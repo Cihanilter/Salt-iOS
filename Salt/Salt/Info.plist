@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>salt.auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>salt</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.557422217226-0gr15du4d3us30t68c0pa41cnrs57o5q</string>
+			</array>
+		</dict>
+	</array>
+	<key>GIDClientID</key>
+	<string>557422217226-0gr15du4d3us30t68c0pa41cnrs57o5q.apps.googleusercontent.com</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>OpenSans-Regular.ttf</string>
+		<string>OpenSans-SemiBold.ttf</string>
+		<string>Playfair_9pt-Bold.ttf</string>
+		<string>Playfair_9pt-ExtraBold.ttf</string>
+		<string>Playfair_9pt-Medium.ttf</string>
+		<string>Playfair_9pt-Regular.ttf</string>
+		<string>Playfair_9pt-SemiBold.ttf</string>
+		<string>Playfair_144pt-Bold.ttf</string>
+		<string>Playfair_144pt-Medium.ttf</string>
+		<string>Playfair_144pt-Regular.ttf</string>
+		<string>Playfair_144pt-SemiBold.ttf</string>
+	</array>
+</dict>
+</plist>
