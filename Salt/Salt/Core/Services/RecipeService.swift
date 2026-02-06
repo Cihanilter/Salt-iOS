@@ -336,9 +336,9 @@ class RecipeService {
             instructions: recipeDetail.instructions,
             cuisines: nil,
             dishTypes: nil,
-            notes: recipeDetail.notes == "Enjoy this delicious recipe!" ? nil : recipeDetail.notes,
-            sourceUrl: sourceUrl,
-            sourceName: nil,
+            notes: recipeDetail.notes.isEmpty ? nil : recipeDetail.notes,
+            sourceUrl: recipeDetail.sourceUrl ?? sourceUrl,
+            sourceName: recipeDetail.sourceName,
             photos: finalImages.isEmpty ? nil : finalImages
         )
 

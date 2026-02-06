@@ -101,7 +101,9 @@ class RecipeImportViewModel: ObservableObject {
                 ingredients: recipeDetail.ingredients,
                 instructions: recipeDetail.instructions,
                 notes: recipeDetail.notes,
-                images: imageUrls
+                images: imageUrls,
+                sourceUrl: recipeDetail.sourceUrl ?? importedRecipe?.sourceUrl,
+                sourceName: recipeDetail.sourceName ?? importedRecipe?.sourceName
             )
 
             _ = try await RecipeService.shared.saveRecipeDetail(finalRecipeDetail, sourceUrl: importedRecipe?.sourceUrl)

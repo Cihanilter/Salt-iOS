@@ -224,7 +224,9 @@ class CreateRecipeViewModel: ObservableObject {
                 ingredients: recipeDetail.ingredients,
                 instructions: recipeDetail.instructions,
                 notes: recipeDetail.notes,
-                images: imageUrls
+                images: imageUrls,
+                sourceUrl: recipeDetail.sourceUrl,
+                sourceName: recipeDetail.sourceName
             )
 
             _ = try await RecipeService.shared.saveRecipeDetail(finalRecipeDetail)
@@ -259,8 +261,10 @@ class CreateRecipeViewModel: ObservableObject {
             cookTime: cookTime.isEmpty ? "0" : cookTime,
             ingredients: ingredientsList,
             instructions: instructionsList,
-            notes: notes.isEmpty ? "Enjoy this delicious recipe!" : notes.trimmingCharacters(in: .whitespaces),
-            images: imageUrls
+            notes: notes.trimmingCharacters(in: .whitespaces),
+            images: imageUrls,
+            sourceUrl: nil,
+            sourceName: nil
         )
     }
 

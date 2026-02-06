@@ -159,8 +159,8 @@ extension UserRecipe {
         let prepDisplay = prepTimeMinutes.map { "\($0)" } ?? "0"
         let cookDisplay = cookTimeMinutes.map { "\($0)" } ?? "0"
 
-        // Notes text
-        let notesText = notes ?? "Enjoy this recipe!"
+        // Notes text - empty string if no notes (don't show default text)
+        let notesText = notes ?? ""
 
         // Build images array
         var images: [String] = []
@@ -182,7 +182,9 @@ extension UserRecipe {
             ingredients: ingredients,
             instructions: instructions,
             notes: notesText,
-            images: images
+            images: images,
+            sourceUrl: sourceUrl,
+            sourceName: sourceName
         )
     }
 }

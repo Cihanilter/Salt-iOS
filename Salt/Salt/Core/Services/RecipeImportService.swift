@@ -84,8 +84,10 @@ struct ImportedRecipe {
             cookTime: cookTimeMinutes.map { "\($0)" } ?? "0",
             ingredients: ingredients,
             instructions: instructions,
-            notes: sourceName.map { "Source: \($0)" } ?? "Enjoy this delicious recipe!",
-            images: imageUrl.map { [$0] } ?? []
+            notes: "",
+            images: imageUrl.map { [$0] } ?? [],
+            sourceUrl: sourceUrl,
+            sourceName: sourceName
         )
     }
 }
@@ -118,7 +120,7 @@ class RecipeImportService {
     static let shared = RecipeImportService()
 
     // Backend URL for social media import (Railway - supports yt-dlp)
-    private let socialImportApiUrl = "https://salt-vercel-backend-production.up.railway.app/api/import-social-recipe"
+    private let socialImportApiUrl = "https://salt-backend-production.up.railway.app/api/import-social-recipe"
 
     private init() {}
 

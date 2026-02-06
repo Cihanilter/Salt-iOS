@@ -20,6 +20,8 @@ struct RecipeDetail {
     let instructions: [String]
     let notes: String
     let images: [String]
+    let sourceUrl: String?
+    let sourceName: String?
 }
 
 // MARK: - Recipe to RecipeDetail Conversion
@@ -54,7 +56,9 @@ extension Recipe {
             ingredients: ingredients,  // Already [String] from database
             instructions: instructions,  // Already [String] from database
             notes: notesText,
-            images: [displayImageUrl].filter { !$0.isEmpty }
+            images: [displayImageUrl].filter { !$0.isEmpty },
+            sourceUrl: sourceUrl,
+            sourceName: sourceName
         )
     }
 }
@@ -88,7 +92,9 @@ class PendingSaveDataStorage {
             ingredients: Array(recipe.ingredients),
             instructions: Array(recipe.instructions),
             notes: recipe.notes,
-            images: Array(recipe.images)
+            images: Array(recipe.images),
+            sourceUrl: recipe.sourceUrl,
+            sourceName: recipe.sourceName
         )
 
         // Deep copy photos to avoid memory issues
@@ -132,6 +138,7 @@ struct RecipeDetailView: View {
     @State private var currentImageIndex = 0
     @State private var isSaving = false
     @State private var showSavedHeader = false
+    @State private var hasBeenSaved = false  // Track if recipe was saved (persists after closing saved header)
     @State private var showingEditSheet = false
     @State private var showingDeleteAlert = false
     @State private var isDeleting = false
@@ -229,11 +236,13 @@ struct RecipeDetailView: View {
                         // Instructions
                         InstructionsSection(instructions: recipe.instructions)
 
-                        // Notes & Tips - hidden for now (no notes data in database)
-                        // NotesSection(notes: recipe.notes)
+                        // Notes & Tips section (shown for imported recipes OR when notes exist)
+                        if recipe.sourceUrl != nil || !recipe.notes.isEmpty {
+                            NotesSection(notes: recipe.notes, sourceUrl: recipe.sourceUrl, sourceName: recipe.sourceName)
+                        }
 
-                        // Preview mode buttons
-                        if mode == .preview && !showSavedHeader {
+                        // Preview mode buttons (hide after recipe is saved)
+                        if mode == .preview && !hasBeenSaved {
                             previewButtons
                                 .padding(.top, 16)
                         }
@@ -336,6 +345,7 @@ struct RecipeDetailView: View {
                         let success = await save()
                         if success {
                             withAnimation {
+                                hasBeenSaved = true
                                 showSavedHeader = true
                             }
                         }
@@ -809,21 +819,57 @@ struct InstructionsSection: View {
 
 struct NotesSection: View {
     let notes: String
-    
+    var sourceUrl: String? = nil
+    var sourceName: String? = nil
+
+    private var hasNotes: Bool {
+        !notes.isEmpty
+    }
+
+    private var hasSource: Bool {
+        sourceUrl != nil && !sourceUrl!.isEmpty
+    }
+
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Notes & Tips")
                 .font(.custom("Playfair9pt-SemiBold", size: 22))
-            
-            Text(notes)
-                .font(.custom("OpenSans-Regular", size: 14))
+                .frame(maxWidth: .infinity, alignment: .center)
+
+            if hasNotes {
+                Text(notes)
+                    .font(.custom("OpenSans-Regular", size: 14))
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+
+            if hasSource, let url = sourceUrl, let linkUrl = URL(string: url) {
+                VStack(spacing: 4) {
+                    Text("Original Recipe")
+                        .font(.custom("OpenSans-SemiBold", size: 14))
+                        .foregroundColor(Color("GraniteGray"))
+
+                    Link(destination: linkUrl) {
+                        HStack(spacing: 4) {
+                            Text(sourceName ?? "View Source")
+                                .font(.custom("OpenSans-Regular", size: 14))
+                                .foregroundColor(Color("OrangeRed"))
+                                .lineLimit(1)
+
+                            Image(systemName: "arrow.up.right.square")
+                                .font(.system(size: 12))
+                                .foregroundColor(Color("OrangeRed"))
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+            }
         }
         .padding(.horizontal, 20)
-        .frame(width: 366, height: 115)
+        .padding(.vertical, 16)
+        .frame(maxWidth: .infinity)
         .background(Color("PeachCream"))
         .cornerRadius(25)
         .shadow(color: Color.black.opacity(0.25), radius: 4, x: 0, y: 4)
-        .frame(maxWidth: .infinity) 
     }
 }
 
@@ -857,7 +903,9 @@ struct NotesSection: View {
             images: [
                 "https://upload.wikimedia.org/wikipedia/commons/4/43/Pancake.jpg",
                 "https://upload.wikimedia.org/wikipedia/commons/a/ae/Plateau_van_zeevruchten.jpg"
-            ]
+            ],
+            sourceUrl: "https://www.allrecipes.com/recipe/123/pancakes",
+            sourceName: "AllRecipes"
         )
     )
 }
