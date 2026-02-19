@@ -23,7 +23,7 @@ class GoogleSignInHelper {
             throw NSError(domain: "GoogleSignIn", code: -1, userInfo: [NSLocalizedDescriptionKey: "No root view controller found"])
         }
 
-        let config = GIDConfiguration(clientID: GoogleConfig.webClientID)
+        let config = GIDConfiguration(clientID: GoogleConfig.iosClientID, serverClientID: GoogleConfig.webClientID)
         GIDSignIn.sharedInstance.configuration = config
 
         let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: rootViewController)

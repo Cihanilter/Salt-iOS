@@ -21,12 +21,12 @@
 			<string>google</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.557422217226-0gr15du4d3us30t68c0pa41cnrs57o5q</string>
+				<string>com.googleusercontent.apps.508904580768-q607n0d9aonfdrmset8mj6gmui3g7553</string>
 			</array>
 		</dict>
 	</array>
 	<key>GIDClientID</key>
-	<string>557422217226-0gr15du4d3us30t68c0pa41cnrs57o5q.apps.googleusercontent.com</string>
+	<string>508904580768-q607n0d9aonfdrmset8mj6gmui3g7553.apps.googleusercontent.com</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>OpenSans-Regular.ttf</string>
