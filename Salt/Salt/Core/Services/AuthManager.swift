@@ -120,6 +120,11 @@ final class AuthManager: ObservableObject {
         try await authService.resetPassword(email: email)
     }
 
+    // MARK: - Update Password
+    func updatePassword(newPassword: String) async throws {
+        try await authService.updatePassword(newPassword: newPassword)
+    }
+
     // MARK: - Sign Out
     func signOut() async throws {
         try await authService.signOut()
