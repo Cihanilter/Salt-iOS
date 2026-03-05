@@ -213,6 +213,23 @@ class ProfileViewModel: ObservableObject {
             }
         }
     }
+
+    // MARK: - Delete Account
+
+    func deleteAccount() async -> Bool {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            try await authManager.deleteAccount()
+            isLoading = false
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            isLoading = false
+            return false
+        }
+    }
 }
 
 // MARK: - User Profile Data

@@ -132,6 +132,13 @@ final class AuthManager: ObservableObject {
         self.isAuthenticated = false
     }
 
+    // MARK: - Delete Account
+    func deleteAccount() async throws {
+        try await authService.deleteAccount()
+        self.currentUser = nil
+        self.isAuthenticated = false
+    }
+
     // MARK: - Resend Verification Email
     func resendVerificationEmail() async throws {
         try await authService.resendVerificationEmail()

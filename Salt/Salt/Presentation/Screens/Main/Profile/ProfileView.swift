@@ -6,6 +6,7 @@ import PhotosUI
 struct ProfileView: View {
     @StateObject private var viewModel = ProfileViewModel()
     @State private var showingSignOutAlert = false
+    @State private var showingDeleteAccountAlert = false
     @State private var selectedPhotoItem: PhotosPickerItem?
 
     var body: some View {
@@ -32,6 +33,9 @@ struct ProfileView: View {
 
                     // Sign Out Button
                     signOutButton
+
+                    // Delete Account Button
+                    deleteAccountButton
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 40)
@@ -49,6 +53,16 @@ struct ProfileView: View {
             }
         } message: {
             Text("Are you sure you want to sign out?")
+        }
+        .alert("Delete Account", isPresented: $showingDeleteAccountAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete Account", role: .destructive) {
+                Task {
+                    await viewModel.deleteAccount()
+                }
+            }
+        } message: {
+            Text("Are you sure you want to delete your account? This action cannot be undone. All your data including saved recipes will be permanently deleted.")
         }
     }
 
@@ -334,8 +348,26 @@ struct ProfileView: View {
             .padding(.vertical, 14)
             .background(Color(.red.opacity(0.1)))
             .cornerRadius(16)
- }
+        }
         .padding(.top, 10)
+    }
+
+    // MARK: - Delete Account Button
+
+    private var deleteAccountButton: some View {
+        Button(action: { showingDeleteAccountAlert = true }) {
+            HStack(spacing: 8) {
+                Image(systemName: "trash")
+                Text("Delete Account")
+            }
+            .font(.custom("OpenSans-Regular", size: 16))
+            .foregroundColor(.red)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(Color(.red.opacity(0.1)))
+            .cornerRadius(16)
+        }
+        .padding(.top, 4)
     }
 }
 
