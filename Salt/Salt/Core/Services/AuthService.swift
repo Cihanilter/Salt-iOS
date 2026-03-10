@@ -335,6 +335,9 @@ final class SupabaseAuthService: AuthService {
             return .emailNotVerified
         } else if errorMessage.contains("network") {
             return .networkError
+        } else if errorMessage.contains("coerce") || errorMessage.contains("single json") {
+            // Profile was deleted but auth user still exists
+            return .userNotFound
         } else {
             return .unknown(error.localizedDescription)
         }

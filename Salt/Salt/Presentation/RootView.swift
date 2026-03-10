@@ -28,7 +28,7 @@ struct RootView: View {
             // Splash overlay (shows for ~1 second after launch)
             if showSplash {
                 SplashView()
-//                    .transition(.opacity)
+                    .transition(.opacity)
                     .zIndex(1)
             }
         }
