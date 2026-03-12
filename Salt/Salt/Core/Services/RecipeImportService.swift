@@ -248,17 +248,56 @@ class RecipeImportService {
         // Extract JSON-LD scripts
         let jsonLdScripts = extractJsonLd(from: html)
 
+        #if DEBUG
+        print("[RecipeImport] URL: \(urlString)")
+        print("[RecipeImport] HTML length: \(html.count)")
+        print("[RecipeImport] Found \(jsonLdScripts.count) JSON-LD scripts")
+        #endif
+
         // Try to find Recipe schema
         for jsonString in jsonLdScripts {
             if let recipe = parseRecipeSchema(from: jsonString, sourceUrl: urlString) {
+                #if DEBUG
+                print("[RecipeImport] ✅ Found recipe via JSON-LD")
+                #endif
                 return recipe
             }
         }
 
+        #if DEBUG
+        print("[RecipeImport] No JSON-LD recipe found, trying microdata...")
+        print("[RecipeImport] HTML contains 'itemscope': \(html.contains("itemscope"))")
+        print("[RecipeImport] HTML contains 'itemprop': \(html.contains("itemprop"))")
+        print("[RecipeImport] HTML contains 'Recipe': \(html.contains("Recipe"))")
+        #endif
+
         // If no JSON-LD, try microdata (fallback)
         if let recipe = parseMicrodata(from: html, sourceUrl: urlString) {
+            #if DEBUG
+            print("[RecipeImport] ✅ Found recipe via Microdata")
+            #endif
             return recipe
         }
+
+        #if DEBUG
+        print("[RecipeImport] No microdata recipe found, trying RDFa...")
+        print("[RecipeImport] HTML contains 'typeof': \(html.contains("typeof"))")
+        print("[RecipeImport] HTML contains 'property': \(html.contains("property"))")
+        #endif
+
+        // If no microdata, try RDFa (fallback)
+        if let recipe = parseRDFa(from: html, sourceUrl: urlString) {
+            #if DEBUG
+            print("[RecipeImport] ✅ Found recipe via RDFa")
+            #endif
+            return recipe
+        }
+
+        #if DEBUG
+        print("[RecipeImport] ❌ No recipe found in any format")
+        // Print first 2000 chars of HTML for debugging
+        print("[RecipeImport] HTML preview: \(String(html.prefix(2000)))")
+        #endif
 
         throw RecipeImportError.noRecipeFound
     }
@@ -518,10 +557,604 @@ class RecipeImportService {
         return nil
     }
 
-    /// Fallback: parse microdata (basic implementation)
+    // MARK: - Microdata Parsing
+
+    /// Parse microdata format (itemscope/itemprop attributes)
     private func parseMicrodata(from html: String, sourceUrl: String) -> ImportedRecipe? {
-        // Basic microdata parsing - can be extended
-        // For now, return nil and rely on JSON-LD
+        // First, try to find and extract Recipe itemscope block
+        // Pattern matches: <div itemscope itemtype="http://schema.org/Recipe">
+        // The block may have attributes in any order
+        let patterns = [
+            #"<[^>]+itemscope[^>]+itemtype\s*=\s*["']https?://schema\.org/Recipe["'][^>]*>([\s\S]*?)(?=</div>|</article>|</section>)"#,
+            #"<[^>]+itemtype\s*=\s*["']https?://schema\.org/Recipe["'][^>]+itemscope[^>]*>([\s\S]*?)(?=</div>|</article>|</section>)"#
+        ]
+
+        for pattern in patterns {
+            if let recipeRegex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+               let recipeMatch = recipeRegex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)),
+               let recipeRange = Range(recipeMatch.range, in: html) {
+                let recipeHtml = String(html[recipeRange])
+                #if DEBUG
+                print("[RecipeImport] Found Recipe block, length: \(recipeHtml.count)")
+                #endif
+                if let recipe = extractMicrodataRecipe(from: recipeHtml, sourceUrl: sourceUrl) {
+                    return recipe
+                }
+            }
+        }
+
+        // Fallback: try to find Recipe in the whole document
+        return parseMicrodataFromDocument(html: html, sourceUrl: sourceUrl)
+    }
+
+    /// Parse microdata from entire document (when Recipe block is not clearly defined)
+    private func parseMicrodataFromDocument(html: String, sourceUrl: String) -> ImportedRecipe? {
+        // Check if there's any itemprop="recipeIngredient" in the document
+        guard html.contains("itemprop") && html.contains("recipeIngredient") else {
+            return nil
+        }
+        #if DEBUG
+        print("[RecipeImport] Trying whole document parsing...")
+        #endif
+        return extractMicrodataRecipe(from: html, sourceUrl: sourceUrl)
+    }
+
+    /// Extract recipe data from HTML with microdata attributes
+    private func extractMicrodataRecipe(from html: String, sourceUrl: String) -> ImportedRecipe? {
+        // Extract title - find best name (not user names like "NYT Kullanıcısı")
+        let title = extractBestRecipeName(from: html)
+
+        guard let recipeTitle = title, !recipeTitle.isEmpty else {
+            #if DEBUG
+            print("[RecipeImport] Could not find recipe title")
+            #endif
+            return nil
+        }
+
+        #if DEBUG
+        print("[RecipeImport] Found title: \(recipeTitle)")
+        #endif
+
+        // Extract description
+        let description = extractMicrodataValue(from: html, property: "description")
+            ?? extractMetaItemprop(from: html, property: "description")
+
+        // Extract image
+        let imageUrl = extractMicrodataImage(from: html)
+
+        // Extract times
+        let prepTime = extractMicrodataTime(from: html, property: "prepTime")
+        let cookTime = extractMicrodataTime(from: html, property: "cookTime")
+        let totalTime = extractMicrodataTime(from: html, property: "totalTime")
+
+        // Extract servings
+        let servings = extractMicrodataValue(from: html, property: "recipeYield")
+            ?? extractMetaItemprop(from: html, property: "recipeYield")
+            ?? "2 servings"
+
+        // Extract ingredients
+        let ingredients = extractMicrodataList(from: html, property: "recipeIngredient")
+        #if DEBUG
+        print("[RecipeImport] Found \(ingredients.count) ingredients")
+        #endif
+
+        // Extract instructions
+        var instructions = extractMicrodataInstructions(from: html)
+        if instructions.isEmpty {
+            instructions = extractMicrodataList(from: html, property: "recipeInstructions")
+        }
+        #if DEBUG
+        print("[RecipeImport] Found \(instructions.count) instructions")
+        #endif
+
+        // Extract author
+        let author = extractMicrodataValue(from: html, property: "author")
+            ?? extractNestedMicrodataValue(from: html, parentProperty: "author", childProperty: "name")
+
+        // Only return if we have meaningful data
+        guard !ingredients.isEmpty || !instructions.isEmpty else {
+            #if DEBUG
+            print("[RecipeImport] No ingredients or instructions found - returning nil")
+            #endif
+            return nil
+        }
+
+        return ImportedRecipe(
+            title: recipeTitle,
+            description: description,
+            imageUrl: imageUrl,
+            prepTimeMinutes: prepTime,
+            cookTimeMinutes: cookTime,
+            totalTimeMinutes: totalTime ?? ((prepTime ?? 0) + (cookTime ?? 0) > 0 ? (prepTime ?? 0) + (cookTime ?? 0) : nil),
+            servings: servings,
+            ingredients: ingredients,
+            instructions: instructions,
+            sourceUrl: sourceUrl,
+            sourceName: extractSourceName(from: [:], url: sourceUrl),
+            author: author
+        )
+    }
+
+    /// Find the best recipe name (avoiding user names like "NYT Kullanıcısı")
+    private func extractBestRecipeName(from html: String) -> String? {
+        // Collect all potential names from meta tags
+        var names: [String] = []
+
+        // Pattern 1: <meta itemprop="name" content="...">
+        let metaPattern = #"<meta[^>]+itemprop\s*=\s*["']name["'][^>]+content\s*=\s*["']([^"']+)["']"#
+        if let regex = try? NSRegularExpression(pattern: metaPattern, options: .caseInsensitive) {
+            let matches = regex.matches(in: html, options: [], range: NSRange(html.startIndex..., in: html))
+            for match in matches {
+                if let valueRange = Range(match.range(at: 1), in: html) {
+                    let value = decodeHTMLEntities(String(html[valueRange]).trimmingCharacters(in: .whitespacesAndNewlines))
+                    if !value.isEmpty {
+                        names.append(value)
+                    }
+                }
+            }
+        }
+
+        // Pattern 2: reverse order <meta content="..." itemprop="name">
+        let reverseMetaPattern = #"<meta[^>]+content\s*=\s*["']([^"']+)["'][^>]+itemprop\s*=\s*["']name["']"#
+        if let regex = try? NSRegularExpression(pattern: reverseMetaPattern, options: .caseInsensitive) {
+            let matches = regex.matches(in: html, options: [], range: NSRange(html.startIndex..., in: html))
+            for match in matches {
+                if let valueRange = Range(match.range(at: 1), in: html) {
+                    let value = decodeHTMLEntities(String(html[valueRange]).trimmingCharacters(in: .whitespacesAndNewlines))
+                    if !value.isEmpty && !names.contains(value) {
+                        names.append(value)
+                    }
+                }
+            }
+        }
+
+        // Filter out common user placeholder names
+        let blacklist = ["NYT Kullanıcısı", "User", "Anonymous", "Kullanıcı"]
+        let filteredNames = names.filter { name in
+            !blacklist.contains(where: { name.contains($0) })
+        }
+
+        // Return the first good name, or fallback to any name
+        return filteredNames.first ?? names.first
+    }
+
+    /// Extract single value from itemprop attribute
+    private func extractMicrodataValue(from html: String, property: String) -> String? {
+        // Pattern for: <tag itemprop="property">value</tag>
+        let pattern = #"<[^>]+itemprop\s*=\s*["']\#(property)["'][^>]*>([^<]+)<"#
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+              let match = regex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)),
+              let valueRange = Range(match.range(at: 1), in: html) else {
+            return nil
+        }
+
+        let value = String(html[valueRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+        return decodeHTMLEntities(value)
+    }
+
+    /// Extract value from <meta itemprop="property" content="value">
+    private func extractMetaItemprop(from html: String, property: String) -> String? {
+        // Pattern for: <meta itemprop="property" content="value">
+        let pattern = #"<meta[^>]+itemprop\s*=\s*["']\#(property)["'][^>]+content\s*=\s*["']([^"']+)["']"#
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+              let match = regex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)),
+              let valueRange = Range(match.range(at: 1), in: html) else {
+            // Try reverse order (content before itemprop)
+            let reversePattern = #"<meta[^>]+content\s*=\s*["']([^"']+)["'][^>]+itemprop\s*=\s*["']\#(property)["']"#
+            guard let reverseRegex = try? NSRegularExpression(pattern: reversePattern, options: .caseInsensitive),
+                  let reverseMatch = reverseRegex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)),
+                  let reverseValueRange = Range(reverseMatch.range(at: 1), in: html) else {
+                return nil
+            }
+            return decodeHTMLEntities(String(html[reverseValueRange]))
+        }
+
+        return decodeHTMLEntities(String(html[valueRange]))
+    }
+
+    /// Extract image URL from microdata
+    private func extractMicrodataImage(from html: String) -> String? {
+        // Pattern 1: Nested ImageObject with url inside
+        // <div itemprop="image" itemscope itemtype="...ImageObject">
+        //   <meta itemprop="url" content="https://..."/>
+        // </div>
+        let nestedPattern = #"itemprop\s*=\s*["']image["'][^>]*itemscope[^>]*itemtype\s*=\s*["'][^"']*ImageObject["'][^>]*>[\s\S]*?<meta[^>]+itemprop\s*=\s*["']url["'][^>]+content\s*=\s*["']([^"']+)["']"#
+        if let regex = try? NSRegularExpression(pattern: nestedPattern, options: .caseInsensitive),
+           let match = regex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)),
+           let urlRange = Range(match.range(at: 1), in: html) {
+            let url = String(html[urlRange])
+            if url.hasPrefix("http") {
+                #if DEBUG
+                print("[RecipeImport] Found image (nested): \(url)")
+                #endif
+                return url
+            }
+        }
+
+        // Pattern 2: Try meta tag with itemprop="image" content="url"
+        if let metaImage = extractMetaItemprop(from: html, property: "image") {
+            if metaImage.hasPrefix("http") {
+                #if DEBUG
+                print("[RecipeImport] Found image (meta): \(metaImage)")
+                #endif
+                return metaImage
+            }
+        }
+
+        // Pattern 3: Try img tag with itemprop="image"
+        let imgPattern = #"<img[^>]+itemprop\s*=\s*["']image["'][^>]+src\s*=\s*["']([^"']+)["']"#
+        if let regex = try? NSRegularExpression(pattern: imgPattern, options: .caseInsensitive),
+           let match = regex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)),
+           let urlRange = Range(match.range(at: 1), in: html) {
+            let url = String(html[urlRange])
+            if url.hasPrefix("http") {
+                return url
+            }
+        }
+
+        // Pattern 4: Try reverse order for img
+        let reverseImgPattern = #"<img[^>]+src\s*=\s*["']([^"']+)["'][^>]+itemprop\s*=\s*["']image["']"#
+        if let regex = try? NSRegularExpression(pattern: reverseImgPattern, options: .caseInsensitive),
+           let match = regex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)),
+           let urlRange = Range(match.range(at: 1), in: html) {
+            let url = String(html[urlRange])
+            if url.hasPrefix("http") {
+                return url
+            }
+        }
+
+        // Pattern 5: Look for og:image as fallback
+        let ogPattern = #"<meta[^>]+property\s*=\s*["']og:image["'][^>]+content\s*=\s*["']([^"']+)["']"#
+        if let regex = try? NSRegularExpression(pattern: ogPattern, options: .caseInsensitive),
+           let match = regex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)),
+           let urlRange = Range(match.range(at: 1), in: html) {
+            let url = String(html[urlRange])
+            #if DEBUG
+            print("[RecipeImport] Found image (og:image): \(url)")
+            #endif
+            return url
+        }
+
         return nil
+    }
+
+    /// Extract time value from microdata (handles ISO duration in content attribute)
+    private func extractMicrodataTime(from html: String, property: String) -> Int? {
+        // Try meta/span with content attribute containing ISO duration
+        let contentPattern = #"<[^>]+itemprop\s*=\s*["']\#(property)["'][^>]+content\s*=\s*["']([^"']+)["']"#
+        if let regex = try? NSRegularExpression(pattern: contentPattern, options: .caseInsensitive),
+           let match = regex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)),
+           let valueRange = Range(match.range(at: 1), in: html) {
+            return parseISODuration(String(html[valueRange]))
+        }
+
+        // Try reverse order
+        let reversePattern = #"<[^>]+content\s*=\s*["']([^"']+)["'][^>]+itemprop\s*=\s*["']\#(property)["']"#
+        if let regex = try? NSRegularExpression(pattern: reversePattern, options: .caseInsensitive),
+           let match = regex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)),
+           let valueRange = Range(match.range(at: 1), in: html) {
+            return parseISODuration(String(html[valueRange]))
+        }
+
+        // Try inline value
+        if let inlineValue = extractMicrodataValue(from: html, property: property) {
+            return parseISODuration(inlineValue)
+        }
+
+        return nil
+    }
+
+    /// Extract list of values with the same itemprop (e.g., ingredients)
+    private func extractMicrodataList(from html: String, property: String) -> [String] {
+        var results: [String] = []
+
+        // Pattern 1: <tag itemprop="property">value</tag> (handles duplicate attributes)
+        // Match: <li itemprop="recipeIngredient" itemprop="recipeIngredient">text</li>
+        let pattern1 = #"<(?:li|span|p|div)[^>]*itemprop\s*=\s*["']\#(property)["'][^>]*>([^<]+)</(?:li|span|p|div)>"#
+
+        if let regex = try? NSRegularExpression(pattern: pattern1, options: .caseInsensitive) {
+            let matches = regex.matches(in: html, options: [], range: NSRange(html.startIndex..., in: html))
+            for match in matches {
+                if let valueRange = Range(match.range(at: 1), in: html) {
+                    let value = String(html[valueRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !value.isEmpty {
+                        results.append(decodeHTMLEntities(value))
+                    }
+                }
+            }
+        }
+
+        // If no results, try meta tags with content attribute
+        if results.isEmpty {
+            let metaPattern = #"<meta[^>]+itemprop\s*=\s*["']\#(property)["'][^>]+content\s*=\s*["']([^"']+)["']"#
+            if let regex = try? NSRegularExpression(pattern: metaPattern, options: .caseInsensitive) {
+                let matches = regex.matches(in: html, options: [], range: NSRange(html.startIndex..., in: html))
+                for match in matches {
+                    if let valueRange = Range(match.range(at: 1), in: html) {
+                        let value = String(html[valueRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !value.isEmpty {
+                            results.append(decodeHTMLEntities(value))
+                        }
+                    }
+                }
+            }
+        }
+
+        return results
+    }
+
+    /// Extract instructions from microdata (handles nested structures)
+    private func extractMicrodataInstructions(from html: String) -> [String] {
+        var results: [String] = []
+
+        // Pattern 1: <ol/ul itemprop="recipeInstructions">...<li>step</li>...</ol/ul>
+        // This is the most common pattern for Turkish recipe sites
+        let olPattern = #"<(?:ol|ul)[^>]+itemprop\s*=\s*["']recipeInstructions["'][^>]*>([\s\S]*?)</(?:ol|ul)>"#
+        if let regex = try? NSRegularExpression(pattern: olPattern, options: .caseInsensitive),
+           let match = regex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)),
+           let olRange = Range(match.range(at: 1), in: html) {
+            let olContent = String(html[olRange])
+            // Extract <li> contents
+            let liPattern = #"<li[^>]*>([^<]+)</li>"#
+            if let liRegex = try? NSRegularExpression(pattern: liPattern, options: .caseInsensitive) {
+                let liMatches = liRegex.matches(in: olContent, options: [], range: NSRange(olContent.startIndex..., in: olContent))
+                for liMatch in liMatches {
+                    if let valueRange = Range(liMatch.range(at: 1), in: olContent) {
+                        let value = String(olContent[valueRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !value.isEmpty {
+                            results.append(decodeHTMLEntities(value))
+                        }
+                    }
+                }
+            }
+        }
+
+        // Pattern 2: Try individual elements with itemprop="recipeInstructions"
+        if results.isEmpty {
+            let instructionPattern = #"<(?:li|p|div|span)[^>]*itemprop\s*=\s*["']recipeInstructions["'][^>]*>([^<]+)</(?:li|p|div|span)>"#
+            if let regex = try? NSRegularExpression(pattern: instructionPattern, options: .caseInsensitive) {
+                let matches = regex.matches(in: html, options: [], range: NSRange(html.startIndex..., in: html))
+                for match in matches {
+                    if let valueRange = Range(match.range(at: 1), in: html) {
+                        let value = String(html[valueRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !value.isEmpty {
+                            results.append(decodeHTMLEntities(value))
+                        }
+                    }
+                }
+            }
+        }
+
+        // Pattern 3: Try class-based pattern (fallback)
+        if results.isEmpty {
+            let classPattern = #"class\s*=\s*["'][^"']*recipe-instructions[^"']*["'][^>]*>([\s\S]*?)</(?:ol|ul)>"#
+            if let regex = try? NSRegularExpression(pattern: classPattern, options: .caseInsensitive),
+               let match = regex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)),
+               let olRange = Range(match.range(at: 1), in: html) {
+                let olContent = String(html[olRange])
+                let liPattern = #"<li[^>]*>([^<]+)</li>"#
+                if let liRegex = try? NSRegularExpression(pattern: liPattern, options: .caseInsensitive) {
+                    let liMatches = liRegex.matches(in: olContent, options: [], range: NSRange(olContent.startIndex..., in: olContent))
+                    for liMatch in liMatches {
+                        if let valueRange = Range(liMatch.range(at: 1), in: olContent) {
+                            let value = String(olContent[valueRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !value.isEmpty {
+                                results.append(decodeHTMLEntities(value))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return results
+    }
+
+    /// Extract nested microdata value (e.g., author -> name)
+    private func extractNestedMicrodataValue(from html: String, parentProperty: String, childProperty: String) -> String? {
+        // Find the parent block
+        let parentPattern = #"itemprop\s*=\s*["']\#(parentProperty)["'][^>]*>([\s\S]*?)</"#
+
+        guard let regex = try? NSRegularExpression(pattern: parentPattern, options: .caseInsensitive),
+              let match = regex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)),
+              let contentRange = Range(match.range(at: 1), in: html) else {
+            return nil
+        }
+
+        let parentContent = String(html[contentRange])
+        return extractMicrodataValue(from: parentContent, property: childProperty)
+    }
+
+    // MARK: - RDFa Parsing
+
+    /// Parse RDFa format (typeof/property attributes)
+    private func parseRDFa(from html: String, sourceUrl: String) -> ImportedRecipe? {
+        // Check if there's RDFa Recipe markup
+        guard html.contains("typeof") && html.contains("Recipe") else {
+            return nil
+        }
+
+        // Extract title
+        let title = extractRDFaValue(from: html, property: "name")
+
+        guard let recipeTitle = title, !recipeTitle.isEmpty else { return nil }
+
+        // Extract description
+        let description = extractRDFaValue(from: html, property: "description")
+
+        // Extract image
+        let imageUrl = extractRDFaImage(from: html)
+
+        // Extract times
+        let prepTime = extractRDFaTime(from: html, property: "prepTime")
+        let cookTime = extractRDFaTime(from: html, property: "cookTime")
+        let totalTime = extractRDFaTime(from: html, property: "totalTime")
+
+        // Extract servings
+        let servings = extractRDFaValue(from: html, property: "recipeYield") ?? "2 servings"
+
+        // Extract ingredients
+        let ingredients = extractRDFaList(from: html, property: "recipeIngredient")
+
+        // Extract instructions
+        let instructions = extractRDFaList(from: html, property: "recipeInstructions")
+
+        // Extract author
+        let author = extractRDFaValue(from: html, property: "author")
+
+        // Only return if we have meaningful data
+        guard !ingredients.isEmpty || !instructions.isEmpty else { return nil }
+
+        return ImportedRecipe(
+            title: recipeTitle,
+            description: description,
+            imageUrl: imageUrl,
+            prepTimeMinutes: prepTime,
+            cookTimeMinutes: cookTime,
+            totalTimeMinutes: totalTime ?? ((prepTime ?? 0) + (cookTime ?? 0) > 0 ? (prepTime ?? 0) + (cookTime ?? 0) : nil),
+            servings: servings,
+            ingredients: ingredients,
+            instructions: instructions,
+            sourceUrl: sourceUrl,
+            sourceName: extractSourceName(from: [:], url: sourceUrl),
+            author: author
+        )
+    }
+
+    /// Extract single value from RDFa property attribute
+    private func extractRDFaValue(from html: String, property: String) -> String? {
+        // Pattern for: <tag property="property">value</tag>
+        let pattern = #"<[^>]+property\s*=\s*["'][^"']*\#(property)["'][^>]*>([^<]+)<"#
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+              let match = regex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)),
+              let valueRange = Range(match.range(at: 1), in: html) else {
+            // Try content attribute
+            return extractRDFaContent(from: html, property: property)
+        }
+
+        let value = String(html[valueRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+        return decodeHTMLEntities(value)
+    }
+
+    /// Extract value from RDFa content attribute
+    private func extractRDFaContent(from html: String, property: String) -> String? {
+        let pattern = #"<[^>]+property\s*=\s*["'][^"']*\#(property)["'][^>]+content\s*=\s*["']([^"']+)["']"#
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+              let match = regex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)),
+              let valueRange = Range(match.range(at: 1), in: html) else {
+            return nil
+        }
+
+        return decodeHTMLEntities(String(html[valueRange]))
+    }
+
+    /// Extract image URL from RDFa
+    private func extractRDFaImage(from html: String) -> String? {
+        // Try img tag with property="image"
+        let imgPattern = #"<img[^>]+property\s*=\s*["'][^"']*image["'][^>]+src\s*=\s*["']([^"']+)["']"#
+        if let regex = try? NSRegularExpression(pattern: imgPattern, options: .caseInsensitive),
+           let match = regex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)),
+           let urlRange = Range(match.range(at: 1), in: html) {
+            return String(html[urlRange])
+        }
+
+        // Try content attribute
+        return extractRDFaContent(from: html, property: "image")
+    }
+
+    /// Extract time value from RDFa
+    private func extractRDFaTime(from html: String, property: String) -> Int? {
+        if let content = extractRDFaContent(from: html, property: property) {
+            return parseISODuration(content)
+        }
+        if let value = extractRDFaValue(from: html, property: property) {
+            return parseISODuration(value)
+        }
+        return nil
+    }
+
+    /// Extract list of values from RDFa
+    private func extractRDFaList(from html: String, property: String) -> [String] {
+        var results: [String] = []
+
+        let pattern = #"<[^>]+property\s*=\s*["'][^"']*\#(property)["'][^>]*>([^<]+)<"#
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
+            return results
+        }
+
+        let matches = regex.matches(in: html, options: [], range: NSRange(html.startIndex..., in: html))
+
+        for match in matches {
+            if let valueRange = Range(match.range(at: 1), in: html) {
+                let value = String(html[valueRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !value.isEmpty {
+                    results.append(decodeHTMLEntities(value))
+                }
+            }
+        }
+
+        return results
+    }
+
+    // MARK: - HTML Helpers
+
+    /// Decode common HTML entities
+    private func decodeHTMLEntities(_ string: String) -> String {
+        var result = string
+        let entities: [(String, String)] = [
+            ("&amp;", "&"),
+            ("&lt;", "<"),
+            ("&gt;", ">"),
+            ("&quot;", "\""),
+            ("&#39;", "'"),
+            ("&apos;", "'"),
+            ("&nbsp;", " "),
+            ("&#8211;", "–"),
+            ("&#8212;", "—"),
+            ("&#8217;", "'"),
+            ("&#8220;", "\u{201C}"),
+            ("&#8221;", "\u{201D}"),
+            ("&#x27;", "'"),
+            ("&#x22;", "\"")
+        ]
+
+        for (entity, character) in entities {
+            result = result.replacingOccurrences(of: entity, with: character)
+        }
+
+        // Decode numeric entities (&#NNN;)
+        let numericPattern = #"&#(\d+);"#
+        if let regex = try? NSRegularExpression(pattern: numericPattern, options: []) {
+            let matches = regex.matches(in: result, options: [], range: NSRange(result.startIndex..., in: result))
+            for match in matches.reversed() {
+                if let range = Range(match.range, in: result),
+                   let codeRange = Range(match.range(at: 1), in: result),
+                   let code = Int(result[codeRange]),
+                   let scalar = Unicode.Scalar(code) {
+                    result.replaceSubrange(range, with: String(Character(scalar)))
+                }
+            }
+        }
+
+        // Decode hex entities (&#xNN;) - important for Turkish characters
+        let hexPattern = #"&#x([0-9A-Fa-f]+);"#
+        if let regex = try? NSRegularExpression(pattern: hexPattern, options: []) {
+            let matches = regex.matches(in: result, options: [], range: NSRange(result.startIndex..., in: result))
+            for match in matches.reversed() {
+                if let range = Range(match.range, in: result),
+                   let codeRange = Range(match.range(at: 1), in: result),
+                   let code = Int(result[codeRange], radix: 16),
+                   let scalar = Unicode.Scalar(code) {
+                    result.replaceSubrange(range, with: String(Character(scalar)))
+                }
+            }
+        }
+
+        return result
     }
 }
