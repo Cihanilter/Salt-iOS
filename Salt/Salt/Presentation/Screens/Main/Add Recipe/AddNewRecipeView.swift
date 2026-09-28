@@ -7,6 +7,7 @@ import PhotosUI
 struct AddNewRecipeView: View {
     @State private var selectedTab: AddRecipeTab = .import
     @State private var recipeLink = ""
+    @ObservedObject private var shareImportRouter = ShareImportRouter.shared
 
     // Callback to switch to My Recipes tab
     var switchToMyRecipes: (() -> Void)?
@@ -31,6 +32,17 @@ struct AddNewRecipeView: View {
             }
         }
         .background(Color(.systemBackground))
+        .onAppear {
+            if shareImportRouter.pendingUrl != nil {
+                selectedTab = .import
+            }
+        }
+        .onChange(of: shareImportRouter.pendingUrl) { _, url in
+            // Shared link arrived - show the Import tab so it can pick it up
+            if url != nil {
+                selectedTab = .import
+            }
+        }
     }
 }
 
@@ -105,6 +117,7 @@ struct ImportRecipeView: View {
     @Binding var recipeLink: String
     @StateObject private var viewModel = RecipeImportViewModel()
     @State private var navigateToPreview = false
+    @ObservedObject private var shareImportRouter = ShareImportRouter.shared
 
     // Callback to switch to My Recipes tab
     var switchToMyRecipes: (() -> Void)?
@@ -156,12 +169,7 @@ struct ImportRecipeView: View {
             HStack {
                 Spacer()
                 Button(action: {
-                    Task {
-                        await viewModel.importRecipe(from: recipeLink)
-                        if viewModel.importedRecipe != nil {
-                            navigateToPreview = true
-                        }
-                    }
+                    Task { await startImport() }
                 }) {
                     HStack(spacing: 8) {
                         if viewModel.isLoading {
@@ -221,6 +229,38 @@ struct ImportRecipeView: View {
                 recipeLink = ""
             }
         }
+        .onAppear {
+            importSharedLinkIfNeeded()
+        }
+        .onChange(of: shareImportRouter.pendingUrl) { _, _ in
+            importSharedLinkIfNeeded()
+        }
+        .onChange(of: viewModel.isLoading) { _, isLoading in
+            // A link shared while another import was running is picked up afterwards
+            if !isLoading {
+                importSharedLinkIfNeeded()
+            }
+        }
+    }
+
+    private func startImport() async {
+        await viewModel.importRecipe(from: recipeLink)
+        if viewModel.importedRecipe != nil {
+            navigateToPreview = true
+        }
+    }
+
+    /// Runs the same import flow as pasting the link, for links shared via the Share Extension.
+    private func importSharedLinkIfNeeded() {
+        guard !viewModel.isLoading, let sharedUrl = shareImportRouter.consume() else { return }
+
+        // Leave any preview currently shown so the new recipe replaces it
+        navigateToPreview = false
+        viewModel.clearImport()
+        PendingSaveDataStorage.shared.clear()
+        recipeLink = sharedUrl
+
+        Task { await startImport() }
     }
 }
 

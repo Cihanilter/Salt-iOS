@@ -19,6 +19,11 @@ struct SaltApp: App {
                     print("Deep link received: \(url)")
                     print("Deep link full URL: \(url.absoluteString)")
 
+                    // Handle recipe links shared from the Share Extension
+                    if ShareImportRouter.shared.handle(url) {
+                        return
+                    }
+
                     // Handle Google Sign In callback
                     GIDSignIn.sharedInstance.handle(url)
 
