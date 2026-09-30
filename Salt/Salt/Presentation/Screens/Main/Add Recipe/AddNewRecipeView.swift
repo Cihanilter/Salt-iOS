@@ -123,76 +123,82 @@ struct ImportRecipeView: View {
     var switchToMyRecipes: (() -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Title
-            Text("Enter your recipe link here")
-                .font(.custom("Playfair9pt-Regular", size: 22))
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 16) {
+                // Title
+                Text("Enter your recipe link here")
+                    .font(.custom("Playfair9pt-Regular", size: 22))
 
-            // Text Field
-            ZStack(alignment: .leading) {
-                if recipeLink.isEmpty {
-                    Text("e.g., https://example.com/recipe/pancake")
+                // Text Field
+                ZStack(alignment: .leading) {
+                    if recipeLink.isEmpty {
+                        Text("e.g., https://example.com/recipe/pancake")
+                            .font(.custom("OpenSans-Regular", size: 14))
+                            .foregroundColor(Color("DarkSilver"))
+                            .padding(.horizontal, 16)
+                    }
+
+                    TextField("", text: $recipeLink)
                         .font(.custom("OpenSans-Regular", size: 14))
-                        .foregroundColor(Color("DarkSilver"))
+                        .foregroundColor(.black)
+                        .tint(Color("OrangeRed"))
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                        .keyboardType(.URL)
                         .padding(.horizontal, 16)
                 }
+                .frame(height: 35)
+                .frame(maxWidth: .infinity)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color("DarkSilver"), lineWidth: 1)
+                )
 
-                TextField("", text: $recipeLink)
+                // Description
+                Text("Paste the link, and we'll pull in the recipe for you to review and save.")
                     .font(.custom("OpenSans-Regular", size: 14))
-                    .foregroundColor(.black)
-                    .tint(Color("OrangeRed"))
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                    .keyboardType(.URL)
-                    .padding(.horizontal, 16)
-            }
-            .frame(height: 35)
-            .frame(maxWidth: .infinity)
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color("DarkSilver"), lineWidth: 1)
-            )
+                    .foregroundColor(Color("DarkSilver"))
 
-            // Description
-            Text("Paste the link, and we'll pull in the recipe for you to review and save.")
-                .font(.custom("OpenSans-Regular", size: 14))
-                .foregroundColor(Color("DarkSilver"))
-
-            // Error message
-            if let error = viewModel.errorMessage {
-                Text(error)
-                    .font(.custom("OpenSans-Regular", size: 14))
-                    .foregroundColor(.red)
-            }
-
-            // Import Button
-            HStack {
-                Spacer()
-                Button(action: {
-                    Task { await startImport() }
-                }) {
-                    HStack(spacing: 8) {
-                        if viewModel.isLoading {
-                            ProgressView()
-                                .tint(.white)
-                        }
-                        Text(viewModel.isLoading ? "Importing..." : "Import the Recipe")
-                            .font(.custom("OpenSans-SemiBold", size: 18))
-                            .foregroundColor(.white)
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 14)
-                    .background(Color("Orange"))
-                    .cornerRadius(10)
+                // Error message
+                if let error = viewModel.errorMessage {
+                    Text(error)
+                        .font(.custom("OpenSans-Regular", size: 14))
+                        .foregroundColor(.red)
                 }
-                .disabled(recipeLink.isEmpty || viewModel.isLoading)
-                Spacer()
-            }
-            .padding(.top, 27)
 
-            Spacer()
+                // Import Button
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        Task { await startImport() }
+                    }) {
+                        HStack(spacing: 8) {
+                            if viewModel.isLoading {
+                                ProgressView()
+                                    .tint(.white)
+                            }
+                            Text(viewModel.isLoading ? "Importing..." : "Import the Recipe")
+                                .font(.custom("OpenSans-SemiBold", size: 18))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 14)
+                        .background(Color("Orange"))
+                        .cornerRadius(10)
+                    }
+                    .disabled(recipeLink.isEmpty || viewModel.isLoading)
+                    Spacer()
+                }
+                .padding(.top, 27)
+
+                // How to import from social media via the Share Extension
+                ShareImportDemoView()
+                    .padding(.top, 24)
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 24)
         }
-        .padding(.horizontal)
+        .scrollDismissesKeyboard(.interactively)
         .navigationDestination(isPresented: $navigateToPreview) {
             if let recipe = viewModel.importedRecipe {
                 RecipeDetailView(

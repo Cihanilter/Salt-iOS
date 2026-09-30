@@ -143,6 +143,7 @@ struct RecipeDetailView: View {
     @State private var showingDeleteAlert = false
     @State private var isDeleting = false
     @State private var pendingPhotoImages: [UIImage] = []  // New photos added in edit mode (for display only)
+    @State private var isCookingModeOn = false  // Keeps the screen awake while viewing the recipe
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var bookmarkManager = BookmarkManager.shared
 
@@ -230,6 +231,9 @@ struct RecipeDetailView: View {
                             cookTime: recipe.cookTime
                         )
 
+                        // Cooking Mode (keep screen awake)
+                        CookingModeToggle(isOn: $isCookingModeOn)
+
                         // Ingredients
                         IngredientsSection(ingredients: recipe.ingredients)
 
@@ -287,9 +291,14 @@ struct RecipeDetailView: View {
                 }
             }
         }
+        .onChange(of: isCookingModeOn) { _, isOn in
+            UIApplication.shared.isIdleTimerDisabled = isOn
+        }
         .onDisappear {
             // Clean up storage when view disappears (back button, etc.)
             PendingSaveDataStorage.shared.clear()
+            // Restore normal auto-lock when leaving the recipe
+            UIApplication.shared.isIdleTimerDisabled = false
         }
         .alert("Delete Recipe", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
@@ -767,6 +776,26 @@ struct TimeInfoItem: View {
             Text(label)
                 .font(.custom("OpenSans-Regular", size: 14))
         }
+    }
+}
+
+// MARK: - Cooking Mode Toggle
+
+struct CookingModeToggle: View {
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Cooking Mode")
+                    .font(.custom("Playfair9pt-SemiBold", size: 18))
+
+                Text("Keep screen awake")
+                    .font(.custom("OpenSans-Regular", size: 14))
+                    .foregroundColor(Color("GraniteGray"))
+            }
+        }
+        .tint(Color("Orange"))
     }
 }
 

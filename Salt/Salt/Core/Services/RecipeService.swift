@@ -121,7 +121,8 @@ class RecipeService {
         return recipes
     }
 
-    /// Get user recipes count
+    /// Count of all recipes the user currently has (created and imported).
+    /// Goes down when a recipe is deleted.
     func getUserRecipesCount() async throws -> Int {
         guard let userId = try? await supabase.auth.session.user.id else {
             return 0
@@ -129,6 +130,22 @@ class RecipeService {
 
         let response = try await supabase
             .from("user_recipes")
+            .select("id", head: true, count: .exact)
+            .eq("user_id", value: userId.uuidString)
+            .execute()
+
+        return response.count ?? 0
+    }
+
+    /// Count of imported recipes the user has ever saved, from the `recipe_imports` log.
+    /// Deleting a recipe doesn't lower it, so it can back a free-tier import limit later.
+    func getImportedRecipesCount() async throws -> Int {
+        guard let userId = try? await supabase.auth.session.user.id else {
+            return 0
+        }
+
+        let response = try await supabase
+            .from("recipe_imports")
             .select("id", head: true, count: .exact)
             .eq("user_id", value: userId.uuidString)
             .execute()
