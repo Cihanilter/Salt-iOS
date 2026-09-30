@@ -32,6 +32,10 @@ struct RootView: View {
                     .zIndex(1)
             }
         }
+        .task(id: authManager.currentUser?.id) {
+            // Link RevenueCat purchases to the signed-in account (or log out on sign out)
+            await SubscriptionManager.shared.setUser(id: authManager.currentUser?.id)
+        }
         .onAppear {
             // Keep splash visible for 1 second, then fade out
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {

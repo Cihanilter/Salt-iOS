@@ -189,11 +189,11 @@ struct ImportRecipeView: View {
                     .disabled(recipeLink.isEmpty || viewModel.isLoading)
                     Spacer()
                 }
-                .padding(.top, 27)
+                .padding(.top, 16)
 
                 // Shortcut for social media: share straight to Salt via the Share Extension
                 ShareImportDemoView()
-                    .padding(.top, 36)
+                    .padding(.top, 20)
             }
             .padding(.horizontal)
             .padding(.bottom, 24)

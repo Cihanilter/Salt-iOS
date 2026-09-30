@@ -43,12 +43,12 @@ struct ShareImportDemoView: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 230)
+            .frame(height: 180)
 
             ShareDemoPageDots(count: steps.count, current: currentStep)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
+        .padding(.vertical, 14)
         // Tinted card sets the walkthrough apart from the link import above
         .background(
             RoundedRectangle(cornerRadius: 16)
@@ -88,7 +88,7 @@ struct ShareDemoStepView: View {
     let stepCount: Int
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 10) {
             Group {
                 switch step {
                 case .tapShare: DemoPostMock()
@@ -100,6 +100,9 @@ struct ShareDemoStepView: View {
             .background(Color("Alabaster"))
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 3)
+            // Mocks are laid out at 220x180 and drawn smaller so the tip fits above the fold
+            .scaleEffect(0.75)
+            .frame(width: 165, height: 135)
 
             Text(step.caption)
                 .font(.custom("Playfair9pt-Regular", size: 18))

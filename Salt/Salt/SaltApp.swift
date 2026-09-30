@@ -11,6 +11,10 @@ import GoogleSignIn
 struct SaltApp: App {
     @State private var showSetNewPassword = false
 
+    init() {
+        SubscriptionManager.shared.configure()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
