@@ -506,7 +506,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = N8N4Q5Z4U5;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SaltShare/Info.plist;
@@ -536,7 +536,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = N8N4Q5Z4U5;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SaltShare/Info.plist;
