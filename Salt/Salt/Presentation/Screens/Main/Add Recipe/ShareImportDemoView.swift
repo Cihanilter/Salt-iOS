@@ -17,8 +17,24 @@ struct ShareImportDemoView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Text("Import from social media")
-                .font(.custom("Playfair9pt-SemiBold", size: 20))
+            VStack(spacing: 6) {
+                // Tip pill
+                Label("Tip", systemImage: "lightbulb.fill")
+                    .font(.custom("OpenSans-SemiBold", size: 12))
+                    .foregroundColor(Color("Orange"))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color("Orange").opacity(0.12)))
+
+                Text("Importing from social media?")
+                    .font(.custom("Playfair9pt-SemiBold", size: 20))
+
+                Text("You can share recipes straight to Salt from Instagram, TikTok or YouTube.")
+                    .font(.custom("OpenSans-Regular", size: 14))
+                    .foregroundColor(Color("GraniteGray"))
+            }
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 16)
 
             TabView(selection: $currentStep) {
                 ForEach(steps) { step in
@@ -32,6 +48,12 @@ struct ShareImportDemoView: View {
             ShareDemoPageDots(count: steps.count, current: currentStep)
         }
         .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
+        // Tinted card sets the walkthrough apart from the link import above
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color("PeachCream").opacity(0.7))
+        )
         .task(id: currentStep) {
             // Auto-advance; restarting on every change means a manual swipe resets the timer
             try? await Task.sleep(for: .seconds(2.5))
@@ -337,7 +359,7 @@ struct ShareDemoPageDots: View {
         HStack(spacing: 6) {
             ForEach(0..<count, id: \.self) { index in
                 Capsule()
-                    .fill(index == current ? Color("Orange") : Color("LightGrayishPink"))
+                    .fill(index == current ? Color("Orange") : Color("Orange").opacity(0.25))
                     .frame(width: index == current ? 20 : 7, height: 7)
             }
         }
