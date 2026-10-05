@@ -1,6 +1,8 @@
 
 import SwiftUI
 import PhotosUI
+import RevenueCat
+import RevenueCatUI
 
 // MARK: - Add New Recipe View
 
@@ -117,6 +119,7 @@ struct ImportRecipeView: View {
     @Binding var recipeLink: String
     @StateObject private var viewModel = RecipeImportViewModel()
     @State private var navigateToPreview = false
+    @State private var showingPaywall = false
     @ObservedObject private var shareImportRouter = ShareImportRouter.shared
 
     // Callback to switch to My Recipes tab
@@ -199,6 +202,16 @@ struct ImportRecipeView: View {
             .padding(.bottom, 24)
         }
         .scrollDismissesKeyboard(.interactively)
+        .sheet(isPresented: $showingPaywall) {
+            // Remote paywall: shows whatever is attached to the current offering in the RevenueCat dashboard
+            PaywallView(displayCloseButton: true)
+                .onPurchaseCompleted { customerInfo in
+                    continueImportAfterUpgrade(customerInfo)
+                }
+                .onRestoreCompleted { customerInfo in
+                    continueImportAfterUpgrade(customerInfo)
+                }
+        }
         .navigationDestination(isPresented: $navigateToPreview) {
             if let recipe = viewModel.importedRecipe {
                 RecipeDetailView(
@@ -250,10 +263,28 @@ struct ImportRecipeView: View {
     }
 
     private func startImport() async {
+        // Free users who've used all their imports see the paywall instead.
+        // The link stays in the field so the import can continue after upgrading.
+        guard await SubscriptionManager.shared.canImportRecipe() else {
+            showingPaywall = true
+            return
+        }
+
         await viewModel.importRecipe(from: recipeLink)
         if viewModel.importedRecipe != nil {
             navigateToPreview = true
         }
+    }
+
+    /// Closes the paywall and resumes the blocked import once the user has Premium.
+    private func continueImportAfterUpgrade(_ customerInfo: CustomerInfo) {
+        let subscriptionManager = SubscriptionManager.shared
+        subscriptionManager.update(with: customerInfo)
+        // A restore with no active subscription leaves the paywall open
+        guard subscriptionManager.isPremium else { return }
+
+        showingPaywall = false
+        Task { await startImport() }
     }
 
     /// Runs the same import flow as pasting the link, for links shared via the Share Extension.

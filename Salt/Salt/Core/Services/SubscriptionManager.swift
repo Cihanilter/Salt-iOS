@@ -68,6 +68,7 @@ final class SubscriptionManager: ObservableObject {
     /// Whether the user can import another recipe. Premium users are unlimited;
     /// free users are limited to `RevenueCatConfig.freeImportLimit` saved imports.
     func canImportRecipe() async -> Bool {
+        guard RevenueCatConfig.isEnabled, Purchases.isConfigured else { return true }
         if isPremium { return true }
 
         do {

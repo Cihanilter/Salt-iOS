@@ -2,9 +2,14 @@
 
 import SwiftUI
 import PhotosUI
+import StoreKit
+import RevenueCatUI
 
 struct ProfileView: View {
     @StateObject private var viewModel = ProfileViewModel()
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
+    @State private var showingPaywall = false
+    @State private var showingManageSubscription = false
     @State private var showingSignOutAlert = false
     @State private var showingDeleteAccountAlert = false
     @State private var selectedPhotoItem: PhotosPickerItem?
@@ -19,6 +24,11 @@ struct ProfileView: View {
                 VStack(spacing: 16) {
                     // Stats Card
                     statsCard
+
+                    // Subscription
+                    if RevenueCatConfig.isEnabled {
+                        premiumCard
+                    }
 
                     // About Me Section
                     aboutMeSection
@@ -51,6 +61,21 @@ struct ProfileView: View {
         .sheet(isPresented: $viewModel.isEditing) {
             EditProfileView(viewModel: viewModel)
         }
+        .sheet(isPresented: $showingPaywall) {
+            // Remote paywall: shows whatever is attached to the current offering in the RevenueCat dashboard
+            PaywallView(displayCloseButton: true)
+                .onPurchaseCompleted { customerInfo in
+                    subscriptionManager.update(with: customerInfo)
+                    showingPaywall = false
+                }
+                .onRestoreCompleted { customerInfo in
+                    subscriptionManager.update(with: customerInfo)
+                    if subscriptionManager.isPremium {
+                        showingPaywall = false
+                    }
+                }
+        }
+        .manageSubscriptionsSheet(isPresented: $showingManageSubscription)
         .alert("Sign Out", isPresented: $showingSignOutAlert) {
             Button("Cancel", role: .cancel) {}
             Button("Sign Out", role: .destructive) {
@@ -253,6 +278,59 @@ struct ProfileView: View {
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
+    }
+
+    // MARK: - Premium Card
+
+    private var premiumCard: some View {
+        HStack(spacing: 12) {
+            Image(systemName: subscriptionManager.isPremium ? "crown.fill" : "sparkles")
+                .font(.system(size: 20))
+                .foregroundColor(Color("Orange"))
+                .frame(width: 40, height: 40)
+                .background(Circle().fill(Color("Orange").opacity(0.12)))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(subscriptionManager.isPremium ? "Salt Premium" : "Free Plan")
+                    .font(.custom("OpenSans-SemiBold", size: 16))
+                    .foregroundColor(.primary)
+                Text(premiumCardSubtitle)
+                    .font(.custom("OpenSans-Regular", size: 12))
+                    .foregroundColor(Color("GrayText"))
+            }
+
+            Spacer()
+
+            Button(action: {
+                if subscriptionManager.isPremium {
+                    showingManageSubscription = true
+                } else {
+                    showingPaywall = true
+                }
+            }) {
+                Text(subscriptionManager.isPremium ? "Manage" : "Upgrade")
+                    .font(.custom("OpenSans-SemiBold", size: 14))
+                    .foregroundColor(subscriptionManager.isPremium ? Color("Orange") : .white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule().fill(subscriptionManager.isPremium ? Color("Orange").opacity(0.12) : Color("Orange"))
+                    )
+            }
+        }
+        .padding(16)
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.1), radius: 1, y: 1)
+        .shadow(color: Color.black.opacity(0.18), radius: 1.5, y: 1)
+    }
+
+    private var premiumCardSubtitle: String {
+        if subscriptionManager.isPremium {
+            return "Unlimited recipe imports"
+        }
+        let used = min(viewModel.importedRecipesCount, RevenueCatConfig.freeImportLimit)
+        return "\(used) of \(RevenueCatConfig.freeImportLimit) free imports used"
     }
 
     // MARK: - About Me Section
