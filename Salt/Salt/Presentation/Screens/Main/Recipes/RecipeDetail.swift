@@ -168,6 +168,11 @@ struct RecipeDetailView: View {
         self.onGoToMyRecipes = onGoToMyRecipes
     }
 
+    /// Reviewing a created/imported recipe that hasn't been saved yet
+    private var isUnsavedPreview: Bool {
+        mode == .preview && !hasBeenSaved
+    }
+
     private var isBookmarked: Bool {
         guard let id = recipeId else { return false }
         return bookmarkManager.isBookmarked(id)
@@ -192,7 +197,10 @@ struct RecipeDetailView: View {
                         showMenuButton: userRecipeId != nil,
                         onDelete: userRecipeId != nil ? {
                             showingDeleteAlert = true
-                        } : nil
+                        } : nil,
+                        onEdit: isUnsavedPreview ? { showingEditSheet = true } : nil,
+                        // Discards the unsaved recipe and goes back to the form / link field
+                        onCancel: isUnsavedPreview ? { dismiss() } : nil
                     )
                     .id("top")  // Anchor for scrolling to top
 
@@ -244,17 +252,18 @@ struct RecipeDetailView: View {
                         if recipe.sourceUrl != nil || !recipe.notes.isEmpty {
                             NotesSection(notes: recipe.notes, sourceUrl: recipe.sourceUrl, sourceName: recipe.sourceName)
                         }
-
-                        // Preview mode buttons (hide after recipe is saved)
-                        if mode == .preview && !hasBeenSaved {
-                            previewButtons
-                                .padding(.top, 16)
-                        }
                     }
                     .padding(.horizontal)
                     .offset(y: -40)
                 }
                 .padding(.bottom, 30)
+            }
+            .safeAreaInset(edge: .bottom) {
+                // Pinned so Save is always visible while reviewing; users missed it at the end of the content
+                if isUnsavedPreview {
+                    previewButtons
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
             .onChange(of: showSavedHeader) { _, saved in
                 if saved {
@@ -267,6 +276,8 @@ struct RecipeDetailView: View {
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
+        // Hide the tab bar while reviewing a new recipe so the Save footer is the only bottom action
+        .toolbar(isUnsavedPreview ? .hidden : .automatic, for: .tabBar)
         .ignoresSafeArea(edges: .top)
         .sheet(isPresented: $showingEditSheet) {
             NavigationStack {
@@ -329,20 +340,12 @@ struct RecipeDetailView: View {
         isDeleting = false
     }
 
-    // MARK: - Preview Buttons (Edit + Save)
+    // MARK: - Preview Footer (Save)
 
+    /// Bottom bar shown while reviewing a created/imported recipe that hasn't been saved yet.
+    /// Edit and Cancel live in the top-right menu so Save is the single primary action.
     private var previewButtons: some View {
-        HStack(spacing: 20) {
-            // Edit button - opens sheet
-            Button(action: {
-                showingEditSheet = true
-            }) {
-                Text("Edit")
-                    .font(.custom("OpenSans-SemiBold", size: 16))
-                    .foregroundColor(Color("OrangeRed"))
-            }
-
-            // Save button
+        Group {
             Button(action: {
                 // Store ALL data in shared storage BEFORE async call
                 // This completely avoids passing any data through closures
@@ -368,18 +371,25 @@ struct RecipeDetailView: View {
                             .tint(.white)
                             .scaleEffect(0.8)
                     }
-                    Text("Save")
+                    Text("Save Recipe")
                         .font(.custom("OpenSans-SemiBold", size: 16))
                         .foregroundColor(.white)
                 }
-                .padding(.horizontal, 32)
+                .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background(Color("Orange"))
                 .cornerRadius(10)
             }
             .disabled(isSaving)
         }
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .background(
+            Color(.systemBackground)
+                .shadow(color: Color.black.opacity(0.08), radius: 6, y: -2)
+                .ignoresSafeArea(edges: .bottom)
+        )
     }
 }
 
@@ -474,9 +484,16 @@ struct ImageCarousel: View {
     var onBookmarkTap: (() -> Void)? = nil
     var showMenuButton: Bool = false
     var onDelete: (() -> Void)? = nil
+    // Preview mode (unsaved recipe) menu actions
+    var onEdit: (() -> Void)? = nil
+    var onCancel: (() -> Void)? = nil
 
     private var totalImageCount: Int {
         images.count + pendingImages.count
+    }
+
+    private var hasMenuActions: Bool {
+        (showMenuButton && onDelete != nil) || onEdit != nil || onCancel != nil
     }
 
     var body: some View {
@@ -555,11 +572,23 @@ struct ImageCarousel: View {
 
                     Spacer()
 
-                    // Menu button (for user recipes - Delete)
-                    if showMenuButton, let onDelete = onDelete {
+                    // Menu button (user recipes: Delete; unsaved preview: Edit / Cancel)
+                    if hasMenuActions {
                         Menu {
-                            Button(role: .destructive, action: onDelete) {
-                                Label("Delete", systemImage: "trash")
+                            if let onEdit {
+                                Button(action: onEdit) {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                            }
+                            if let onCancel {
+                                Button(role: .destructive, action: onCancel) {
+                                    Label("Cancel", systemImage: "xmark")
+                                }
+                            }
+                            if showMenuButton, let onDelete {
+                                Button(role: .destructive, action: onDelete) {
+                                    Label("Delete", systemImage: "trash")
+                                }
                             }
                         } label: {
                             ZStack {

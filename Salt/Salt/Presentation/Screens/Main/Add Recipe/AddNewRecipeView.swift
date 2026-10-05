@@ -196,7 +196,7 @@ struct ImportRecipeView: View {
 
                 // Shortcut for social media: share straight to Salt via the Share Extension
                 ShareImportDemoView()
-                    .padding(.top, 20)
+                    .padding(.top, 12)
             }
             .padding(.horizontal)
             .padding(.bottom, 24)
