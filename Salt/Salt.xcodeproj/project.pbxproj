@@ -15,10 +15,38 @@
 		119DFFB62EC91668000A0280 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 119DFFB52EC91668000A0280 /* Supabase */; };
 		3CCDC64A2ECBB25B00CDEAAA /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 3CCDC6492ECBB25B00CDEAAA /* GoogleSignIn */; };
 		3CCDC64C2ECBB25B00CDEAAA /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 3CCDC64B2ECBB25B00CDEAAA /* GoogleSignInSwift */; };
+		A37C29BF306A3B3B005D0611 /* SaltShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A37C29B5306A3B3B005D0611 /* SaltShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A3AB0628306CD835009F7D81 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = A3AB0627306CD835009F7D81 /* RevenueCat */; };
+		A3AB062A306CD835009F7D81 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = A3AB0629306CD835009F7D81 /* RevenueCatUI */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A37C29BD306A3B3B005D0611 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 119DFF522EC91496000A0280 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A37C29B4306A3B3B005D0611;
+			remoteInfo = SaltShare;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A37C29C0306A3B3B005D0611 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A37C29BF306A3B3B005D0611 /* SaltShare.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		119DFF5A2EC91496000A0280 /* Salt.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Salt.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A37C29B5306A3B3B005D0611 /* SaltShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SaltShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -29,6 +57,13 @@
 			);
 			target = 119DFF592EC91496000A0280 /* Salt */;
 		};
+		A37C29C4306A3B3B005D0611 /* Exceptions for "SaltShare" folder in "SaltShare" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A37C29B4306A3B3B005D0611 /* SaltShare */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -38,6 +73,14 @@
 				119DFFA82EC91505000A0280 /* Exceptions for "Salt" folder in "Salt" target */,
 			);
 			path = Salt;
+			sourceTree = "<group>";
+		};
+		A37C29B6306A3B3B005D0611 /* SaltShare */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A37C29C4306A3B3B005D0611 /* Exceptions for "SaltShare" folder in "SaltShare" target */,
+			);
+			path = SaltShare;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -52,9 +95,18 @@
 				119DFFB62EC91668000A0280 /* Supabase in Frameworks */,
 				3CCDC64C2ECBB25B00CDEAAA /* GoogleSignInSwift in Frameworks */,
 				119DFFAB2EC91561000A0280 /* Auth in Frameworks */,
+				A3AB0628306CD835009F7D81 /* RevenueCat in Frameworks */,
 				119DFFB32EC91561000A0280 /* Storage in Frameworks */,
 				119DFFB12EC91561000A0280 /* Realtime in Frameworks */,
+				A3AB062A306CD835009F7D81 /* RevenueCatUI in Frameworks */,
 				3CCDC64A2ECBB25B00CDEAAA /* GoogleSignIn in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A37C29B2306A3B3B005D0611 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +117,7 @@
 			isa = PBXGroup;
 			children = (
 				119DFF5C2EC91496000A0280 /* Salt */,
+				A37C29B6306A3B3B005D0611 /* SaltShare */,
 				119DFFB42EC91668000A0280 /* Frameworks */,
 				119DFF5B2EC91496000A0280 /* Products */,
 			);
@@ -74,6 +127,7 @@
 			isa = PBXGroup;
 			children = (
 				119DFF5A2EC91496000A0280 /* Salt.app */,
+				A37C29B5306A3B3B005D0611 /* SaltShare.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,10 +149,12 @@
 				119DFF562EC91496000A0280 /* Sources */,
 				119DFF572EC91496000A0280 /* Frameworks */,
 				119DFF582EC91496000A0280 /* Resources */,
+				A37C29C0306A3B3B005D0611 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A37C29BE306A3B3B005D0611 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				119DFF5C2EC91496000A0280 /* Salt */,
@@ -113,10 +169,34 @@
 				119DFFB52EC91668000A0280 /* Supabase */,
 				3CCDC6492ECBB25B00CDEAAA /* GoogleSignIn */,
 				3CCDC64B2ECBB25B00CDEAAA /* GoogleSignInSwift */,
+				A3AB0627306CD835009F7D81 /* RevenueCat */,
+				A3AB0629306CD835009F7D81 /* RevenueCatUI */,
 			);
 			productName = Salt;
 			productReference = 119DFF5A2EC91496000A0280 /* Salt.app */;
 			productType = "com.apple.product-type.application";
+		};
+		A37C29B4306A3B3B005D0611 /* SaltShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A37C29C3306A3B3B005D0611 /* Build configuration list for PBXNativeTarget "SaltShare" */;
+			buildPhases = (
+				A37C29B1306A3B3B005D0611 /* Sources */,
+				A37C29B2306A3B3B005D0611 /* Frameworks */,
+				A37C29B3306A3B3B005D0611 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A37C29B6306A3B3B005D0611 /* SaltShare */,
+			);
+			name = SaltShare;
+			packageProductDependencies = (
+			);
+			productName = SaltShare;
+			productReference = A37C29B5306A3B3B005D0611 /* SaltShare.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -125,11 +205,14 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2610;
+				LastSwiftUpdateCheck = 2700;
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
 					119DFF592EC91496000A0280 = {
 						CreatedOnToolsVersion = 26.1.1;
+					};
+					A37C29B4306A3B3B005D0611 = {
+						CreatedOnToolsVersion = 27.0;
 					};
 				};
 			};
@@ -145,6 +228,7 @@
 			packageReferences = (
 				119DFFA92EC91561000A0280 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				3CCDC6482ECBB25B00CDEAAA /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				A3AB0626306CD791009F7D81 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 119DFF5B2EC91496000A0280 /* Products */;
@@ -152,12 +236,20 @@
 			projectRoot = "";
 			targets = (
 				119DFF592EC91496000A0280 /* Salt */,
+				A37C29B4306A3B3B005D0611 /* SaltShare */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		119DFF582EC91496000A0280 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A37C29B3306A3B3B005D0611 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -174,7 +266,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A37C29B1306A3B3B005D0611 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A37C29BE306A3B3B005D0611 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A37C29B4306A3B3B005D0611 /* SaltShare */;
+			targetProxy = A37C29BD306A3B3B005D0611 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		119DFF632EC91498000A0280 /* Debug */ = {
@@ -298,10 +405,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = Salt.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
-				DEVELOPMENT_TEAM = N8N4Q5Z4U5;
+				DEVELOPMENT_TEAM = LACMYJX24C;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -326,7 +434,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.salt.recipes;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -348,10 +456,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = Salt.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
-				DEVELOPMENT_TEAM = N8N4Q5Z4U5;
+				DEVELOPMENT_TEAM = LACMYJX24C;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -376,7 +485,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.salt.recipes;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -390,6 +499,67 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
 				XROS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Release;
+		};
+		A37C29C1306A3B3B005D0611 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 9;
+				DEVELOPMENT_TEAM = LACMYJX24C;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SaltShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Salt;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.salt.recipes.SaltShare;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A37C29C2306A3B3B005D0611 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 9;
+				DEVELOPMENT_TEAM = LACMYJX24C;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SaltShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Salt;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.salt.recipes.SaltShare;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -414,6 +584,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		A37C29C3306A3B3B005D0611 /* Build configuration list for PBXNativeTarget "SaltShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A37C29C1306A3B3B005D0611 /* Debug */,
+				A37C29C2306A3B3B005D0611 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -431,6 +610,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 9.0.0;
+			};
+		};
+		A3AB0626306CD791009F7D81 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.91.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -475,6 +662,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3CCDC6482ECBB25B00CDEAAA /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignInSwift;
+		};
+		A3AB0627306CD835009F7D81 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A3AB0626306CD791009F7D81 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+		A3AB0629306CD835009F7D81 /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A3AB0626306CD791009F7D81 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

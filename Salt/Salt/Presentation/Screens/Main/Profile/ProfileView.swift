@@ -43,6 +43,11 @@ struct ProfileView: View {
         }
         .background(Color(.systemBackground))
         .ignoresSafeArea(edges: .top)
+        .task {
+            // The tab stays alive between visits, so refresh the count each time
+            // it appears to reflect recipes added or deleted elsewhere
+            await viewModel.loadRecipesCount()
+        }
         .sheet(isPresented: $viewModel.isEditing) {
             EditProfileView(viewModel: viewModel)
         }
@@ -221,23 +226,33 @@ struct ProfileView: View {
     // MARK: - Stats Card
 
     private var statsCard: some View {
-        HStack {
-            Spacer()
-            VStack(spacing: 4) {
-                Text("\(viewModel.recipesCount)")
-                    .font(.custom("OpenSans-SemiBold", size: 30))
-                    .foregroundColor(Color("Orange"))
-                Text("Recipes Created")
-                    .font(.custom("OpenSans-Regular", size: 14))
-                    .foregroundColor(Color("GrayText"))
-            }
-            Spacer()
+        HStack(spacing: 0) {
+            statItem(count: viewModel.createdRecipesCount, label: "Recipes")
+
+            Rectangle()
+                .fill(Color("GrayText").opacity(0.25))
+                .frame(width: 1, height: 44)
+
+            statItem(count: viewModel.importedRecipesCount, label: "Total Recipes Imported")
         }
         .padding(.vertical, 20)
         .background(Color(.systemBackground))
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.1), radius: 1, y: 1)
         .shadow(color: Color.black.opacity(0.18), radius: 1.5, y: 1)
+    }
+
+    private func statItem(count: Int, label: String) -> some View {
+        VStack(spacing: 4) {
+            Text("\(count)")
+                .font(.custom("OpenSans-SemiBold", size: 30))
+                .foregroundColor(Color("Orange"))
+            Text(label)
+                .font(.custom("OpenSans-Regular", size: 14))
+                .foregroundColor(Color("GrayText"))
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - About Me Section

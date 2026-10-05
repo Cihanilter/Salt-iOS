@@ -8,6 +8,7 @@ import SwiftUI
 struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var exploreScrollToTop = UUID()
+    @ObservedObject private var shareImportRouter = ShareImportRouter.shared
 
     // Custom binding to detect same-tab taps
     private var tabSelection: Binding<Int> {
@@ -83,6 +84,18 @@ struct MainTabView: View {
                 .tag(3)
         }
         .accentColor(Color("OrangeRed"))
+        .onAppear {
+            // Link shared before the tabs existed (cold launch or while logged out)
+            if shareImportRouter.pendingUrl != nil {
+                selectedTab = 1
+            }
+        }
+        .onChange(of: shareImportRouter.pendingUrl) { _, url in
+            // Link shared from the Share Extension - go to Add Recipe to import it
+            if url != nil {
+                selectedTab = 1
+            }
+        }
         .task {
             // Prefetch My Recipes data in background while user is on Explore
             await MyRecipesViewModel.shared.prefetch()
