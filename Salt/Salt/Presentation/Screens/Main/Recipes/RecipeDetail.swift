@@ -22,6 +22,7 @@ struct RecipeDetail {
     let images: [String]
     let sourceUrl: String?
     let sourceName: String?
+    var nutrition: NutritionInfo? = nil  // Per serving; only recipes from the app's database have it for now
 }
 
 // MARK: - Recipe to RecipeDetail Conversion
@@ -58,7 +59,8 @@ extension Recipe {
             notes: notesText,
             images: [displayImageUrl].filter { !$0.isEmpty },
             sourceUrl: sourceUrl,
-            sourceName: sourceName
+            sourceName: sourceName,
+            nutrition: nutrition
         )
     }
 }
@@ -253,6 +255,11 @@ struct RecipeDetailView: View {
                         // The source link now lives in the info card at the top.
                         if recipe.sourceUrl != nil || !recipe.notes.isEmpty {
                             NotesSection(notes: recipe.notes)
+                        }
+
+                        // Nutrition (per serving), at the very bottom; hidden when there's no data
+                        if let nutrition = recipe.nutrition, NutritionSection.hasValues(nutrition) {
+                            NutritionSection(nutrition: nutrition)
                         }
                     }
                     .padding(.horizontal)
@@ -922,6 +929,119 @@ struct NotesSection: View {
         .background(Color("PeachCream"))
         .cornerRadius(25)
         .shadow(color: Color.black.opacity(0.25), radius: 4, x: 0, y: 4)
+    }
+}
+
+// MARK: - Nutrition Section
+
+/// Per-serving nutrition card: calories highlighted, then the main nutrients as rows.
+struct NutritionSection: View {
+    let nutrition: NutritionInfo
+
+    private struct Row: Identifiable {
+        let name: String
+        let value: String
+        var id: String { name }
+    }
+
+    /// Whether there's anything worth showing
+    static func hasValues(_ nutrition: NutritionInfo) -> Bool {
+        [nutrition.calories, nutrition.carbohydrateContent, nutrition.fiberContent, nutrition.sugarContent,
+         nutrition.proteinContent, nutrition.fatContent, nutrition.sodiumContent]
+            .contains { formatAmount($0) != nil }
+    }
+
+    private var rows: [Row] {
+        let candidates: [(String, String?)] = [
+            ("Carbs", nutrition.carbohydrateContent),
+            ("Protein", nutrition.proteinContent),
+            ("Fat", nutrition.fatContent),
+            ("Sugar", nutrition.sugarContent),
+            ("Fiber", nutrition.fiberContent),
+            ("Sodium", nutrition.sodiumContent)
+        ]
+        return candidates.compactMap { name, raw in
+            Self.formatAmount(raw).map { Row(name: name, value: $0) }
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Nutrition")
+                    .font(.custom("Playfair9pt-SemiBold", size: 22))
+                Spacer()
+                Text("Per serving")
+                    .font(.custom("OpenSans-Regular", size: 14))
+                    .foregroundColor(Color("GraniteGray"))
+            }
+
+            VStack(spacing: 0) {
+                // Calories, highlighted
+                if let calories = Self.formatNumber(nutrition.calories) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("Calories")
+                            .font(.custom("OpenSans-SemiBold", size: 16))
+                        Spacer()
+                        Text(calories)
+                            .font(.custom("OpenSans-SemiBold", size: 28))
+                            .foregroundColor(Color("Orange"))
+                        Text("cal")
+                            .font(.custom("OpenSans-Regular", size: 14))
+                            .foregroundColor(Color("GraniteGray"))
+                    }
+                    .padding(.bottom, 12)
+                    .accessibilityElement(children: .combine)
+
+                    if !rows.isEmpty {
+                        Divider()
+                    }
+                }
+
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                    HStack {
+                        Text(row.name)
+                            .font(.custom("OpenSans-SemiBold", size: 16))
+                        Spacer()
+                        Text(row.value)
+                            .font(.custom("OpenSans-Regular", size: 16))
+                    }
+                    .padding(.vertical, 10)
+                    .accessibilityElement(children: .combine)
+
+                    if index < rows.count - 1 {
+                        Divider()
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .background(Color(red: 1.0, green: 0.941, blue: 0.855)) // #FFF0DA
+            .cornerRadius(25)
+        }
+    }
+
+    // MARK: Formatting
+
+    /// The number in a stored value like "346.6 calories" or "1492.5 mg"
+    private static func number(in raw: String?) -> Double? {
+        guard let raw,
+              let match = raw.range(of: #"\d+([.,]\d+)?"#, options: .regularExpression) else { return nil }
+        return Double(raw[match].replacingOccurrences(of: ",", with: "."))
+    }
+
+    /// Whole number with thousands separators, e.g. "1,493"
+    private static func formatNumber(_ raw: String?) -> String? {
+        number(in: raw).map { Int($0.rounded()).formatted() }
+    }
+
+    /// Value with its unit, e.g. "23 g", "4.5 g", "1,493 mg". Small gram values keep one decimal.
+    static func formatAmount(_ raw: String?) -> String? {
+        guard let raw, let value = number(in: raw) else { return nil }
+        let unit = raw.lowercased().contains("mg") ? "mg" : (raw.lowercased().contains("calorie") ? "cal" : "g")
+        let shown = (unit == "g" && value < 10) ? value.formatted(.number.precision(.fractionLength(0...1)))
+                                                : Int(value.rounded()).formatted()
+        return "\(shown) \(unit)"
     }
 }
 
