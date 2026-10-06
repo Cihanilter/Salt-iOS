@@ -221,7 +221,8 @@ struct RecipeDetailView: View {
                         RecipeInfoCard(
                             title: recipe.title,
                             duration: recipe.duration,
-                            ingredientsCount: recipe.ingredientsCount
+                            ingredientsCount: recipe.ingredientsCount,
+                            sourceUrl: recipe.sourceUrl
                         )
                         .padding(.horizontal)
                         .offset(y: -60)
@@ -248,9 +249,10 @@ struct RecipeDetailView: View {
                         // Instructions
                         InstructionsSection(instructions: recipe.instructions)
 
-                        // Notes & Tips section (shown for imported recipes OR when notes exist)
+                        // Notes & Tips section (shown for imported recipes OR when notes exist).
+                        // The source link now lives in the info card at the top.
                         if recipe.sourceUrl != nil || !recipe.notes.isEmpty {
-                            NotesSection(notes: recipe.notes, sourceUrl: recipe.sourceUrl, sourceName: recipe.sourceName)
+                            NotesSection(notes: recipe.notes)
                         }
                     }
                     .padding(.horizontal)
@@ -668,6 +670,13 @@ struct RecipeInfoCard: View {
     let title: String
     let duration: String
     let ingredientsCount: String
+    var sourceUrl: String? = nil
+
+    /// Link to the page the recipe was imported from, if any
+    private var sourceLink: URL? {
+        guard let sourceUrl, !sourceUrl.isEmpty else { return nil }
+        return URL(string: sourceUrl)
+    }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -699,6 +708,19 @@ struct RecipeInfoCard: View {
                     
                     Text(ingredientsCount)
                         .font(.custom("Playfair9pt-Regular", size: 16))
+                }
+            }
+
+            // Original source for imported recipes; the arrow icon signals it opens a link
+            if let sourceLink {
+                Link(destination: sourceLink) {
+                    HStack(spacing: 4) {
+                        Text("Original Recipe")
+                            .font(.custom("OpenSans-SemiBold", size: 14))
+                        Image(systemName: "arrow.up.right.square")
+                            .font(.system(size: 12))
+                    }
+                    .foregroundColor(Color("OrangeRed"))
                 }
             }
         }
@@ -877,15 +899,9 @@ struct InstructionsSection: View {
 
 struct NotesSection: View {
     let notes: String
-    var sourceUrl: String? = nil
-    var sourceName: String? = nil
 
     private var hasNotes: Bool {
         !notes.isEmpty
-    }
-
-    private var hasSource: Bool {
-        sourceUrl != nil && !sourceUrl!.isEmpty
     }
 
     var body: some View {
@@ -898,28 +914,6 @@ struct NotesSection: View {
                 Text(notes)
                     .font(.custom("OpenSans-Regular", size: 14))
                     .frame(maxWidth: .infinity, alignment: .center)
-            }
-
-            if hasSource, let url = sourceUrl, let linkUrl = URL(string: url) {
-                VStack(spacing: 4) {
-                    Text("Original Recipe")
-                        .font(.custom("OpenSans-SemiBold", size: 14))
-                        .foregroundColor(Color("GraniteGray"))
-
-                    Link(destination: linkUrl) {
-                        HStack(spacing: 4) {
-                            Text(sourceName ?? "View Source")
-                                .font(.custom("OpenSans-Regular", size: 14))
-                                .foregroundColor(Color("OrangeRed"))
-                                .lineLimit(1)
-
-                            Image(systemName: "arrow.up.right.square")
-                                .font(.system(size: 12))
-                                .foregroundColor(Color("OrangeRed"))
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
             }
         }
         .padding(.horizontal, 20)

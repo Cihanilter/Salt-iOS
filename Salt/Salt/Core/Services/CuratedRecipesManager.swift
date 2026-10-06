@@ -185,14 +185,13 @@ class CuratedRecipesManager {
         recipesByCategory[category] ?? []
     }
 
-    /// Get curated recipes for a section (cuisine or category)
+    /// Get curated recipes for a section (cuisine or category).
+    /// Returns a random selection so Explore shows different curated recipes on each load.
     func recipes(forSection name: String, isCuisine: Bool, limit: Int = 6) -> [Recipe] {
         let recipes = isCuisine ? recipesByCuisine[name] : recipesByCategory[name]
         guard let recipes = recipes else { return [] }
 
-        // Sort by total rating (highest first)
-        let sorted = recipes.sorted { ($0.totalRating ?? 0) > ($1.totalRating ?? 0) }
-        return Array(sorted.prefix(limit))
+        return Array(recipes.shuffled().prefix(limit))
     }
 
     /// Get available cuisines that have recipes

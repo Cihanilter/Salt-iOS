@@ -69,13 +69,24 @@ struct ExploreRecipesView: View {
                     .padding(.bottom, 16)
 
                     // Search Bar (fixed)
-                    SearchBarView(
-                        text: $searchText,
-                        isSearchFocused: $isSearchFocused,
-                        searchState: $searchState,
-                        onSearch: performSearch,
-                        onCancel: cancelSearch
-                    )
+                    HStack(spacing: 12) {
+                        SearchBarView(
+                            text: $searchText,
+                            isSearchFocused: $isSearchFocused,
+                            searchState: $searchState,
+                            onSearch: performSearch,
+                            onCancel: cancelSearch
+                        )
+
+                        // Exit search, even with nothing typed (the clear button only shows with text)
+                        if searchState == .focused {
+                            Button("Cancel", action: cancelSearch)
+                                .font(.custom("OpenSans-Regular", size: 16))
+                                .foregroundColor(Color("OrangeRed"))
+                                .transition(.move(edge: .trailing).combined(with: .opacity))
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.2), value: searchState == .focused)
                     .padding(.horizontal, 18)
                     .padding(.bottom, 30)
                 }
@@ -137,6 +148,11 @@ struct ExploreRecipesView: View {
                     Task {
                         await viewModel.fetchAutocompleteSuggestions(searchText)
                     }
+                }
+            } else if !focused && searchText.isEmpty && searchState == .focused {
+                // Keyboard closed with nothing typed: leave search, since the clear button is hidden
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    searchState = .idle
                 }
             }
         }
@@ -573,16 +589,21 @@ struct SearchBarView: View {
                     .onSubmit(onSearch)
             }
             
-            Button(action: {
-                onCancel() 
-            }) {
-                Image("closeIcon")
-                    .resizable()
-                    .renderingMode(.template)
-                    .frame(width: 24, height: 24)
-                    .foregroundColor(Color("GraniteGray"))
+            // Clear button only appears once the user has typed something
+            if !text.isEmpty {
+                Button(action: {
+                    onCancel()
+                }) {
+                    Image("closeIcon")
+                        .resizable()
+                        .renderingMode(.template)
+                        .frame(width: 24, height: 24)
+                        .foregroundColor(Color("GraniteGray"))
+                }
+                .transition(.opacity)
             }
         }
+        .animation(.easeInOut(duration: 0.15), value: text.isEmpty)
         .padding(.horizontal, 19)
         .frame(height: 44)
         .background(Color(.systemBackground))

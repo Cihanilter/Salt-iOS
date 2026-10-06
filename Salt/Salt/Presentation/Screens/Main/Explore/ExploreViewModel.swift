@@ -97,9 +97,13 @@ class ExploreViewModel: ObservableObject {
         "Ukrainian"         // 35
     ]
 
-    // Combined list of all sections (priority + remaining cuisines)
-    private var allSections: [SectionItem] {
-        var sections = prioritySections
+    // Combined list of all sections (priority + remaining cuisines), fixed for the current load
+    private var allSections: [SectionItem] = []
+
+    /// Priority sections in a random order (so Explore feels fresh each visit),
+    /// followed by the remaining cuisines in popularity order.
+    private func makeSectionOrder() -> [SectionItem] {
+        var sections = prioritySections.shuffled()
         for cuisine in remainingCuisines {
             sections.append(SectionItem(name: cuisine, displayName: cuisine, isCuisine: true))
         }
@@ -124,6 +128,8 @@ class ExploreViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
 
+        // New random order on each load (app launch / pull to refresh), kept stable while browsing
+        allSections = makeSectionOrder()
         let sectionsToLoad = allSections
         var sections: [CuisineSection] = []
 
