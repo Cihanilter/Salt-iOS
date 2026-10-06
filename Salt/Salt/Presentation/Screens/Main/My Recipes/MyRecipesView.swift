@@ -7,9 +7,33 @@
 
 import SwiftUI
 
+// MARK: - Tabs
+
+enum MyRecipesTab: String, CaseIterable, Identifiable {
+    case all = "All"
+    case imports = "Imports"   // The user's own recipes: imported and created by hand
+    case saved = "Saved"       // Recipes bookmarked from the app's recipe database
+
+    var id: String { rawValue }
+}
+
+/// A card in the My Recipes grid: either one of the user's own recipes or a bookmarked one.
+enum MyRecipeItem: Identifiable {
+    case own(UserRecipe)
+    case saved(Recipe)
+
+    var id: String {
+        switch self {
+        case .own(let recipe): "own-\(recipe.id)"
+        case .saved(let recipe): "saved-\(recipe.id)"
+        }
+    }
+}
+
 struct MyRecipesView: View {
     @ObservedObject private var viewModel = MyRecipesViewModel.shared
     @FocusState private var isSearchFocused: Bool
+    @State private var selectedTab: MyRecipesTab = .imports
 
     // Callback to switch to Add Recipe tab
     var switchToAddRecipe: (() -> Void)?
@@ -23,39 +47,47 @@ struct MyRecipesView: View {
                         .font(.custom("Playfair9pt-Medium", size: 28))
                         .padding(.horizontal, 18)
                         .padding(.top, 16)
-                    
+                        .padding(.bottom, 6)
+
+                    // All / Imports / Saved
+                    MyRecipesTabPicker(selection: $selectedTab)
+                        .padding(.horizontal, 18)
+                        .padding(.bottom, 8) // 16pt stack spacing + 8 = 24pt to the search bar
+
                     // Search Bar
-                    HStack(spacing: 10) {
+                    HStack(spacing: 12) {
+                        HStack(spacing: 10) {
                             Image("search_icon")
                                 .resizable()
                                 .renderingMode(.template)
                                 .frame(width: 17.58, height: 17.58)
                                 .foregroundColor(Color("GraniteGray"))
-                            
+
                             ZStack(alignment: .leading) {
                                 if viewModel.searchText.isEmpty {
                                     Text("Search in My Recipes...")
                                         .font(.custom("OpenSans-Regular", size: 14))
                                         .foregroundColor(Color("DarkSilver"))
                                 }
-                                
+
                                 TextField("", text: $viewModel.searchText)
                                     .font(.custom("OpenSans-Regular", size: 14))
                                     .focused($isSearchFocused)
                             }
-                            
-                        Button(action: {
-                            viewModel.searchText = ""
-                            isSearchFocused = false
-                        }) {
+
+                            // Clear button only appears once the user has typed something
+                            if !viewModel.searchText.isEmpty {
+                                Button(action: clearSearch) {
                                     Image("closeIcon")
                                         .resizable()
                                         .renderingMode(.template)
                                         .frame(width: 24, height: 24)
                                         .foregroundColor(Color("GraniteGray"))
                                 }
-                    }
-                        
+                                .transition(.opacity)
+                            }
+                        }
+                        .animation(.easeInOut(duration: 0.15), value: viewModel.searchText.isEmpty)
                         .padding(.horizontal, 19)
                         .frame(height: 44)
                         .background(Color(.systemBackground))
@@ -64,33 +96,16 @@ struct MyRecipesView: View {
                             RoundedRectangle(cornerRadius: 10)
                                 .stroke(Color("DarkSilver"), lineWidth: 1)
                         )
-                   
-                    .padding(.horizontal, 18)
-                    
-                    // Add New Recipe Button
-                    Button(action: { switchToAddRecipe?() }) {
-                        HStack(spacing: 8) {
-                            Text("Add New Recipe")
-                                .font(.custom("Playfair9pt-SemiBold", size: 16))
-                                .foregroundColor(.primary)
-                                .lineLimit(1)
-                            
-                            Image("addNewRecipeIcon")
-                                .resizable()
-                                .frame(width: 32, height: 32)
-                                
+
+                        // Leave search, even with nothing typed (the clear button only shows with text)
+                        if isSearchFocused {
+                            Button("Cancel", action: clearSearch)
+                                .font(.custom("OpenSans-Regular", size: 16))
+                                .foregroundColor(Color("OrangeRed"))
+                                .transition(.move(edge: .trailing).combined(with: .opacity))
                         }
-                        .padding(.leading, 19)
-                        .padding(.trailing, 12)
-                        .frame(height: 46)
-                        .background(Color(.systemBackground))
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule()
-                                .stroke(Color("DarkSilver"), lineWidth: 1)
-                        )
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .animation(.easeInOut(duration: 0.2), value: isSearchFocused)
                     .padding(.horizontal, 18)
                 }
                 
@@ -100,7 +115,7 @@ struct MyRecipesView: View {
                     ProgressView()
                         .scaleEffect(1.2)
                     Spacer()
-                } else if !viewModel.hasContent {
+                } else if items(for: selectedTab).isEmpty {
                     emptyStateView
                 } else {
                     recipesContent
@@ -116,259 +131,263 @@ struct MyRecipesView: View {
         }
     }
     
+    // MARK: - Search
+
+    private func clearSearch() {
+        viewModel.searchText = ""
+        isSearchFocused = false
+    }
+
+    // MARK: - Tab Items
+
+    /// Recipes shown for a tab, filtered by the search text.
+    private func items(for tab: MyRecipesTab) -> [MyRecipeItem] {
+        let own = viewModel.filteredUserRecipes.map(MyRecipeItem.own)
+        let saved = viewModel.filteredBookmarkedRecipes.map(MyRecipeItem.saved)
+
+        switch tab {
+        case .all: return own + saved
+        case .imports: return own
+        case .saved: return saved
+        }
+    }
+
     // MARK: - Empty State
-    
+
     private var emptyStateView: some View {
         VStack(spacing: 20) {
             Spacer()
-            
-            Image(systemName: "book.closed")
+
+            Image(systemName: selectedTab == .saved ? "bookmark" : "book.closed")
                 .font(.system(size: 60))
                 .foregroundColor(Color("DarkSilver"))
-            
-            Text("No recipes yet")
+
+            Text(emptyStateTitle)
                 .font(.custom("Playfair9pt-SemiBold", size: 22))
-            
-            Text("Create your own recipes or save\nrecipes from Explore to see them here")
+                .multilineTextAlignment(.center)
+
+            Text(emptyStateMessage)
                 .font(.custom("OpenSans-Regular", size: 14))
                 .foregroundColor(Color("GraniteGray"))
                 .multilineTextAlignment(.center)
-            
-            Button(action: { switchToAddRecipe?() }) {
-                Text("Create Your First Recipe")
-                    .font(.custom("OpenSans-SemiBold", size: 16))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 14)
-                    .background(Color("Orange"))
-                    .cornerRadius(10)
+
+            // Offer to add a recipe, except when searching or on Saved (saving happens from Explore)
+            if viewModel.searchText.isEmpty && selectedTab != .saved {
+                Button(action: { switchToAddRecipe?() }) {
+                    Text("Add Your First Recipe")
+                        .font(.custom("OpenSans-SemiBold", size: 16))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 14)
+                        .background(Color("Orange"))
+                        .cornerRadius(10)
+                }
+                .padding(.top, 10)
             }
-            .padding(.top, 10)
-            
+
             Spacer()
         }
         .padding()
     }
-    
+
+    private var emptyStateTitle: String {
+        if !viewModel.searchText.isEmpty { return "No matching recipes" }
+        return selectedTab == .saved ? "No saved recipes yet" : "No recipes yet"
+    }
+
+    private var emptyStateMessage: String {
+        if !viewModel.searchText.isEmpty {
+            return "Nothing in \(selectedTab.rawValue) matches \"\(viewModel.searchText)\""
+        }
+        switch selectedTab {
+        case .all: return "Import or create recipes, or save\nrecipes from Explore to see them here"
+        case .imports: return "Import a recipe from a link or social media,\nor create your own"
+        case .saved: return "Tap the bookmark on any recipe\nin Explore to save it here"
+        }
+    }
 
     // MARK: - Recipes Content
 
     private var recipesContent: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 20) {
-                // User Created Recipes Grid with gradient overlay
-                if !viewModel.filteredUserRecipes.isEmpty {
-                    ZStack(alignment: .bottom) {
-                        LazyVGrid(columns: [
-                            GridItem(.flexible(), spacing: 30, alignment: .top),
-                            GridItem(.flexible(), alignment: .top)
-                        ], spacing: 30) {
-                            ForEach(viewModel.displayedUserRecipes) { recipe in
-                                RecipeGridCard(recipe: recipe)
-                            }
-                        }
-                        
-                        // Gradient overlay (only when collapsed and has more recipes)
-                        if viewModel.hasMoreUserRecipes && !viewModel.showAllRecipes {
-                            LinearGradient(
-                                stops: [
-                                    .init(color: Color.white.opacity(0.1), location: 0),
-                                    .init(color: Color.white, location: 1)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                            .frame(height: 161)
-                            .frame(maxWidth: .infinity)
-                            .allowsHitTesting(false)
-                        }
-                    }
-                    .padding(.horizontal, 18)
-                    
-                    // View more button
-                    if viewModel.hasMoreUserRecipes && !viewModel.showAllRecipes {
-                        Button(action: {
-                            withAnimation {
-                                viewModel.showAllRecipes = true
-                            }
-                        }) {
-                            Text("View more")
-                                .font(.custom("OpenSans-Regular", size: 14))
-                                .foregroundColor(.primary)
-                                .underline()
-                        }
-                    }
-                }
-                
-                // Saved Recipes Section
-                if !viewModel.filteredBookmarkedRecipes.isEmpty {
-                    VStack(alignment: .leading, spacing: 30) {
-                        Text("Saved Recipes")
-                            .font(.custom("Playfair9pt-SemiBold", size: 24))
-                            .padding(.horizontal, 18)
-                        
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(alignment: .top, spacing: 20) {
-                                ForEach(viewModel.filteredBookmarkedRecipes) { recipe in
-                                    SavedRecipeCard(recipe: recipe)
-                                }
-                            }
-                            .padding(.horizontal, 18)
-                        }
-                    }
+            LazyVGrid(columns: [
+                GridItem(.fixed(MyRecipeCard.width), spacing: 30, alignment: .top),
+                GridItem(.fixed(MyRecipeCard.width), alignment: .top)
+            ], spacing: 30) {
+                ForEach(items(for: selectedTab)) { item in
+                    MyRecipeCard(item: item)
                 }
             }
+            .padding(.horizontal, 18)
             .padding(.vertical, 20)
         }
     }
 }
 
-// MARK: - Recipe Grid Card
+// MARK: - Tab Picker
 
-struct RecipeGridCard: View {
-    let recipe: UserRecipe
+/// Segmented All / Imports / Saved control, styled like the Create / Import switcher.
+struct MyRecipesTabPicker: View {
+    @Binding var selection: MyRecipesTab
+    @Namespace private var selectionNamespace
 
     var body: some View {
-        NavigationLink(destination: RecipeDetailView(recipe: recipe.toRecipeDetail(), userRecipeId: recipe.id)) {
+        HStack(spacing: 0) {
+            ForEach(MyRecipesTab.allCases) { tab in
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selection = tab
+                    }
+                }) {
+                    Text(tab.rawValue)
+                        .font(.custom("Playfair9pt-Regular", size: 22))
+                        .lineLimit(1)
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 36)
+                        .background {
+                            if selection == tab {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.white)
+                                    .matchedGeometryEffect(id: "selectedTab", in: selectionNamespace)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selection == tab ? .isSelected : [])
+            }
+        }
+        .padding(4)
+        .frame(width: 348, height: 44)
+        .background(Color(red: 1.0, green: 0.941, blue: 0.855)) // #FFF0DA
+        .cornerRadius(16)
+        .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - My Recipe Card
+
+/// Grid card used on every tab. Photos are cropped into the same fixed-height frame so square
+/// imported photos and portrait photos from the app's database line up evenly.
+struct MyRecipeCard: View {
+    let item: MyRecipeItem
+    @ObservedObject private var bookmarkManager = BookmarkManager.shared
+
+    /// Card width; two columns of 168 with 30pt spacing fill the screen inside 18pt margins
+    static let width: CGFloat = 168
+
+    var body: some View {
+        NavigationLink(destination: destination) {
             VStack(alignment: .leading, spacing: 8) {
-                // Image
-                if let imageUrl = recipe.displayImageUrl.nilIfEmpty,
-                   let url = URL(string: imageUrl) {
-                    CachedAsyncImage(url: url) { phase in
-                        switch phase {
-                        case .empty:
-                            imagePlaceholder
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        case .failure:
-                            imagePlaceholder
-                        @unknown default:
-                            imagePlaceholder
+                photo
+                    .overlay(alignment: .topTrailing) {
+                        if case .saved(let recipe) = item {
+                            bookmarkButton(for: recipe)
                         }
                     }
-                    .frame(minWidth: 0, maxWidth: .infinity, minHeight: 140, maxHeight: 140)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                } else {
-                    imagePlaceholder
-                        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 140, maxHeight: 140)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
 
-                // Title and Duration
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(recipe.title)
+                    Text(title)
                         .font(.custom("OpenSans-Regular", size: 14))
                         .foregroundColor(.primary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
 
-                    Text(recipe.durationText)
+                    Text(duration)
                         .font(.custom("OpenSans-Regular", size: 14))
                         .foregroundColor(Color("GraniteGray"))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-           
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: Content
+
+    @ViewBuilder
+    private var destination: some View {
+        switch item {
+        case .own(let recipe):
+            RecipeDetailView(recipe: recipe.toRecipeDetail(), userRecipeId: recipe.id)
+        case .saved(let recipe):
+            RecipeDetailView(recipe: recipe.toRecipeDetail(), recipeId: recipe.id)
         }
     }
 
-    private var imagePlaceholder: some View {
-        Rectangle()
-            .fill(Color("LightGrayishPink"))
-            .overlay(
-                Image(systemName: "photo")
-                    .font(.system(size: 24))
-                    .foregroundColor(Color("GraniteGray"))
-            )
-    }
-}
-
-// MARK: - Saved Recipe Card
-
-struct SavedRecipeCard: View {
-    let recipe: Recipe
-    @ObservedObject private var bookmarkManager = BookmarkManager.shared
-
-    private var isBookmarked: Bool {
-        bookmarkManager.isBookmarked(recipe.id)
+    private var title: String {
+        switch item {
+        case .own(let recipe): recipe.title
+        case .saved(let recipe): recipe.title
+        }
     }
 
-    var body: some View {
-        NavigationLink(destination: RecipeDetailView(recipe: recipe.toRecipeDetail(), recipeId: recipe.id)) {
-            VStack(alignment: .leading, spacing: 7) {
-                ZStack(alignment: .topTrailing) {
-                    CachedAsyncImage(url: URL(string: recipe.displayImageUrl)) { phase in
+    private var duration: String {
+        switch item {
+        case .own(let recipe): recipe.durationText
+        case .saved(let recipe): recipe.durationText
+        }
+    }
+
+    private var imageUrl: URL? {
+        let urlString: String
+        switch item {
+        case .own(let recipe): urlString = recipe.displayImageUrl
+        case .saved(let recipe): urlString = recipe.displayImageUrl
+        }
+        return urlString.isEmpty ? nil : URL(string: urlString)
+    }
+
+    // MARK: Photo
+
+    /// Fixed 168 × 140 frame; the image fills it and is cropped from the center.
+    private var photo: some View {
+        Color("LightGrayishPink")
+            .frame(width: Self.width, height: 140)
+            .overlay {
+                if let imageUrl {
+                    CachedAsyncImage(url: imageUrl) { phase in
                         switch phase {
-                        case .empty:
-                            RoundedRectangle(cornerRadius: 25)
-                                .fill(Color(.systemGray5))
-                                .overlay(ProgressView())
                         case .success(let image):
                             image
                                 .resizable()
                                 .scaledToFill()
-                        case .failure:
-                            RoundedRectangle(cornerRadius: 25)
-                                .fill(Color(.systemGray5))
-                                .overlay(
-                                    Image(systemName: "photo")
-                                        .foregroundColor(.gray)
-                                )
-                        @unknown default:
-                            EmptyView()
+                        case .empty:
+                            ProgressView()
+                        default:
+                            photoPlaceholderIcon
                         }
                     }
-                    .frame(width: 134, height: 200)
-                    .clipShape(RoundedRectangle(cornerRadius: 25))
-                    .overlay(alignment: .top) {
-                        LinearGradient(
-                            stops: [
-                                .init(color: Color("Nero"), location: -4),
-                                .init(color: Color("DimGray").opacity(0), location: 1)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                        .frame(width: 134, height: 42)
-                        .clipShape(
-                            UnevenRoundedRectangle(
-                                topLeadingRadius: 25,
-                                topTrailingRadius: 25
-                            )
-                        )
-                    }
-
-                    Button(action: {
-                        Task {
-                            await bookmarkManager.toggleBookmark(for: recipe.id)
-                        }
-                    }) {
-                        Image(isBookmarked ? "selectedBookmarkIcon" : "bookmarkIcon")
-                            .resizable()
-                            .frame(width: 24, height: 24)
-                            .padding(10)
-                    }
+                } else {
+                    photoPlaceholderIcon
                 }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(recipe.title)
-                        .font(.custom("OpenSans-Regular", size: 14))
-                        .lineLimit(2)
-                        .foregroundColor(.primary)
-
-                    Text(recipe.durationText)
-                        .font(.custom("OpenSans-Regular", size: 14))
-                        .foregroundColor(Color("DarkSilver"))
-                }
-                .frame(width: 134, height: 65, alignment: .topLeading)
             }
+            .clipShape(RoundedRectangle(cornerRadius: 25))
+    }
+
+    private var photoPlaceholderIcon: some View {
+        Image(systemName: "photo")
+            .font(.system(size: 24))
+            .foregroundColor(Color("GraniteGray"))
+    }
+
+    private func bookmarkButton(for recipe: Recipe) -> some View {
+        let isBookmarked = bookmarkManager.isBookmarked(recipe.id)
+        return Button(action: {
+            Task {
+                await bookmarkManager.toggleBookmark(for: recipe.id)
+            }
+        }) {
+            Image(isBookmarked ? "selectedBookmarkIcon" : "bookmarkIcon")
+                .resizable()
+                .frame(width: 24, height: 24)
+                .padding(8)
+                .background(Circle().fill(Color.black.opacity(0.25)))
+                .padding(8)
         }
-        .buttonStyle(PlainButtonStyle())
+        .accessibilityLabel(isBookmarked ? "Remove from saved" : "Save recipe")
     }
 }
-
 
 //// MARK: - User Recipe Card (Horizontal)
 //
