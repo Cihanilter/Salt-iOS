@@ -201,6 +201,9 @@ class RecipeService {
             .execute()
             .value
 
+        // Estimate nutrition in the background; the save itself doesn't wait for it
+        requestNutritionEstimate(for: recipe.id)
+
         return created.first ?? recipe
     }
 
@@ -233,6 +236,40 @@ class RecipeService {
             .eq("id", value: recipe.id.uuidString)
             .eq("user_id", value: userId.uuidString)
             .execute()
+
+        // Ingredients or servings may have changed, so replace the old estimate
+        requestNutritionEstimate(for: recipe.id, force: true)
+    }
+
+    // MARK: - Nutrition
+
+    private struct NutritionEstimateRequest: Encodable {
+        let recipe_id: String
+        let force: Bool
+    }
+
+    private struct NutritionEstimateResponse: Decodable {
+        let status: String?
+        let nutrition: NutritionInfo?
+    }
+
+    /// Asks the `estimate-nutrition` Edge Function to estimate per-serving nutrition with AI
+    /// and store it on the recipe. Runs in the background; failures only mean the recipe
+    /// shows no Nutrition section until it's estimated on a later edit.
+    func requestNutritionEstimate(for recipeId: UUID, force: Bool = false) {
+        Task {
+            do {
+                let response: NutritionEstimateResponse = try await supabase.functions.invoke(
+                    "estimate-nutrition",
+                    options: FunctionInvokeOptions(body: NutritionEstimateRequest(recipe_id: recipeId.uuidString, force: force))
+                )
+                guard let nutrition = response.nutrition else { return }
+                // Show it right away in My Recipes without a full reload
+                await MyRecipesViewModel.shared.applyEstimatedNutrition(nutrition, toRecipeId: recipeId)
+            } catch {
+                print("⚠️ Nutrition estimate failed for \(recipeId): \(error)")
+            }
+        }
     }
 
     /// Delete a user recipe

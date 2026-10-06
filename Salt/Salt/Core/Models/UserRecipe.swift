@@ -47,6 +47,10 @@ struct UserRecipe: Identifiable, Codable {
     // Photos (array of URLs)
     var photos: [String]?
 
+    // Per-serving nutrition, estimated by AI after saving (see the estimate-nutrition Edge Function)
+    var nutrition: NutritionInfo? = nil
+    var nutritionEstimated: Bool? = nil
+
     // MARK: - Computed Properties
 
     var durationText: String {
@@ -111,6 +115,8 @@ struct UserRecipe: Identifiable, Codable {
         case sourceUrl = "source_url"
         case sourceName = "source_name"
         case photos
+        case nutrition
+        case nutritionEstimated = "nutrition_estimated"
     }
 
     // MARK: - Empty Recipe for Creation
@@ -184,7 +190,9 @@ extension UserRecipe {
             notes: notesText,
             images: images,
             sourceUrl: sourceUrl,
-            sourceName: sourceName
+            sourceName: sourceName,
+            nutrition: nutrition,
+            nutritionEstimated: nutritionEstimated ?? false
         )
     }
 }
