@@ -102,8 +102,11 @@ class ExploreViewModel: ObservableObject {
 
     /// Priority sections in a random order (so Explore feels fresh each visit),
     /// followed by the remaining cuisines in popularity order.
+    /// Desserts always stays last among the priority sections; it looks odd at the top of Explore.
     private func makeSectionOrder() -> [SectionItem] {
-        var sections = prioritySections.shuffled()
+        let isDesserts: (SectionItem) -> Bool = { $0.name == "Desserts" }
+        var sections = prioritySections.filter { !isDesserts($0) }.shuffled()
+        sections.append(contentsOf: prioritySections.filter(isDesserts))
         for cuisine in remainingCuisines {
             sections.append(SectionItem(name: cuisine, displayName: cuisine, isCuisine: true))
         }
