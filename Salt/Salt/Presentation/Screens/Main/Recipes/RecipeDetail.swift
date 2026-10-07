@@ -66,6 +66,44 @@ extension Recipe {
     }
 }
 
+// MARK: - Sharing
+
+extension RecipeDetail {
+    /// The recipe as plain text for the share sheet (Messages, WhatsApp, Notes, Mail, ...):
+    /// title, servings and time, ingredients as shown in the app (amount first, in sections),
+    /// numbered steps, and the original recipe's link.
+    var shareText: String {
+        var parts: [String] = [title]
+
+        let servingsCount = IngredientScaler.baseServings(from: servings)
+        let summary = [servingsCount.map { "Serves \($0)" }, duration.isEmpty ? nil : duration]
+            .compactMap { $0 }
+            .joined(separator: " · ")
+        if !summary.isEmpty { parts.append(summary) }
+
+        if !ingredients.isEmpty {
+            var lines = ["Ingredients"]
+            for section in IngredientScaler.sections(from: ingredients) {
+                if let heading = section.heading { lines.append("\n\(heading)") }
+                lines += section.lines.map { "• " + IngredientScaler.display($0) }
+            }
+            parts.append(lines.joined(separator: "\n"))
+        }
+
+        let steps = instructions.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        if !steps.isEmpty {
+            let numbered = steps.enumerated().map { "\($0.offset + 1). \($0.element)" }
+            parts.append((["Instructions"] + numbered).joined(separator: "\n"))
+        }
+
+        if let sourceUrl, !sourceUrl.isEmpty {
+            parts.append("Original recipe: \(sourceUrl)")
+        }
+        parts.append("Shared from Salt")
+        return parts.joined(separator: "\n\n")
+    }
+}
+
 // MARK: - Recipe Detail View Mode
 
 enum RecipeDetailMode {
@@ -222,7 +260,10 @@ struct RecipeDetailView: View {
                         } : nil,
                         onEdit: isUnsavedPreview ? { showingEditSheet = true } : nil,
                         // Discards the unsaved recipe and goes back to the form / link field
-                        onCancel: isUnsavedPreview ? { dismiss() } : nil
+                        onCancel: isUnsavedPreview ? { dismiss() } : nil,
+                        // The unsaved preview keeps its menu to Edit / Cancel
+                        shareTitle: recipe.title,
+                        shareText: isUnsavedPreview ? nil : recipe.shareText
                     )
                     .id("top")  // Anchor for scrolling to top
 
@@ -543,13 +584,16 @@ struct ImageCarousel: View {
     // Preview mode (unsaved recipe) menu actions
     var onEdit: (() -> Void)? = nil
     var onCancel: (() -> Void)? = nil
+    // Recipe as text for the share sheet; nil hides Share
+    var shareTitle: String = ""
+    var shareText: String? = nil
 
     private var totalImageCount: Int {
         images.count + pendingImages.count
     }
 
     private var hasMenuActions: Bool {
-        (showMenuButton && onDelete != nil) || onEdit != nil || onCancel != nil
+        shareText != nil || (showMenuButton && onDelete != nil) || onEdit != nil || onCancel != nil
     }
 
     var body: some View {
@@ -628,9 +672,18 @@ struct ImageCarousel: View {
 
                     Spacer()
 
-                    // Menu button (user recipes: Delete; unsaved preview: Edit / Cancel)
+                    // Menu button (all saved recipes: Share; user recipes: Delete; unsaved preview: Edit / Cancel)
                     if hasMenuActions {
                         Menu {
+                            if let shareText {
+                                ShareLink(
+                                    item: shareText,
+                                    subject: Text(shareTitle),
+                                    preview: SharePreview(shareTitle)
+                                ) {
+                                    Label("Share", systemImage: "square.and.arrow.up")
+                                }
+                            }
                             if let onEdit {
                                 Button(action: onEdit) {
                                     Label("Edit", systemImage: "pencil")
