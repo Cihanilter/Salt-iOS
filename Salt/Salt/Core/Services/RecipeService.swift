@@ -201,6 +201,9 @@ class RecipeService {
             .execute()
             .value
 
+        // Estimate nutrition in the background; the save itself doesn't wait for it
+        requestNutritionEstimate(for: recipe)
+
         return created.first ?? recipe
     }
 
@@ -233,6 +236,85 @@ class RecipeService {
             .eq("id", value: recipe.id.uuidString)
             .eq("user_id", value: userId.uuidString)
             .execute()
+
+        // Ingredients or servings may have changed, so replace the old estimate
+        requestNutritionEstimate(for: recipe)
+    }
+
+    // MARK: - Nutrition
+
+    private let nutritionApiUrl = "https://salt-backend-production.up.railway.app/api/estimate-nutrition"
+
+    private struct NutritionEstimateRequest: Encodable {
+        let title: String
+        let servings: String?
+        let ingredients: [String]
+    }
+
+    private struct NutritionEstimateResponse: Decodable {
+        let success: Bool
+        let nutrition: NutritionInfo?
+    }
+
+    private struct NutritionUpdate: Encodable {
+        let nutrition: NutritionInfo
+        let nutrition_estimated: Bool
+    }
+
+    /// Estimates per-serving nutrition for a user recipe.
+    func requestNutritionEstimate(for recipe: UserRecipe) {
+        requestNutritionEstimate(
+            recipeId: recipe.id,
+            title: recipe.title,
+            servings: recipe.servingsText ?? recipe.servings.map { "\($0)" },
+            ingredients: recipe.ingredients
+        )
+    }
+
+    /// Asks Salt-backend (`/api/estimate-nutrition`) to estimate per-serving nutrition with AI,
+    /// then saves it on the recipe. Runs in the background; failures only mean the recipe
+    /// shows no Nutrition section until it's estimated again on a later edit or open.
+    func requestNutritionEstimate(recipeId: UUID, title: String, servings: String?, ingredients: [String]) {
+        let ingredients = ingredients.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        guard !ingredients.isEmpty, let url = URL(string: nutritionApiUrl) else { return }
+
+        Task {
+            do {
+                // The backend only accepts signed-in users
+                let session = try await supabase.auth.session
+
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.timeoutInterval = 60
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+                request.httpBody = try JSONEncoder().encode(
+                    NutritionEstimateRequest(title: title, servings: servings, ingredients: ingredients)
+                )
+
+                let (data, response) = try await URLSession.shared.data(for: request)
+                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+                guard statusCode == 200 else {
+                    print("⚠️ Nutrition estimate failed for \(recipeId): HTTP \(statusCode)")
+                    return
+                }
+
+                let decoded = try JSONDecoder().decode(NutritionEstimateResponse.self, from: data)
+                guard let nutrition = decoded.nutrition else { return }
+
+                try await supabase
+                    .from("user_recipes")
+                    .update(NutritionUpdate(nutrition: nutrition, nutrition_estimated: true))
+                    .eq("id", value: recipeId.uuidString)
+                    .eq("user_id", value: session.user.id.uuidString)
+                    .execute()
+
+                // Show it right away in My Recipes without a full reload
+                await MyRecipesViewModel.shared.applyEstimatedNutrition(nutrition, toRecipeId: recipeId)
+            } catch {
+                print("⚠️ Nutrition estimate failed for \(recipeId): \(error)")
+            }
+        }
     }
 
     /// Delete a user recipe

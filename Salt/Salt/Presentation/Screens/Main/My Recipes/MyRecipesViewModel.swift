@@ -141,6 +141,14 @@ class MyRecipesViewModel: ObservableObject {
         userRecipes.removeAll { $0.id == id }
     }
 
+    /// Updates a recipe in place once its AI nutrition estimate arrives (avoids a full reload).
+    /// If the recipe isn't loaded yet, the next load picks the value up from the database.
+    func applyEstimatedNutrition(_ nutrition: NutritionInfo, toRecipeId recipeId: UUID) {
+        guard let index = userRecipes.firstIndex(where: { $0.id == recipeId }) else { return }
+        userRecipes[index].nutrition = nutrition
+        userRecipes[index].nutritionEstimated = true
+    }
+
     func removeBookmark(_ recipe: Recipe) async {
         do {
             try await recipeService.removeBookmark(recipeId: recipe.id)

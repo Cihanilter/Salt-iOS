@@ -22,7 +22,8 @@ struct RecipeDetail {
     let images: [String]
     let sourceUrl: String?
     let sourceName: String?
-    var nutrition: NutritionInfo? = nil  // Per serving; only recipes from the app's database have it for now
+    var nutrition: NutritionInfo? = nil  // Per serving
+    var nutritionEstimated = false       // true when AI-estimated (user recipes) rather than from the source website
 }
 
 // MARK: - Recipe to RecipeDetail Conversion
@@ -259,7 +260,7 @@ struct RecipeDetailView: View {
 
                         // Nutrition (per serving), at the very bottom; hidden when there's no data
                         if let nutrition = recipe.nutrition, NutritionSection.hasValues(nutrition) {
-                            NutritionSection(nutrition: nutrition)
+                            NutritionSection(nutrition: nutrition, isEstimated: recipe.nutritionEstimated)
                         }
                     }
                     .padding(.horizontal)
@@ -309,6 +310,17 @@ struct RecipeDetailView: View {
                         }
                     }
                 }
+            }
+        }
+        .task {
+            // Recipes saved before nutrition estimates existed get one the first time they're opened
+            if let userRecipeId, recipe.nutrition == nil {
+                RecipeService.shared.requestNutritionEstimate(
+                    recipeId: userRecipeId,
+                    title: recipe.title,
+                    servings: recipe.servings == "N/A" ? nil : recipe.servings,
+                    ingredients: recipe.ingredients
+                )
             }
         }
         .onChange(of: isCookingModeOn) { _, isOn in
@@ -937,6 +949,7 @@ struct NotesSection: View {
 /// Per-serving nutrition card: calories highlighted, then the main nutrients as rows.
 struct NutritionSection: View {
     let nutrition: NutritionInfo
+    var isEstimated = false  // AI-estimated values get a label and a short disclaimer
 
     private struct Row: Identifiable {
         let name: String
@@ -970,6 +983,14 @@ struct NutritionSection: View {
             HStack(alignment: .firstTextBaseline) {
                 Text("Nutrition")
                     .font(.custom("Playfair9pt-SemiBold", size: 22))
+                if isEstimated {
+                    Text("Estimated")
+                        .font(.custom("OpenSans-SemiBold", size: 12))
+                        .foregroundColor(Color("Orange"))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Color("Orange").opacity(0.12)))
+                }
                 Spacer()
                 Text("Per serving")
                     .font(.custom("OpenSans-Regular", size: 14))
@@ -1018,6 +1039,12 @@ struct NutritionSection: View {
             .padding(.vertical, 16)
             .background(Color(red: 1.0, green: 0.941, blue: 0.855)) // #FFF0DA
             .cornerRadius(25)
+
+            if isEstimated {
+                Text("Estimated with AI from the ingredients. Values are approximate.")
+                    .font(.custom("OpenSans-Regular", size: 12))
+                    .foregroundColor(Color("GraniteGray"))
+            }
         }
     }
 
