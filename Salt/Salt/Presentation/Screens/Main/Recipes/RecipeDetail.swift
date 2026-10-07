@@ -997,9 +997,9 @@ struct NutritionSection: View {
         proteinContent: "24 g",
         fatContent: "18 g",
         saturatedFatContent: nil,
-        fiberContent: "5 g",
+        fiberContent: nil,
         sugarContent: "6 g",
-        sodiumContent: "640 mg",
+        sodiumContent: nil,
         cholesterolContent: nil,
         servingSize: nil
     )
@@ -1012,19 +1012,18 @@ struct NutritionSection: View {
 
     /// Whether there's anything worth showing
     static func hasValues(_ nutrition: NutritionInfo) -> Bool {
-        [nutrition.calories, nutrition.carbohydrateContent, nutrition.fiberContent, nutrition.sugarContent,
-         nutrition.proteinContent, nutrition.fatContent, nutrition.sodiumContent]
+        [nutrition.calories, nutrition.carbohydrateContent, nutrition.sugarContent,
+         nutrition.proteinContent, nutrition.fatContent]
             .contains { formatAmount($0) != nil }
     }
 
+    // Fiber and sodium are left out: too detailed for a recipe app, and hard to estimate reliably
     private var rows: [Row] {
         let candidates: [(String, String?)] = [
             ("Carbs", nutrition.carbohydrateContent),
             ("Protein", nutrition.proteinContent),
             ("Fat", nutrition.fatContent),
-            ("Sugar", nutrition.sugarContent),
-            ("Fiber", nutrition.fiberContent),
-            ("Sodium", nutrition.sodiumContent)
+            ("Sugar", nutrition.sugarContent)
         ]
         return candidates.compactMap { name, raw in
             Self.formatAmount(raw).map { Row(name: name, value: $0) }
