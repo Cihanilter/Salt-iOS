@@ -927,7 +927,7 @@ struct ServingsStepper: View {
                 }
 
                 Text(servings == 1 ? "1 serving" : "\(servings) servings")
-                    .font(.custom("OpenSans-SemiBold", size: 16))
+                    .font(.custom("OpenSans-Regular", size: 16))
                     .monospacedDigit()
                     .frame(minWidth: 96)
 

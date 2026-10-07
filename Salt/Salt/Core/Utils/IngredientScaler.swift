@@ -128,9 +128,10 @@ enum IngredientScaler {
         let kind = unitInfo?.kind ?? .count
         let isScaled = abs(factor - 1) > 0.0001
 
-        // As written, unless it's being scaled or written as "1/2" / "1 and 1/2"
+        // As written, unless it's being scaled or written as "1/2", "1 and 1/2" or "One"
         func formatted(_ raw: String, _ value: Double) -> String {
-            let needsKitchenStyle = raw.contains("/") || raw.lowercased().contains(" and ")
+            let lower = raw.lowercased()
+            let needsKitchenStyle = raw.contains("/") || lower.contains(" and ") || wordValues[lower] != nil
             return isScaled || needsKitchenStyle ? format(value * factor, unit: kind) : raw
         }
 
@@ -156,7 +157,8 @@ enum IngredientScaler {
 
     // One number: "1 and 1/2", "1 and a half", "1 1/2", "1 ½", "1½", "1/2", "1.5", "1,5", "½"
     private static let number = #"(?:\d+\s+and\s+(?:a\s+half|\d+/\d+|[¼½¾⅓⅔⅛⅜⅝⅞])|\d+\s+\d+/\d+|\d+\s*[¼½¾⅓⅔⅛⅜⅝⅞]|\d+/\d+|\d+(?:[.,]\d+)?|[¼½¾⅓⅔⅛⅜⅝⅞])"#
-    private static let wordNumber = #"(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b"#
+    // "One onion", but not "One-pot"
+    private static let wordNumber = #"(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b(?!-)"#
     private static let approx = #"(?:(?:about|approx\.?|approximately|roughly|around)\s+)?"#
     // Groups: 1 = amount, 2 = range separator, 3 = range end
     private static let quantity = "(\(number)|\(wordNumber))(?:(\\s*(?:-|–|—|to)\\s*)(\(number)))?"
@@ -279,7 +281,16 @@ enum IngredientScaler {
         "bunch": "bunches", "handful": "handfuls", "package": "packages", "packet": "packets",
         "jar": "jars", "bottle": "bottles", "head": "heads", "egg": "eggs", "onion": "onions",
         "lemon": "lemons", "lime": "limes", "potato": "potatoes", "tomato": "tomatoes",
-        "carrot": "carrots", "shallot": "shallots", "leek": "leeks", "apple": "apples", "banana": "bananas"
+        "carrot": "carrots", "shallot": "shallots", "leek": "leeks", "apple": "apples", "banana": "bananas",
+        "peach": "peaches", "pear": "pears", "orange": "oranges", "avocado": "avocados", "mango": "mangoes",
+        "pepper": "peppers", "chili": "chilies", "jalapeño": "jalapeños", "jalapeno": "jalapenos",
+        "cucumber": "cucumbers", "zucchini": "zucchinis", "mushroom": "mushrooms", "radish": "radishes",
+        "scallion": "scallions", "stalk": "stalks", "rib": "ribs", "leaf": "leaves", "strawberry": "strawberries",
+        "cherry": "cherries", "breast": "breasts", "thigh": "thighs", "drumstick": "drumsticks",
+        "fillet": "fillets", "filet": "filets", "steak": "steaks", "chop": "chops", "sausage": "sausages",
+        "tortilla": "tortillas", "bun": "buns", "roll": "rolls", "loaf": "loaves", "cookie": "cookies",
+        "sheet": "sheets", "cube": "cubes", "bag": "bags", "box": "boxes", "container": "containers",
+        "envelope": "envelopes", "ear": "ears", "date": "dates", "fig": "figs", "plum": "plums", "olive": "olives"
     ]
     private static let singulars = Dictionary(uniqueKeysWithValues: plurals.map { ($1, $0) })
 
