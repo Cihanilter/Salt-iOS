@@ -47,7 +47,7 @@ struct UserRecipe: Identifiable, Codable {
     // Photos (array of URLs)
     var photos: [String]?
 
-    // Per-serving nutrition, estimated by AI after saving (see the estimate-nutrition Edge Function)
+    // Per-serving nutrition, estimated by AI after saving (Salt-backend /api/estimate-nutrition)
     var nutrition: NutritionInfo? = nil
     var nutritionEstimated: Bool? = nil
 

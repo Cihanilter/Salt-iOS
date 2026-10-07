@@ -315,7 +315,12 @@ struct RecipeDetailView: View {
         .task {
             // Recipes saved before nutrition estimates existed get one the first time they're opened
             if let userRecipeId, recipe.nutrition == nil {
-                RecipeService.shared.requestNutritionEstimate(for: userRecipeId)
+                RecipeService.shared.requestNutritionEstimate(
+                    recipeId: userRecipeId,
+                    title: recipe.title,
+                    servings: recipe.servings == "N/A" ? nil : recipe.servings,
+                    ingredients: recipe.ingredients
+                )
             }
         }
         .onChange(of: isCookingModeOn) { _, isOn in

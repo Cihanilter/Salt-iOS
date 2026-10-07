@@ -1,16 +1,17 @@
 -- Nutrition for user recipes
 --
 -- Imported and hand-made recipes have no nutrition data, so it's estimated by
--- AI (Claude Haiku 4.5) in the `estimate-nutrition` Edge Function right after
--- the recipe is saved or its ingredients change.
+-- AI (Gemini via Salt-backend `/api/estimate-nutrition`) right after the
+-- recipe is saved or edited, or the first time an older recipe is opened.
+-- The app writes the result.
 --
 --   nutrition            per-serving values, same JSON shape as recipes.nutrition
 --                        (schema.org NutritionInformation), e.g.
 --                        {"calories": "347 calories", "fatContent": "21 g", "sodiumContent": "1493 mg", ...}
 --   nutrition_estimated  true when the values came from AI rather than the source website
 --
--- No RLS changes: the Edge Function runs as the signed-in user, so the existing
--- "users can update their own recipes" policy covers writing these columns.
+-- No RLS changes: the app writes these columns as the signed-in user, so the
+-- existing "users can update their own recipes" policy covers it.
 --
 -- Safe to re-run.
 
