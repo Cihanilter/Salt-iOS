@@ -902,9 +902,12 @@ struct IngredientsSection: View {
         }
     }
 
+    /// Amount first ("½ cup milk"), scaled to the selected servings
     private func scaled(_ ingredient: String) -> String {
-        guard let base = baseServings, let selected = selectedServings else { return ingredient }
-        return IngredientScaler.scale(ingredient, by: Double(selected) / Double(base))
+        guard let base = baseServings, let selected = selectedServings else {
+            return IngredientScaler.display(ingredient)
+        }
+        return IngredientScaler.display(ingredient, scaledBy: Double(selected) / Double(base))
     }
 }
 
