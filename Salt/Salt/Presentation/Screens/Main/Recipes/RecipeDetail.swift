@@ -257,7 +257,6 @@ struct RecipeDetailView: View {
 
                         // Time Info
                         TimeInfoSection(
-                            servings: recipe.servings,
                             prepTime: recipe.prepTime,
                             cookTime: recipe.cookTime
                         )
@@ -266,7 +265,7 @@ struct RecipeDetailView: View {
                         CookingModeToggle(isOn: $isCookingModeOn)
 
                         // Ingredients
-                        IngredientsSection(ingredients: recipe.ingredients)
+                        IngredientsSection(ingredients: recipe.ingredients, servings: recipe.servings)
 
                         // Instructions
                         InstructionsSection(instructions: recipe.instructions)
@@ -806,55 +805,15 @@ struct DescriptionSection: View {
 
 // MARK: - Time Info Section
 
+// Servings live in the Ingredients section, where they can be adjusted
 struct TimeInfoSection: View {
-    let servings: String
     let prepTime: String
     let cookTime: String
 
-    // Extract just the number from servings string
-    private var servingsNumber: String {
-        let text = servings.trimmingCharacters(in: .whitespaces)
-
-        // Extract leading digits
-        var numberPart = ""
-        for char in text {
-            if char.isNumber {
-                numberPart.append(char)
-            } else if !numberPart.isEmpty {
-                break
-            }
-        }
-
-        return numberPart.isEmpty ? "2" : numberPart
-    }
-
     var body: some View {
         HStack(spacing: 25) {
-            ServingsInfoItem(number: servingsNumber)
             TimeInfoItem(value: prepTime, label: "Prep time")
             TimeInfoItem(value: cookTime, label: "Cook time")
-        }
-    }
-}
-
-struct ServingsInfoItem: View {
-    let number: String
-
-    var body: some View {
-        VStack(spacing: 4) {
-            ZStack {
-                Circle()
-                    .fill(Color("LightGrayishPink"))
-                    .frame(width: 57, height: 57)
-
-                Text(number)
-                    .font(.custom("Playfair9pt-Regular", size: 18))
-                    .minimumScaleFactor(0.6)
-                    .lineLimit(1)
-            }
-
-            Text("Servings")
-                .font(.custom("OpenSans-Regular", size: 14))
         }
     }
 }
@@ -909,19 +868,106 @@ struct CookingModeToggle: View {
 
 struct IngredientsSection: View {
     let ingredients: [String]
-    
+    let servings: String  // The recipe's servings text, e.g. "4 servings"; scaling starts from it
+
+    @State private var selectedServings: Int?  // nil = the recipe's own servings
+
+    private var baseServings: Int? { IngredientScaler.baseServings(from: servings) }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Ingredients")
                 .font(.custom("Playfair9pt-SemiBold", size: 22))
-            
+
+            // Hidden when the recipe doesn't say how many it serves; there's nothing to scale from
+            if let base = baseServings {
+                ServingsStepper(
+                    servings: selectedServings ?? base,
+                    original: base,
+                    onChange: { selectedServings = $0 == base ? nil : $0 }
+                )
+            }
+
             VStack(alignment: .leading, spacing: 5) {
-                ForEach(ingredients, id: \.self) { ingredient in
-                    Text(ingredient)
+                // Lines can repeat (e.g. "Salt" twice), so they're identified by position
+                ForEach(Array(ingredients.enumerated()), id: \.offset) { _, ingredient in
+                    Text(scaled(ingredient))
                         .font(.custom("OpenSans-Regular", size: 16))
                 }
             }
         }
+        // The recipe was edited (preview mode); start again from its servings
+        .onChange(of: servings) { _, _ in
+            selectedServings = nil
+        }
+    }
+
+    /// Amount first ("½ cup milk"), scaled to the selected servings
+    private func scaled(_ ingredient: String) -> String {
+        guard let base = baseServings, let selected = selectedServings else {
+            return IngredientScaler.display(ingredient)
+        }
+        return IngredientScaler.display(ingredient, scaledBy: Double(selected) / Double(base))
+    }
+}
+
+/// "−  4 servings  +" control for scaling the ingredient amounts
+struct ServingsStepper: View {
+    let servings: Int
+    let original: Int
+    let onChange: (Int) -> Void
+
+    private let range = 1...99
+
+    var body: some View {
+        HStack(spacing: 14) {
+            HStack(spacing: 14) {
+                stepButton(systemName: "minus", isEnabled: servings > range.lowerBound) {
+                    onChange(servings - 1)
+                }
+
+                Text(servings == 1 ? "1 serving" : "\(servings) servings")
+                    .font(.custom("OpenSans-Regular", size: 16))
+                    .monospacedDigit()
+                    .frame(minWidth: 96)
+
+                stepButton(systemName: "plus", isEnabled: servings < range.upperBound) {
+                    onChange(servings + 1)
+                }
+            }
+            // One adjustable control for VoiceOver (swipe up/down) instead of three elements
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Servings")
+            .accessibilityValue("\(servings)")
+            .accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment where servings < range.upperBound: onChange(servings + 1)
+                case .decrement where servings > range.lowerBound: onChange(servings - 1)
+                default: break
+                }
+            }
+
+            if servings != original {
+                Button("Reset") {
+                    onChange(original)
+                }
+                .font(.custom("OpenSans-Regular", size: 14))
+                .foregroundColor(Color("Orange"))
+                .accessibilityLabel("Reset to \(original) servings")
+            }
+        }
+    }
+
+    private func stepButton(systemName: String, isEnabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.primary)
+                .frame(width: 36, height: 36)
+                .background(Circle().fill(Color("LightGrayishPink")))
+        }
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.4)
     }
 }
 
