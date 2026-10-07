@@ -151,6 +151,10 @@ enum IngredientScaler {
         }
         text = text.trimmingCharacters(in: .whitespaces)
         if isAllCaps { text = text.lowercased() }
+        // "For serving:" reads better as "To serve"
+        if ["serving", "serve", "to serve"].contains(text.lowercased()) {
+            return "To serve"
+        }
         guard let first = text.first else { return nil }
         return first.uppercased() + text.dropFirst()
     }
