@@ -147,6 +147,7 @@ struct RecipeDetailView: View {
     @State private var isDeleting = false
     @State private var pendingPhotoImages: [UIImage] = []  // New photos added in edit mode (for display only)
     @State private var isCookingModeOn = false  // Keeps the screen awake while viewing the recipe
+    @State private var isEstimatingNutrition = false  // AI estimate running for a saved recipe opened without nutrition
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var bookmarkManager = BookmarkManager.shared
 
@@ -179,6 +180,23 @@ struct RecipeDetailView: View {
     private var isBookmarked: Bool {
         guard let id = recipeId else { return false }
         return bookmarkManager.isBookmarked(id)
+    }
+
+    /// Message for the blurred Nutrition placeholder while there are no values yet;
+    /// nil hides the placeholder. Tells users an estimate is coming for their own recipes.
+    private var nutritionPlaceholderMessage: String? {
+        guard recipe.nutrition == nil, RecipeService.canEstimateNutrition(from: recipe.ingredients) else { return nil }
+        if isUnsavedPreview {
+            return "Save this recipe to see its estimated nutrition in My Recipes."
+        }
+        if mode == .preview {
+            // Just saved from this screen; the estimate runs in the background
+            return "Estimating nutrition… You'll find it in My Recipes."
+        }
+        if isEstimatingNutrition {
+            return "Estimating nutrition…"
+        }
+        return nil
     }
 
     var body: some View {
@@ -259,8 +277,11 @@ struct RecipeDetailView: View {
                         }
 
                         // Nutrition (per serving), at the very bottom; hidden when there's no data
+                        // and no estimate coming
                         if let nutrition = recipe.nutrition, NutritionSection.hasValues(nutrition) {
                             NutritionSection(nutrition: nutrition, isEstimated: recipe.nutritionEstimated)
+                        } else if let message = nutritionPlaceholderMessage {
+                            NutritionSection(nutrition: NutritionSection.placeholderValues, placeholderMessage: message)
                         }
                     }
                     .padding(.horizontal)
@@ -313,14 +334,24 @@ struct RecipeDetailView: View {
             }
         }
         .task {
-            // Recipes saved before nutrition estimates existed get one the first time they're opened
-            if let userRecipeId, recipe.nutrition == nil {
-                RecipeService.shared.requestNutritionEstimate(
-                    recipeId: userRecipeId,
-                    title: recipe.title,
-                    servings: recipe.servings == "N/A" ? nil : recipe.servings,
-                    ingredients: recipe.ingredients
-                )
+            // User recipes without nutrition get an estimate when opened (older recipes, or one
+            // just saved whose estimate is still running) and show it as soon as it arrives
+            guard let userRecipeId, recipe.nutrition == nil,
+                  RecipeService.canEstimateNutrition(from: recipe.ingredients) else { return }
+
+            isEstimatingNutrition = true
+            let nutrition = await RecipeService.shared.estimateNutrition(
+                recipeId: userRecipeId,
+                title: recipe.title,
+                servings: recipe.servings == "N/A" ? nil : recipe.servings,
+                ingredients: recipe.ingredients
+            )
+            withAnimation {
+                if let nutrition {
+                    recipe.nutrition = nutrition
+                    recipe.nutritionEstimated = true
+                }
+                isEstimatingNutrition = false
             }
         }
         .onChange(of: isCookingModeOn) { _, isOn in
@@ -950,6 +981,22 @@ struct NotesSection: View {
 struct NutritionSection: View {
     let nutrition: NutritionInfo
     var isEstimated = false  // AI-estimated values get a label and a short disclaimer
+    var placeholderMessage: String? = nil  // When set, the values are blurred sample data under this message
+
+    /// Sample values shown blurred while a recipe's real nutrition isn't available yet
+    static let placeholderValues = NutritionInfo(
+        type: nil,
+        calories: "420 calories",
+        carbohydrateContent: "38 g",
+        proteinContent: "24 g",
+        fatContent: "18 g",
+        saturatedFatContent: nil,
+        fiberContent: "5 g",
+        sugarContent: "6 g",
+        sodiumContent: "640 mg",
+        cholesterolContent: nil,
+        servingSize: nil
+    )
 
     private struct Row: Identifiable {
         let name: String
@@ -1035,17 +1082,50 @@ struct NutritionSection: View {
                     }
                 }
             }
+            // Sample values are blurred so they read as "something's coming", not as data
+            .blur(radius: placeholderMessage == nil ? 0 : 6)
+            .accessibilityHidden(placeholderMessage != nil)
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
             .background(Color(red: 1.0, green: 0.941, blue: 0.855)) // #FFF0DA
             .cornerRadius(25)
+            .overlay {
+                if let placeholderMessage {
+                    placeholderOverlay(placeholderMessage)
+                }
+            }
 
-            if isEstimated {
+            if isEstimated && placeholderMessage == nil {
                 Text("Estimated with AI from the ingredients. Values are approximate.")
                     .font(.custom("OpenSans-Regular", size: 12))
                     .foregroundColor(Color("GraniteGray"))
             }
         }
+    }
+
+    /// Message card centered over the blurred sample values
+    private func placeholderOverlay(_ message: String) -> some View {
+        HStack(spacing: 10) {
+            if message.hasPrefix("Estimating") {
+                ProgressView()
+                    .tint(Color("Orange"))
+            } else {
+                Image(systemName: "sparkles")
+                    .foregroundColor(Color("Orange"))
+            }
+            Text(message)
+                .font(.custom("OpenSans-SemiBold", size: 15))
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(.systemBackground).opacity(0.92))
+        )
+        .padding(.horizontal, 24)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: Formatting
