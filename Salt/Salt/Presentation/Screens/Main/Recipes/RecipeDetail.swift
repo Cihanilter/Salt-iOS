@@ -182,19 +182,20 @@ struct RecipeDetailView: View {
         return bookmarkManager.isBookmarked(id)
     }
 
-    /// Message for the blurred Nutrition placeholder while there are no values yet;
-    /// nil hides the placeholder. Tells users an estimate is coming for their own recipes.
-    private var nutritionPlaceholderMessage: String? {
+    /// Message for the blurred Nutrition placeholder while there are no values yet, and whether
+    /// it's in progress (spinner); nil hides the placeholder. Tells users nutrition is coming
+    /// for their own recipes. "Estimated" is left to the real values' label.
+    private var nutritionPlaceholder: (message: String, inProgress: Bool)? {
         guard recipe.nutrition == nil, RecipeService.canEstimateNutrition(from: recipe.ingredients) else { return nil }
         if isUnsavedPreview {
-            return "Save this recipe to see its estimated nutrition in My Recipes."
+            return ("Save this recipe to see its nutrition in My Recipes.", false)
         }
         if mode == .preview {
             // Just saved from this screen; the estimate runs in the background
-            return "Estimating nutrition… You'll find it in My Recipes."
+            return ("Getting nutrition… You'll find it in My Recipes.", true)
         }
         if isEstimatingNutrition {
-            return "Estimating nutrition…"
+            return ("Getting nutrition…", true)
         }
         return nil
     }
@@ -280,8 +281,12 @@ struct RecipeDetailView: View {
                         // and no estimate coming
                         if let nutrition = recipe.nutrition, NutritionSection.hasValues(nutrition) {
                             NutritionSection(nutrition: nutrition, isEstimated: recipe.nutritionEstimated)
-                        } else if let message = nutritionPlaceholderMessage {
-                            NutritionSection(nutrition: NutritionSection.placeholderValues, placeholderMessage: message)
+                        } else if let placeholder = nutritionPlaceholder {
+                            NutritionSection(
+                                nutrition: NutritionSection.placeholderValues,
+                                placeholderMessage: placeholder.message,
+                                placeholderInProgress: placeholder.inProgress
+                            )
                         }
                     }
                     .padding(.horizontal)
@@ -982,6 +987,7 @@ struct NutritionSection: View {
     let nutrition: NutritionInfo
     var isEstimated = false  // AI-estimated values get a label and a short disclaimer
     var placeholderMessage: String? = nil  // When set, the values are blurred sample data under this message
+    var placeholderInProgress = false      // Spinner instead of the sparkles icon next to the message
 
     /// Sample values shown blurred while a recipe's real nutrition isn't available yet
     static let placeholderValues = NutritionInfo(
@@ -1106,7 +1112,7 @@ struct NutritionSection: View {
     /// Message card centered over the blurred sample values
     private func placeholderOverlay(_ message: String) -> some View {
         HStack(spacing: 10) {
-            if message.hasPrefix("Estimating") {
+            if placeholderInProgress {
                 ProgressView()
                     .tint(Color("Orange"))
             } else {
