@@ -873,6 +873,7 @@ struct IngredientsSection: View {
     @State private var selectedServings: Int?  // nil = the recipe's own servings
 
     private var baseServings: Int? { IngredientScaler.baseServings(from: servings) }
+    private var sections: [IngredientScaler.Section] { IngredientScaler.sections(from: ingredients) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -888,11 +889,22 @@ struct IngredientsSection: View {
                 )
             }
 
-            VStack(alignment: .leading, spacing: 5) {
-                // Lines can repeat (e.g. "Salt" twice), so they're identified by position
-                ForEach(Array(ingredients.enumerated()), id: \.offset) { _, ingredient in
-                    Text(scaled(ingredient))
-                        .font(.custom("OpenSans-Regular", size: 16))
+            // Imported recipes can group ingredients (Marinade, Crema, Pico de gallo).
+            // Lines can repeat (e.g. "Salt" in two groups), so everything is identified by position.
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
+                    VStack(alignment: .leading, spacing: 5) {
+                        if let heading = section.heading {
+                            Text(heading)
+                                .font(.custom("OpenSans-SemiBold", size: 16))
+                                .padding(.bottom, 2)
+                                .accessibilityAddTraits(.isHeader)
+                        }
+                        ForEach(Array(section.lines.enumerated()), id: \.offset) { _, ingredient in
+                            Text(scaled(ingredient))
+                                .font(.custom("OpenSans-Regular", size: 16))
+                        }
+                    }
                 }
             }
         }
@@ -1239,3 +1251,4 @@ struct NutritionSection: View {
         )
     )
 }
+

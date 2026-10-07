@@ -32,6 +32,133 @@ enum IngredientScaler {
         scale(amountFirst(line), by: factor)
     }
 
+    // MARK: Sections
+
+    /// A group of ingredients, e.g. "Marinade"; the heading is nil for ungrouped ingredients
+    struct Section {
+        let heading: String?
+        let lines: [String]
+    }
+
+    /// Splits the ingredient list into groups. Recipes mark groups either with heading lines
+    /// ("For the pico de gallo:") or, in AI imports, with a tag on each line
+    /// ("3 ripe tomatoes (for pico de gallo)"). Without either, it's one group without a heading.
+    static func sections(from lines: [String]) -> [Section] {
+        if lines.contains(where: { sectionHeading($0) != nil }) {
+            return sectionsByHeadingLines(lines)
+        }
+        return sectionsByTags(lines) ?? [Section(heading: nil, lines: lines)]
+    }
+
+    private static func sectionsByHeadingLines(_ lines: [String]) -> [Section] {
+        var sections: [Section] = []
+        var heading: String?
+        var current: [String] = []
+        for line in lines {
+            if let next = sectionHeading(line) {
+                if heading != nil || !current.isEmpty { sections.append(Section(heading: heading, lines: current)) }
+                heading = next
+                current = []
+            } else {
+                current.append(line)
+            }
+        }
+        if heading != nil || !current.isEmpty { sections.append(Section(heading: heading, lines: current)) }
+        return sections
+    }
+
+    /// "(for marinade)", "(optional, for pico de gallo)". Group 1 = text before "for", 2 = group name
+    private static let groupTag = try! NSRegularExpression(
+        pattern: #"\s*\(([^()]*?,\s*)?for\s+(?:the\s+)?([^(),]+?)\s*\)"#, options: [.caseInsensitive]
+    )
+
+    /// Tags that are how an ingredient is used, not a part of the recipe
+    private static let usageNotes: Set<String> = [
+        "garnish", "garnishing", "serving", "dusting", "greasing", "frying", "brushing", "decoration",
+        "decorating", "sprinkling", "drizzling", "the pan", "pan", "the tin", "tin", "rolling", "coating"
+    ]
+
+    /// Groups by "(for …)" tags when there are at least two different ones. Untagged lines
+    /// belong to the next tagged line's group ("Juice from 1 orange" above "… (for marinade)");
+    /// untagged lines after the last tag become "Other ingredients" (e.g. tortillas to assemble).
+    private static func sectionsByTags(_ lines: [String]) -> [Section]? {
+        func tag(of line: String) -> (name: String, range: NSRange, kept: String)? {
+            let ns = line as NSString
+            guard let match = groupTag.firstMatch(in: line, range: NSRange(location: 0, length: ns.length)) else { return nil }
+            let name = ns.substring(with: match.range(at: 2)).trimmingCharacters(in: .whitespaces)
+            guard !usageNotes.contains(name.lowercased()) else { return nil }
+            // "(optional, for pico de gallo)" keeps "(optional)"
+            let before = match.range(at: 1).location != NSNotFound
+                ? ns.substring(with: match.range(at: 1)).trimmingCharacters(in: CharacterSet(charactersIn: ", "))
+                : ""
+            return (name, match.range, before.isEmpty ? "" : " (\(before))")
+        }
+
+        let tags = lines.map(tag(of:))
+        let names = tags.compactMap { $0?.name.lowercased() }
+        guard Set(names).count >= 2 else { return nil }
+
+        var order: [String] = []                  // group keys in order of first appearance
+        var groups: [String: (heading: String, lines: [String])] = [:]
+        var pending: [String] = []                // untagged lines waiting for the next tag
+
+        for (line, tag) in zip(lines, tags) {
+            guard let tag else { pending.append(line); continue }
+            let key = tag.name.lowercased()
+            let cleaned = ((line as NSString).replacingCharacters(in: tag.range, with: tag.kept))
+                .trimmingCharacters(in: .whitespaces)
+            if groups[key] == nil {
+                order.append(key)
+                groups[key] = (tag.name.prefix(1).uppercased() + tag.name.dropFirst(), [])
+            }
+            groups[key]?.lines += pending + [cleaned]
+            pending = []
+        }
+
+        var sections = order.compactMap { key in groups[key].map { Section(heading: $0.heading, lines: $0.lines) } }
+        // Labeled so they don't read as part of the last group
+        if !pending.isEmpty { sections.append(Section(heading: "Other ingredients", lines: pending)) }
+        return sections
+    }
+
+    /// The heading if the line starts a group of ingredients rather than being one, e.g.
+    /// "For the pico de gallo:" → "Pico de gallo", "Chicken:" → "Chicken", "**Sauce**" → "Sauce",
+    /// "PICO DE GALLO" → "Pico de gallo". Imports put these in the ingredient list as plain lines.
+    static func sectionHeading(_ line: String) -> String? {
+        var text = line.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty, text.count <= 60 else { return nil }
+
+        // Marked as a heading: "**Sauce**", "## Sauce", "--Sauce--", "[Sauce]"
+        let markers = CharacterSet(charactersIn: "*#-–—=_[]")
+        let unmarked = text.trimmingCharacters(in: markers).trimmingCharacters(in: .whitespaces)
+        let isMarked = unmarked != text && !unmarked.isEmpty
+            && (text.hasPrefix("**") || text.hasPrefix("#") || text.hasPrefix("--") || text.hasPrefix("["))
+        text = unmarked
+
+        let hasAmount = text.range(of: #"[\d¼½¾⅓⅔⅛⅜⅝⅞]"#, options: .regularExpression) != nil
+        let endsWithColon = text.hasSuffix(":")
+        let startsWithFor = text.range(of: #"^(?i)for\s+(the\s+)?\S"#, options: .regularExpression) != nil
+        let letters = text.filter(\.isLetter)
+        let isAllCaps = letters.count >= 3 && letters == letters.uppercased() && text.contains(" ")
+
+        // "Chicken: 1 pound" is an ingredient; "Chicken:" and "For the sauce:" are headings
+        guard isMarked || (!hasAmount && (endsWithColon || startsWithFor || isAllCaps)) else { return nil }
+
+        // Tidy up: no colon, no "For the", sentence case for ALL CAPS
+        if endsWithColon { text.removeLast() }
+        if let forThe = text.range(of: #"^(?i)for\s+(the\s+)?"#, options: .regularExpression) {
+            text.removeSubrange(forThe)
+        }
+        text = text.trimmingCharacters(in: .whitespaces)
+        if isAllCaps { text = text.lowercased() }
+        // "For serving:" reads better as "To serve"
+        if ["serving", "serve", "to serve"].contains(text.lowercased()) {
+            return "To serve"
+        }
+        guard let first = text.first else { return nil }
+        return first.uppercased() + text.dropFirst()
+    }
+
     // MARK: Amount first
 
     /// "Milk: ½ cup" → "½ cup milk", "Garlic cloves (2), crushed" → "2 garlic cloves, crushed",
