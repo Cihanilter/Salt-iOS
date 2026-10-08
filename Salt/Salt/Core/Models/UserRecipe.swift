@@ -51,7 +51,14 @@ struct UserRecipe: Identifiable, Codable {
     var nutrition: NutritionInfo? = nil
     var nutritionEstimated: Bool? = nil
 
+    // Set on customized copies of recipes from the app's recipe database (listed under Saved)
+    var originalRecipeId: UUID? = nil
+
     // MARK: - Computed Properties
+
+    var isCustomizedCopy: Bool {
+        originalRecipeId != nil
+    }
 
     var durationText: String {
         let prep = prepTimeMinutes ?? 0
@@ -117,6 +124,7 @@ struct UserRecipe: Identifiable, Codable {
         case photos
         case nutrition
         case nutritionEstimated = "nutrition_estimated"
+        case originalRecipeId = "original_recipe_id"
     }
 
     // MARK: - Empty Recipe for Creation
@@ -194,6 +202,34 @@ extension UserRecipe {
             nutrition: nutrition,
             nutritionEstimated: nutritionEstimated ?? false
         )
+    }
+}
+
+// MARK: - Apply Edits from RecipeDetail
+
+extension UserRecipe {
+    /// Copies the fields the recipe editor changes. Photos, source and nutrition are left
+    /// to the caller.
+    mutating func applyEdits(from detail: RecipeDetail) {
+        title = detail.title
+        description = detail.description == "No description" ? nil : detail.description
+
+        // The editor sends "0" for empty times
+        prepTimeMinutes = Int(detail.prepTime).flatMap { $0 > 0 ? $0 : nil }
+        cookTimeMinutes = Int(detail.cookTime).flatMap { $0 > 0 ? $0 : nil }
+        let total = (prepTimeMinutes ?? 0) + (cookTimeMinutes ?? 0)
+        totalTimeMinutes = total > 0 ? total : nil
+
+        servingsText = detail.servings
+        servings = detail.servings
+            .split(whereSeparator: { $0.wholeNumberValue == nil })
+            .lazy
+            .compactMap { Int($0) }
+            .first
+
+        ingredients = detail.ingredients
+        instructions = detail.instructions
+        notes = detail.notes.isEmpty ? nil : detail.notes
     }
 }
 

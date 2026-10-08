@@ -121,9 +121,9 @@ class RecipeService {
         return recipes
     }
 
-    /// Count of all recipes the user currently has (created and imported).
-    /// Goes down when a recipe is deleted.
-    func getUserRecipesCount() async throws -> Int {
+    /// Count of the recipes the user currently has under Imports (created and imported).
+    /// Customized copies of Explore recipes aren't included. Goes down when a recipe is deleted.
+    func getActiveImportedRecipesCount() async throws -> Int {
         guard let userId = try? await supabase.auth.session.user.id else {
             return 0
         }
@@ -132,6 +132,7 @@ class RecipeService {
             .from("user_recipes")
             .select("id", head: true, count: .exact)
             .eq("user_id", value: userId.uuidString)
+            .is("original_recipe_id", value: nil)
             .execute()
 
         return response.count ?? 0
@@ -153,8 +154,10 @@ class RecipeService {
         return response.count ?? 0
     }
 
-    /// Create a new user recipe
-    func createRecipe(_ recipe: UserRecipe) async throws -> UserRecipe {
+    /// Create a new user recipe. `source` overrides the value derived from the source URL
+    /// (e.g. copies of Explore recipes are "manual", not imports). Pass `estimateNutrition: false`
+    /// when the caller runs the estimate itself.
+    func createRecipe(_ recipe: UserRecipe, source: String? = nil, estimateNutrition: Bool = true) async throws -> UserRecipe {
         guard let userId = try? await supabase.auth.session.user.id else {
             throw RecipeServiceError.notAuthenticated
         }
@@ -178,9 +181,15 @@ class RecipeService {
             "source_url": recipe.sourceUrl.map { .string($0) } ?? .null,
             "photos": recipe.photos.map { .array($0.map { .string($0) }) } ?? .null
         ]
+        // Only sent for customized copies, so other saves don't depend on the column
+        if let originalRecipeId = recipe.originalRecipeId {
+            recipeData["original_recipe_id"] = .string(originalRecipeId.uuidString)
+        }
 
         // Set source based on origin
-        if let sourceUrl = recipe.sourceUrl?.lowercased() {
+        if let source {
+            recipeData["source"] = .string(source)
+        } else if let sourceUrl = recipe.sourceUrl?.lowercased() {
             if sourceUrl.contains("instagram") {
                 recipeData["source"] = .string("imported_instagram")
             } else if sourceUrl.contains("youtube") || sourceUrl.contains("youtu.be") {
@@ -202,18 +211,21 @@ class RecipeService {
             .value
 
         // Estimate nutrition in the background; the save itself doesn't wait for it
-        requestNutritionEstimate(for: recipe)
+        if estimateNutrition {
+            requestNutritionEstimate(for: recipe)
+        }
 
         return created.first ?? recipe
     }
 
-    /// Update an existing user recipe
-    func updateRecipe(_ recipe: UserRecipe) async throws {
+    /// Update an existing user recipe. Pass `clearNutrition` when ingredients or servings changed,
+    /// so the old estimate isn't kept; the caller then runs a new one with `estimateNutrition`.
+    func updateRecipe(_ recipe: UserRecipe, clearNutrition: Bool) async throws {
         guard let userId = try? await supabase.auth.session.user.id else {
             throw RecipeServiceError.notAuthenticated
         }
 
-        let recipeData: [String: AnyJSON] = [
+        var recipeData: [String: AnyJSON] = [
             "title": .string(recipe.title),
             "description": recipe.description.map { .string($0) } ?? .null,
             "image_url": recipe.imageUrl.map { .string($0) } ?? .null,
@@ -229,6 +241,10 @@ class RecipeService {
             "notes": recipe.notes.map { .string($0) } ?? .null,
             "photos": recipe.photos.map { .array($0.map { .string($0) }) } ?? .null
         ]
+        if clearNutrition {
+            recipeData["nutrition"] = .null
+            recipeData["nutrition_estimated"] = .bool(false)
+        }
 
         try await supabase
             .from("user_recipes")
@@ -236,9 +252,6 @@ class RecipeService {
             .eq("id", value: recipe.id.uuidString)
             .eq("user_id", value: userId.uuidString)
             .execute()
-
-        // Ingredients or servings may have changed, so replace the old estimate
-        requestNutritionEstimate(for: recipe)
     }
 
     // MARK: - Nutrition

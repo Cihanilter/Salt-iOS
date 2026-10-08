@@ -126,9 +126,19 @@ class PendingSaveDataStorage {
 // MARK: - Recipe Detail View
 
 struct RecipeDetailView: View {
+    /// What the edit sheet is for
+    private enum EditSheet: Identifiable {
+        case preview    // Unsaved recipe: only updates this screen, saved later with Save Recipe
+        case ownRecipe  // User's own recipe: saves the changes
+        case customize  // Explore/saved recipe: saves a copy, the original isn't changed
+
+        var id: Self { self }
+    }
+
     @State private var recipe: RecipeDetail
-    var recipeId: UUID? = nil
-    var userRecipeId: UUID? = nil  // For user-created/imported recipes (enables delete)
+    // State so the screen can switch to the user's copy after Customize
+    @State private var recipeId: UUID?
+    @State private var userRecipeId: UUID?  // For user-created/imported recipes (enables edit/delete)
     var mode: RecipeDetailMode = .regular
 
     // Callbacks for preview mode - no parameters, data is in PendingSaveDataStorage
@@ -142,7 +152,8 @@ struct RecipeDetailView: View {
     @State private var isSaving = false
     @State private var showSavedHeader = false
     @State private var hasBeenSaved = false  // Track if recipe was saved (persists after closing saved header)
-    @State private var showingEditSheet = false
+    @State private var editSheet: EditSheet?
+    @State private var showCopySavedToast = false
     @State private var showingDeleteAlert = false
     @State private var isDeleting = false
     @State private var pendingPhotoImages: [UIImage] = []  // New photos added in edit mode (for display only)
@@ -163,8 +174,8 @@ struct RecipeDetailView: View {
         onGoToMyRecipes: (() -> Void)? = nil
     ) {
         self._recipe = State(initialValue: recipe)
-        self.recipeId = recipeId
-        self.userRecipeId = userRecipeId
+        self._recipeId = State(initialValue: recipeId)
+        self._userRecipeId = State(initialValue: userRecipeId)
         self.mode = mode
         self._pendingPhotoImages = State(initialValue: pendingPhotos)
         self.onSave = onSave
@@ -180,6 +191,22 @@ struct RecipeDetailView: View {
     private var isBookmarked: Bool {
         guard let id = recipeId else { return false }
         return bookmarkManager.isBookmarked(id)
+    }
+
+    /// Edit in the menu: unsaved previews and the user's own saved recipes
+    private var editAction: (() -> Void)? {
+        if isUnsavedPreview {
+            return { editSheet = .preview }
+        }
+        if userRecipeId != nil && mode == .regular {
+            return { editSheet = .ownRecipe }
+        }
+        return nil
+    }
+
+    /// Explore/saved recipes are shared, so they're customized as the user's own copy
+    private var canCustomize: Bool {
+        recipeId != nil && userRecipeId == nil && mode == .regular
     }
 
     /// Message for the blurred Nutrition placeholder while there are no values yet, and whether
@@ -211,18 +238,21 @@ struct RecipeDetailView: View {
                         currentIndex: $currentImageIndex,
                         onBack: { dismiss() },
                         isBookmarked: isBookmarked,
-                        onBookmarkTap: recipeId != nil ? {
-                            Task {
-                                await bookmarkManager.toggleBookmark(for: recipeId!)
+                        onBookmarkTap: recipeId.map { id in
+                            {
+                                Task {
+                                    await bookmarkManager.toggleBookmark(for: id)
+                                }
                             }
-                        } : nil,
+                        },
                         showMenuButton: userRecipeId != nil,
                         onDelete: userRecipeId != nil ? {
                             showingDeleteAlert = true
                         } : nil,
-                        onEdit: isUnsavedPreview ? { showingEditSheet = true } : nil,
+                        onEdit: editAction,
                         // Discards the unsaved recipe and goes back to the form / link field
-                        onCancel: isUnsavedPreview ? { dismiss() } : nil
+                        onCancel: isUnsavedPreview ? { dismiss() } : nil,
+                        onCustomize: canCustomize ? { editSheet = .customize } : nil
                     )
                     .id("top")  // Anchor for scrolling to top
 
@@ -314,49 +344,53 @@ struct RecipeDetailView: View {
         // Hide the tab bar while reviewing a new recipe so the Save footer is the only bottom action
         .toolbar(isUnsavedPreview ? .hidden : .automatic, for: .tabBar)
         .ignoresSafeArea(edges: .top)
-        .sheet(isPresented: $showingEditSheet) {
+        .sheet(item: $editSheet) { sheet in
             NavigationStack {
                 CreateRecipeView(
                     initialRecipe: recipe,
                     isEditMode: true,
-                    onUpdate: { updatedRecipe, newPhotos in
+                    onUpdate: sheet == .preview ? { updatedRecipe, newPhotos in
                         // Update recipe
                         recipe = updatedRecipe
                         // Store photos locally for display in carousel
                         pendingPhotoImages = newPhotos
-                        showingEditSheet = false
-                    }
+                        editSheet = nil
+                    } : nil,
+                    onSaveChanges: sheet == .preview ? nil : { updatedRecipe, newPhotos in
+                        try await saveEdits(updatedRecipe, newPhotos: newPhotos, for: sheet)
+                    },
+                    saveChangesTitle: sheet == .customize ? "Save Copy" : "Save Changes",
+                    editNotice: sheet == .customize
+                        ? "Your changes are saved as your own copy in My Recipes. The original recipe isn't affected."
+                        : nil
                 )
+                .navigationTitle(sheet == .customize ? "Customize" : "Edit Recipe")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button("Cancel") {
-                            showingEditSheet = false
+                            editSheet = nil
                         }
                     }
                 }
             }
         }
+        .overlay(alignment: .bottom) {
+            if showCopySavedToast {
+                Text("Copy saved to My Recipes")
+                    .font(.custom("OpenSans-SemiBold", size: 14))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Color.black.opacity(0.8)))
+                    .padding(.bottom, 24)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
         .task {
             // User recipes without nutrition get an estimate when opened (older recipes, or one
             // just saved whose estimate is still running) and show it as soon as it arrives
-            guard let userRecipeId, recipe.nutrition == nil,
-                  RecipeService.canEstimateNutrition(from: recipe.ingredients) else { return }
-
-            isEstimatingNutrition = true
-            let nutrition = await RecipeService.shared.estimateNutrition(
-                recipeId: userRecipeId,
-                title: recipe.title,
-                servings: recipe.servings == "N/A" ? nil : recipe.servings,
-                ingredients: recipe.ingredients
-            )
-            withAnimation {
-                if let nutrition {
-                    recipe.nutrition = nutrition
-                    recipe.nutritionEstimated = true
-                }
-                isEstimatingNutrition = false
-            }
+            await estimateNutritionIfNeeded()
         }
         .onChange(of: isCookingModeOn) { _, isOn in
             UIApplication.shared.isIdleTimerDisabled = isOn
@@ -376,6 +410,65 @@ struct RecipeDetailView: View {
             }
         } message: {
             Text("Are you sure you want to delete this recipe? This action cannot be undone.")
+        }
+    }
+
+    // MARK: - Save Edits
+
+    /// Saves the editor's changes: to the user's own recipe, or as a new copy of an Explore/saved
+    /// recipe. Throws so the editor stays open and shows the error.
+    private func saveEdits(_ edited: RecipeDetail, newPhotos: [UIImage], for sheet: EditSheet) async throws {
+        let saved: UserRecipe
+        switch sheet {
+        case .ownRecipe:
+            guard let userRecipeId else { return }
+            saved = try await MyRecipesViewModel.shared.updateRecipe(id: userRecipeId, with: edited, newPhotos: newPhotos)
+        case .customize:
+            guard let recipeId else { return }
+            saved = try await MyRecipesViewModel.shared.saveCustomizedCopy(of: recipeId, from: edited, newPhotos: newPhotos)
+            // From now on this screen shows the user's copy (Edit/Delete instead of Customize)
+            self.recipeId = nil
+            userRecipeId = saved.id
+        case .preview:
+            return
+        }
+
+        recipe = saved.toRecipeDetail()
+        pendingPhotoImages = []
+        currentImageIndex = 0
+        editSheet = nil
+
+        if sheet == .customize {
+            withAnimation { showCopySavedToast = true }
+            Task {
+                try? await Task.sleep(for: .seconds(2.5))
+                withAnimation { showCopySavedToast = false }
+            }
+        }
+
+        // Changed ingredients/servings cleared the old nutrition; the estimate keeps running
+        // (and is saved) even if the user leaves this screen
+        Task { await estimateNutritionIfNeeded() }
+    }
+
+    /// Estimates nutrition for a user recipe that has none and shows it once it arrives
+    private func estimateNutritionIfNeeded() async {
+        guard let userRecipeId, recipe.nutrition == nil,
+              RecipeService.canEstimateNutrition(from: recipe.ingredients) else { return }
+
+        isEstimatingNutrition = true
+        let nutrition = await RecipeService.shared.estimateNutrition(
+            recipeId: userRecipeId,
+            title: recipe.title,
+            servings: recipe.servings == "N/A" ? nil : recipe.servings,
+            ingredients: recipe.ingredients
+        )
+        withAnimation {
+            if let nutrition {
+                recipe.nutrition = nutrition
+                recipe.nutritionEstimated = true
+            }
+            isEstimatingNutrition = false
         }
     }
 
@@ -540,16 +633,18 @@ struct ImageCarousel: View {
     var onBookmarkTap: (() -> Void)? = nil
     var showMenuButton: Bool = false
     var onDelete: (() -> Void)? = nil
-    // Preview mode (unsaved recipe) menu actions
+    // Edit: unsaved preview or the user's own recipe; Cancel: unsaved preview only
     var onEdit: (() -> Void)? = nil
     var onCancel: (() -> Void)? = nil
+    // Explore/saved recipes: edit as the user's own copy
+    var onCustomize: (() -> Void)? = nil
 
     private var totalImageCount: Int {
         images.count + pendingImages.count
     }
 
     private var hasMenuActions: Bool {
-        (showMenuButton && onDelete != nil) || onEdit != nil || onCancel != nil
+        (showMenuButton && onDelete != nil) || onEdit != nil || onCancel != nil || onCustomize != nil
     }
 
     var body: some View {
@@ -628,12 +723,18 @@ struct ImageCarousel: View {
 
                     Spacer()
 
-                    // Menu button (user recipes: Delete; unsaved preview: Edit / Cancel)
+                    // Menu button (user recipes: Edit / Delete; unsaved preview: Edit / Cancel;
+                    // Explore/saved recipes: Customize)
                     if hasMenuActions {
                         Menu {
                             if let onEdit {
                                 Button(action: onEdit) {
                                     Label("Edit", systemImage: "pencil")
+                                }
+                            }
+                            if let onCustomize {
+                                Button(action: onCustomize) {
+                                    Label("Customize", systemImage: "square.and.pencil")
                                 }
                             }
                             if let onCancel {

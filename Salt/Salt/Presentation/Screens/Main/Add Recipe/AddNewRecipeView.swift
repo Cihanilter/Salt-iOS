@@ -475,6 +475,13 @@ struct CreateRecipeView: View {
     var isEditMode: Bool = false
     var onUpdate: ((RecipeDetail, [UIImage]) -> Void)? = nil  // Returns updated recipe and new photos
 
+    // Editing a recipe that's already saved (own recipe, or a copy of an Explore recipe):
+    // the button saves right away and the sheet stays open until it succeeds
+    var onSaveChanges: ((RecipeDetail, [UIImage]) async throws -> Void)? = nil
+    var saveChangesTitle = "Save Changes"
+    var editNotice: String? = nil  // Shown above the form, e.g. that a copy is saved
+    @State private var isSavingChanges = false
+
     enum CreateRecipeField {
         case title, description, ingredients, instructions, prep, cook, servings, notes
     }
@@ -482,6 +489,20 @@ struct CreateRecipeView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 24) {
+                if let editNotice {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(Color("OrangeRed"))
+                        Text(editNotice)
+                            .font(.custom("OpenSans-Regular", size: 14))
+                            .foregroundColor(.primary)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color("PeachCream"))
+                    .cornerRadius(10)
+                }
+
                 // Title
                 CreateRecipeTextField(
                     title: "Title",
@@ -685,30 +706,41 @@ struct CreateRecipeView: View {
                 HStack {
                     Spacer()
                     Button(action: {
-                        if isEditMode {
-                            // In edit mode, pass the updated recipe and any new photos back
+                        if let onSaveChanges {
                             let updatedRecipe = viewModel.toRecipeDetail()
-                            // Make deep copy of images BEFORE passing to callback to avoid memory issues
-                            let copiedPhotos: [UIImage] = viewModel.photoImages.compactMap { image in
-                                guard let data = image.jpegData(compressionQuality: 0.8),
-                                      let copy = UIImage(data: data) else {
-                                    return nil
+                            let photos = copiedPhotos()
+                            Task {
+                                isSavingChanges = true
+                                viewModel.errorMessage = nil
+                                do {
+                                    try await onSaveChanges(updatedRecipe, photos)
+                                } catch {
+                                    viewModel.errorMessage = error.localizedDescription
                                 }
-                                return copy
+                                isSavingChanges = false
                             }
-                            onUpdate?(updatedRecipe, copiedPhotos)
+                        } else if isEditMode {
+                            // In edit mode, pass the updated recipe and any new photos back
+                            onUpdate?(viewModel.toRecipeDetail(), copiedPhotos())
                         } else {
                             navigateToPreview = true
                         }
                     }) {
-                        Text(isEditMode ? "Update Preview" : "Preview & Save")
-                            .font(.custom("OpenSans-SemiBold", size: 18))
-                            .foregroundColor(.white)
-                            .frame(width: isEditMode ? 180 : 164, height: 45)
-                            .background(Color("Orange"))
-                            .cornerRadius(10)
+                        HStack(spacing: 8) {
+                            if isSavingChanges {
+                                ProgressView()
+                                    .tint(.white)
+                                    .scaleEffect(0.8)
+                            }
+                            Text(onSaveChanges != nil ? saveChangesTitle : (isEditMode ? "Update Preview" : "Preview & Save"))
+                                .font(.custom("OpenSans-SemiBold", size: 18))
+                                .foregroundColor(.white)
+                        }
+                        .frame(width: isEditMode ? 180 : 164, height: 45)
+                        .background(Color("Orange"))
+                        .cornerRadius(10)
                     }
-                    .disabled(!viewModel.isValid)
+                    .disabled(!viewModel.isValid || isSavingChanges)
                     Spacer()
                 }
                 .padding(.top, 10)
@@ -786,6 +818,17 @@ struct CreateRecipeView: View {
                 }
                 selectedPhotoItems = []
             }
+        }
+    }
+
+    /// Deep copy of the new photos BEFORE passing them to a callback, to avoid memory issues
+    private func copiedPhotos() -> [UIImage] {
+        viewModel.photoImages.compactMap { image in
+            guard let data = image.jpegData(compressionQuality: 0.8),
+                  let copy = UIImage(data: data) else {
+                return nil
+            }
+            return copy
         }
     }
 }

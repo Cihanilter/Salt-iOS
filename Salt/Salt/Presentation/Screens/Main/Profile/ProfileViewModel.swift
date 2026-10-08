@@ -14,7 +14,7 @@ class ProfileViewModel: ObservableObject {
     // MARK: - Published Properties
 
     @Published var userProfile: UserProfileData?
-    @Published var createdRecipesCount: Int = 0
+    @Published var activeImportedRecipesCount: Int = 0
     @Published var importedRecipesCount: Int = 0
     @Published var isLoading = false
     @Published var isEditing = false
@@ -119,13 +119,13 @@ class ProfileViewModel: ObservableObject {
     func loadRecipesCount() async {
         // Loaded separately so one failing (e.g. recipe_imports table not created yet)
         // doesn't hide the other
-        async let created = recipeService.getUserRecipesCount()
+        async let active = recipeService.getActiveImportedRecipesCount()
         async let imported = recipeService.getImportedRecipesCount()
 
         do {
-            createdRecipesCount = try await created
+            activeImportedRecipesCount = try await active
         } catch {
-            print("Failed to load created recipes count: \(error)")
+            print("Failed to load active imported recipes count: \(error)")
         }
 
         do {
