@@ -252,13 +252,13 @@ struct ProfileView: View {
 
     private var statsCard: some View {
         HStack(spacing: 0) {
-            statItem(count: viewModel.createdRecipesCount, label: "Recipes")
+            statItem(count: viewModel.activeImportedRecipesCount, label: "Active Imported Recipes")
 
             Rectangle()
                 .fill(Color("GrayText").opacity(0.25))
                 .frame(width: 1, height: 44)
 
-            statItem(count: viewModel.importedRecipesCount, label: "Total Recipes Imported")
+            statItem(count: viewModel.importedRecipesCount, label: "Total Imported Recipes")
         }
         .padding(.vertical, 20)
         .background(Color(.systemBackground))
@@ -275,6 +275,7 @@ struct ProfileView: View {
             Text(label)
                 .font(.custom("OpenSans-Regular", size: 14))
                 .foregroundColor(Color("GrayText"))
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)

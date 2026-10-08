@@ -29,6 +29,11 @@ class CreateRecipeViewModel: ObservableObject {
     // Original image URLs (for edit mode - preserves existing images)
     @Published var originalImageUrls: [String] = []
 
+    // Edit mode: kept so editing doesn't drop the source link, and servings text like
+    // "Makes 12 cookies" survives when the servings count isn't changed
+    private var originalSource: (url: String?, name: String?) = (nil, nil)
+    private var originalServings: (number: String, text: String)?
+
     @Published var isLoading = false
     @Published var isSaving = false
     @Published var errorMessage: String?
@@ -251,20 +256,27 @@ class CreateRecipeViewModel: ObservableObject {
         // New photos from camera will be uploaded when saved
         let imageUrls = originalImageUrls
 
+        let servingsText: String
+        if let originalServings, servings == originalServings.number {
+            servingsText = originalServings.text
+        } else {
+            servingsText = servings.isEmpty ? "2" : servings
+        }
+
         return RecipeDetail(
             title: title.trimmingCharacters(in: .whitespaces),
             duration: durationText,
             ingredientsCount: "\(ingredientsList.count) ingredients",
             description: description.isEmpty ? "No description" : description.trimmingCharacters(in: .whitespaces),
-            servings: servings.isEmpty ? "2" : servings,
+            servings: servingsText,
             prepTime: prepTime.isEmpty ? "0" : prepTime,
             cookTime: cookTime.isEmpty ? "0" : cookTime,
             ingredients: ingredientsList,
             instructions: instructionsList,
             notes: notes.trimmingCharacters(in: .whitespaces),
             images: imageUrls,
-            sourceUrl: nil,
-            sourceName: nil
+            sourceUrl: originalSource.url,
+            sourceName: originalSource.name
         )
     }
 
@@ -272,10 +284,21 @@ class CreateRecipeViewModel: ObservableObject {
 
     func initializeFrom(_ recipe: RecipeDetail) {
         title = recipe.title
-        description = recipe.description == "No description" ? "" : recipe.description
+        let descriptionPlaceholders = ["No description", "No description available"]
+        description = descriptionPlaceholders.contains(recipe.description) ? "" : recipe.description
         ingredientsText = recipe.ingredients.joined(separator: "\n")
         instructionsText = recipe.instructions.joined(separator: "\n")
-        servings = recipe.servings
+
+        // The servings stepper works with a plain number ("4 servings" -> "4")
+        let servingsNumber = recipe.servings
+            .split(whereSeparator: { $0.wholeNumberValue == nil })
+            .lazy
+            .compactMap { Int($0) }
+            .first
+            .map(String.init) ?? ""
+        servings = servingsNumber
+        originalServings = recipe.servings == "N/A" ? nil : (servingsNumber, recipe.servings)
+        originalSource = (recipe.sourceUrl, recipe.sourceName)
         prepTime = recipe.prepTime == "0" ? "" : recipe.prepTime
         cookTime = recipe.cookTime == "0" ? "" : recipe.cookTime
         notes = recipe.notes == "Enjoy this delicious recipe!" ? "" : recipe.notes
@@ -297,6 +320,8 @@ class CreateRecipeViewModel: ObservableObject {
         selectedPhotos = []
         photoImages = []
         originalImageUrls = []
+        originalSource = (nil, nil)
+        originalServings = nil
         errorMessage = nil
         showingPreview = false
         savedSuccessfully = false

@@ -142,8 +142,17 @@ struct MyRecipesView: View {
 
     /// Recipes shown for a tab, filtered by the search text.
     private func items(for tab: MyRecipesTab) -> [MyRecipeItem] {
-        let own = viewModel.filteredUserRecipes.map(MyRecipeItem.own)
-        let saved = viewModel.filteredBookmarkedRecipes.map(MyRecipeItem.saved)
+        let userRecipes = viewModel.filteredUserRecipes
+        let own = userRecipes.filter { !$0.isCustomizedCopy }.map(MyRecipeItem.own)
+        // Customized copies of the app's recipes sit with the bookmarks, but open as the
+        // user's own recipe (Edit / Delete). A customized original stays bookmarked;
+        // only its copy is listed so it doesn't appear twice.
+        let copies = userRecipes.filter(\.isCustomizedCopy)
+        let customizedIds = Set(viewModel.userRecipes.compactMap(\.originalRecipeId))
+        let saved = copies.map(MyRecipeItem.own)
+            + viewModel.filteredBookmarkedRecipes
+                .filter { !customizedIds.contains($0.id) }
+                .map(MyRecipeItem.saved)
 
         switch tab {
         case .all: return own + saved
@@ -281,6 +290,7 @@ struct MyRecipeCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 photo
                     .overlay(alignment: .topTrailing) {
+                        // Customized copies (.own) have no bookmark icon; Delete removes them
                         if case .saved(let recipe) = item {
                             bookmarkButton(for: recipe)
                         }
