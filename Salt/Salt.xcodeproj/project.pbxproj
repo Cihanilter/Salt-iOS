@@ -15,6 +15,7 @@
 		119DFFB62EC91668000A0280 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 119DFFB52EC91668000A0280 /* Supabase */; };
 		3CCDC64A2ECBB25B00CDEAAA /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 3CCDC6492ECBB25B00CDEAAA /* GoogleSignIn */; };
 		3CCDC64C2ECBB25B00CDEAAA /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 3CCDC64B2ECBB25B00CDEAAA /* GoogleSignInSwift */; };
+		A347EAAB3078920F002D6E23 /* AppsFlyerLib-Static in Frameworks */ = {isa = PBXBuildFile; productRef = A347EAAA3078920F002D6E23 /* AppsFlyerLib-Static */; };
 		A37C29BF306A3B3B005D0611 /* SaltShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A37C29B5306A3B3B005D0611 /* SaltShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A3AB0628306CD835009F7D81 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = A3AB0627306CD835009F7D81 /* RevenueCat */; };
 		A3AB062A306CD835009F7D81 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = A3AB0629306CD835009F7D81 /* RevenueCatUI */; };
@@ -92,6 +93,7 @@
 			files = (
 				119DFFAF2EC91561000A0280 /* PostgREST in Frameworks */,
 				119DFFAD2EC91561000A0280 /* Functions in Frameworks */,
+				A347EAAB3078920F002D6E23 /* AppsFlyerLib-Static in Frameworks */,
 				119DFFB62EC91668000A0280 /* Supabase in Frameworks */,
 				3CCDC64C2ECBB25B00CDEAAA /* GoogleSignInSwift in Frameworks */,
 				119DFFAB2EC91561000A0280 /* Auth in Frameworks */,
@@ -171,6 +173,7 @@
 				3CCDC64B2ECBB25B00CDEAAA /* GoogleSignInSwift */,
 				A3AB0627306CD835009F7D81 /* RevenueCat */,
 				A3AB0629306CD835009F7D81 /* RevenueCatUI */,
+				A347EAAA3078920F002D6E23 /* AppsFlyerLib-Static */,
 			);
 			productName = Salt;
 			productReference = 119DFF5A2EC91496000A0280 /* Salt.app */;
@@ -229,6 +232,7 @@
 				119DFFA92EC91561000A0280 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				3CCDC6482ECBB25B00CDEAAA /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				A3AB0626306CD791009F7D81 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				A347EAA93078911F002D6E23 /* XCRemoteSwiftPackageReference "AppsFlyerFramework-Static" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 119DFF5B2EC91496000A0280 /* Products */;
@@ -612,6 +616,14 @@
 				minimumVersion = 9.0.0;
 			};
 		};
+		A347EAA93078911F002D6E23 /* XCRemoteSwiftPackageReference "AppsFlyerFramework-Static" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/AppsFlyerSDK/AppsFlyerFramework-Static";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.0.2;
+			};
+		};
 		A3AB0626306CD791009F7D81 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm";
@@ -662,6 +674,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3CCDC6482ECBB25B00CDEAAA /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignInSwift;
+		};
+		A347EAAA3078920F002D6E23 /* AppsFlyerLib-Static */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A347EAA93078911F002D6E23 /* XCRemoteSwiftPackageReference "AppsFlyerFramework-Static" */;
+			productName = "AppsFlyerLib-Static";
 		};
 		A3AB0627306CD835009F7D81 /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;
