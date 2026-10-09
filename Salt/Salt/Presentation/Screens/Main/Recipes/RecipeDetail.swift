@@ -309,9 +309,9 @@ struct RecipeDetailView: View {
                         // Instructions
                         InstructionsSection(instructions: recipe.instructions)
 
-                        // Notes & Tips section (shown for imported recipes OR when notes exist).
-                        // The source link now lives in the info card at the top.
-                        if recipe.sourceUrl != nil || !recipe.notes.isEmpty {
+                        // Notes & Tips, only when the recipe has notes.
+                        // The source link lives in the info card at the top.
+                        if !recipe.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             NotesSection(notes: recipe.notes)
                         }
 
