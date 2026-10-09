@@ -97,8 +97,6 @@ struct ExploreRecipesView: View {
                 if searchState == .idle {
                     DishTypesRow(dishTypes: dishTypes, viewModel: viewModel)
                         .padding(.top, 8)
-                        // Space between the category names and the recipe cards
-                        .padding(.bottom, 12)
                         .background(Color(.systemBackground))
                 }
 
@@ -446,6 +444,8 @@ struct ExploreRecipesView: View {
                     .font(.custom("OpenSans-Regular", size: 14))
                     .foregroundColor(Color("GraniteGray"))
                     .padding(.horizontal, 18)
+                    // Space between the category names and the results
+                    .padding(.top, 16)
                     .opacity(viewModel.isLoading || viewModel.searchResults.isEmpty ? 0 : 1)
 
                 if viewModel.isLoading {
