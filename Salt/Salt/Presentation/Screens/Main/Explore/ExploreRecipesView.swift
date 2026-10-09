@@ -96,7 +96,9 @@ struct ExploreRecipesView: View {
                 // Dish Types Row (fixed, shown only in idle state)
                 if searchState == .idle {
                     DishTypesRow(dishTypes: dishTypes, viewModel: viewModel)
-                        .padding(.top, 8)
+                        .padding(.top, 0)
+                        // Keeps scrolled recipe cards from running into the category names
+                        .padding(.bottom, 12)
                         .background(Color(.systemBackground))
                 }
 
@@ -196,7 +198,7 @@ struct ExploreRecipesView: View {
 
     private var exploreContent: some View {
         ScrollView(showsIndicators: false) {
-            LazyVStack(alignment: .leading, spacing: 16) {
+            LazyVStack(alignment: .leading, spacing: 10) {
                 // Cuisine sections
                 ForEach(viewModel.cuisineSections) { section in
                     RecipeSection(
@@ -207,7 +209,7 @@ struct ExploreRecipesView: View {
                     )
                 }
             }
-            .padding(.top, 16)
+            .padding(.top, 1)
             .padding(.bottom, 30)
         }
         .id(contentID)  // Reset scroll position when ID changes
@@ -444,8 +446,8 @@ struct ExploreRecipesView: View {
                     .font(.custom("OpenSans-Regular", size: 14))
                     .foregroundColor(Color("GraniteGray"))
                     .padding(.horizontal, 18)
-                    // Space between the category names and the results
-                    .padding(.top, 16)
+                    // Space between the category names and the results (with the row's bottom padding)
+                    .padding(.top, 4)
                     .opacity(viewModel.isLoading || viewModel.searchResults.isEmpty ? 0 : 1)
 
                 if viewModel.isLoading {
@@ -818,7 +820,7 @@ struct RecipeSection: View {
             Text(title)
                 .font(.custom("Playfair9pt-SemiBold", size: 24))
                 .padding(.horizontal)
-                .padding(.top, 30)
+                .padding(.top, 15)
 
             GeometryReader { outerGeometry in
                 ScrollView(.horizontal, showsIndicators: false) {
