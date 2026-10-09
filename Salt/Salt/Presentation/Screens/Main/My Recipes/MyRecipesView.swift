@@ -15,6 +15,15 @@ enum MyRecipesTab: String, CaseIterable, Identifiable {
     case saved = "Saved"       // Recipes bookmarked from the app's recipe database
 
     var id: String { rawValue }
+
+    /// Search bar placeholder for this tab
+    var searchPlaceholder: String {
+        switch self {
+        case .all: "Search in My Recipes..."
+        case .imports: "Search in Imported Recipes..."
+        case .saved: "Search in Saved Recipes..."
+        }
+    }
 }
 
 /// A card in the My Recipes grid: either one of the user's own recipes or a bookmarked one.
@@ -65,7 +74,7 @@ struct MyRecipesView: View {
 
                             ZStack(alignment: .leading) {
                                 if viewModel.searchText.isEmpty {
-                                    Text("Search in My Recipes...")
+                                    Text(selectedTab.searchPlaceholder)
                                         .font(.custom("OpenSans-Regular", size: 14))
                                         .foregroundColor(Color("DarkSilver"))
                                 }
