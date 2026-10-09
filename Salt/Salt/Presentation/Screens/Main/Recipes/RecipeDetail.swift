@@ -159,6 +159,9 @@ struct RecipeDetailView: View {
     @State private var pendingPhotoImages: [UIImage] = []  // New photos added in edit mode (for display only)
     @State private var isCookingModeOn = false  // Keeps the screen awake while viewing the recipe
     @State private var isEstimatingNutrition = false  // AI estimate running for a saved recipe opened without nutrition
+    @State private var isCreatingShareLink = false
+    @State private var shareLink: ShareLinkItem?
+    @State private var shareErrorMessage: String?
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var bookmarkManager = BookmarkManager.shared
 
@@ -209,6 +212,11 @@ struct RecipeDetailView: View {
         recipeId != nil && userRecipeId == nil && mode == .regular
     }
 
+    /// Saved recipes (the user's own and Explore ones) can be shared with a link
+    private var canShare: Bool {
+        mode == .regular && (userRecipeId ?? recipeId) != nil
+    }
+
     /// Message for the blurred Nutrition placeholder while there are no values yet, and whether
     /// it's in progress (spinner); nil hides the placeholder. Tells users nutrition is coming
     /// for their own recipes. "Estimated" is left to the real values' label.
@@ -252,7 +260,8 @@ struct RecipeDetailView: View {
                         onEdit: editAction,
                         // Discards the unsaved recipe and goes back to the form / link field
                         onCancel: isUnsavedPreview ? { dismiss() } : nil,
-                        onCustomize: canCustomize ? { editSheet = .customize } : nil
+                        onCustomize: canCustomize ? { editSheet = .customize } : nil,
+                        onShare: canShare ? { Task { await createShareLink() } } : nil
                     )
                     .id("top")  // Anchor for scrolling to top
 
@@ -375,6 +384,35 @@ struct RecipeDetailView: View {
                 }
             }
         }
+        .sheet(item: $shareLink) { link in
+            ActivityView(items: [link.url])
+                .presentationDetents([.medium, .large])
+        }
+        .alert("Couldn't Share Recipe", isPresented: Binding(
+            get: { shareErrorMessage != nil },
+            set: { if !$0 { shareErrorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(shareErrorMessage ?? "")
+        }
+        .overlay(alignment: .bottom) {
+            if isCreatingShareLink {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .tint(.white)
+                        .scaleEffect(0.8)
+                    Text("Creating link…")
+                        .font(.custom("OpenSans-SemiBold", size: 14))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Capsule().fill(Color.black.opacity(0.8)))
+                .padding(.bottom, 24)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
         .overlay(alignment: .bottom) {
             if showCopySavedToast {
                 Text("Copy saved to My Recipes")
@@ -472,6 +510,27 @@ struct RecipeDetailView: View {
         }
     }
 
+    // MARK: - Share
+
+    /// Saves a snapshot of the recipe and opens the share sheet with its link
+    private func createShareLink() async {
+        guard !isCreatingShareLink, let sourceRecipeId = userRecipeId ?? recipeId else { return }
+
+        withAnimation { isCreatingShareLink = true }
+        do {
+            let url = try await SharedRecipeService.shared.shareLink(
+                for: recipe,
+                sourceRecipeId: sourceRecipeId,
+                // Explore recipes: recipients save the original instead of a copy
+                originalRecipeId: userRecipeId == nil ? recipeId : nil
+            )
+            shareLink = ShareLinkItem(url: url)
+        } catch {
+            shareErrorMessage = error.localizedDescription
+        }
+        withAnimation { isCreatingShareLink = false }
+    }
+
     // MARK: - Delete User Recipe
 
     private func deleteUserRecipe() async {
@@ -540,6 +599,14 @@ struct RecipeDetailView: View {
                 .ignoresSafeArea(edges: .bottom)
         )
     }
+}
+
+// MARK: - Share Link Item
+
+/// Share link ready to show in the share sheet
+struct ShareLinkItem: Identifiable {
+    let url: URL
+    var id: URL { url }
 }
 
 // MARK: - Saved Recipe Info Card (replaces normal card after save)
@@ -638,13 +705,15 @@ struct ImageCarousel: View {
     var onCancel: (() -> Void)? = nil
     // Explore/saved recipes: edit as the user's own copy
     var onCustomize: (() -> Void)? = nil
+    // Saved recipes: share with a link
+    var onShare: (() -> Void)? = nil
 
     private var totalImageCount: Int {
         images.count + pendingImages.count
     }
 
     private var hasMenuActions: Bool {
-        (showMenuButton && onDelete != nil) || onEdit != nil || onCancel != nil || onCustomize != nil
+        (showMenuButton && onDelete != nil) || onEdit != nil || onCancel != nil || onCustomize != nil || onShare != nil
     }
 
     var body: some View {
@@ -727,6 +796,11 @@ struct ImageCarousel: View {
                     // Explore/saved recipes: Customize)
                     if hasMenuActions {
                         Menu {
+                            if let onShare {
+                                Button(action: onShare) {
+                                    Label("Share", systemImage: "square.and.arrow.up")
+                                }
+                            }
                             if let onEdit {
                                 Button(action: onEdit) {
                                     Label("Edit", systemImage: "pencil")

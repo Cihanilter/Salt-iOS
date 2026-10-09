@@ -9,6 +9,15 @@ struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var exploreScrollToTop = UUID()
     @ObservedObject private var shareImportRouter = ShareImportRouter.shared
+    @ObservedObject private var sharedRecipeRouter = SharedRecipeRouter.shared
+
+    /// Recipe opened from a share link; closing the screen clears the link
+    private var sharedRecipeCode: Binding<SharedRecipeCode?> {
+        Binding(
+            get: { sharedRecipeRouter.pendingCode.map(SharedRecipeCode.init) },
+            set: { if $0 == nil { sharedRecipeRouter.clear() } }
+        )
+    }
 
     // Custom binding to detect same-tab taps
     private var tabSelection: Binding<Int> {
@@ -96,11 +105,29 @@ struct MainTabView: View {
                 selectedTab = 1
             }
         }
+        .fullScreenCover(item: sharedRecipeCode) { sharedCode in
+            SharedRecipeView(
+                code: sharedCode.id,
+                onAddMoreRecipes: {
+                    sharedRecipeRouter.clear()
+                    selectedTab = 1
+                },
+                onGoToMyRecipes: {
+                    sharedRecipeRouter.clear()
+                    selectedTab = 2
+                }
+            )
+        }
         .task {
             // Prefetch My Recipes data in background while user is on Explore
             await MyRecipesViewModel.shared.prefetch()
         }
     }
+}
+
+/// Code of a recipe share link, as the item of its full-screen cover
+private struct SharedRecipeCode: Identifiable {
+    let id: String
 }
 
 #Preview {

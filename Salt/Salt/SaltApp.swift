@@ -13,6 +13,7 @@ struct SaltApp: App {
 
     init() {
         SubscriptionManager.shared.configure()
+        AppsFlyerManager.shared.configure()
     }
 
     var body: some Scene {
@@ -22,6 +23,15 @@ struct SaltApp: App {
                 .onOpenURL { url in
                     print("Deep link received: \(url)")
                     print("Deep link full URL: \(url.absoluteString)")
+
+                    // AppsFlyer sorts out universal links (OneLink) and URL schemes itself
+                    AppsFlyerManager.shared.handle(url)
+
+                    // Recipe share links (universal links can arrive here as well as in onContinueUserActivity)
+                    if url.scheme == "https" {
+                        _ = SharedRecipeRouter.shared.handle(url)
+                        return
+                    }
 
                     // Handle recipe links shared from the Share Extension
                     if ShareImportRouter.shared.handle(url) {
@@ -51,6 +61,13 @@ struct SaltApp: App {
                         } catch {
                             print("Failed to handle deep link: \(error)")
                         }
+                    }
+                }
+                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+                    // Recipe share links (OneLink universal links)
+                    AppsFlyerManager.shared.handle(activity)
+                    if let url = activity.webpageURL {
+                        _ = SharedRecipeRouter.shared.handle(url)
                     }
                 }
                 .sheet(isPresented: $showSetNewPassword) {

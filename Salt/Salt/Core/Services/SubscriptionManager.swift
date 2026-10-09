@@ -33,6 +33,9 @@ final class SubscriptionManager: ObservableObject {
         #endif
         Purchases.configure(withAPIKey: RevenueCatConfig.apiKey)
 
+        // Apple Search Ads: sends the install's AdServices token so RevenueCat can tie revenue to campaigns
+        Purchases.shared.attribution.enableAdServicesAttributionTokenCollection()
+
         // Keeps `isPremium` in sync with purchases, renewals, expirations and restores
         customerInfoTask = Task { [weak self] in
             for await customerInfo in Purchases.shared.customerInfoStream {

@@ -200,6 +200,25 @@ class MyRecipesViewModel: ObservableObject {
         return created
     }
 
+    /// Saves a recipe received with a share link as the user's own recipe.
+    /// Saved as "manual", so it doesn't count as an import (free-tier limit).
+    func saveSharedRecipe(from detail: RecipeDetail, newPhotos: [UIImage]) async throws -> UserRecipe {
+        guard let userIdString = AuthManager.shared.currentUser?.id,
+              let userId = UUID(uuidString: userIdString) else {
+            throw RecipeServiceError.notAuthenticated
+        }
+
+        var copy = UserRecipe.empty(userId: userId)
+        copy.applyEdits(from: detail)
+        copy.sourceUrl = detail.sourceUrl
+        copy.sourceName = detail.sourceName
+        try await setPhotos(of: &copy, existing: detail.images, newPhotos: newPhotos)
+
+        let created = try await recipeService.createRecipe(copy, source: "manual")
+        userRecipes.insert(created, at: 0)
+        return created
+    }
+
     /// Uploads new photos and sets them after the existing image URLs
     private func setPhotos(of recipe: inout UserRecipe, existing: [String], newPhotos: [UIImage]) async throws {
         var photos = existing
