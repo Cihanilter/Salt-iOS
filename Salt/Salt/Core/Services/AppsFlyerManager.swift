@@ -21,12 +21,43 @@ final class AppsFlyerManager: NSObject {
         let appsFlyer = AppsFlyerLib.shared()
         appsFlyer.initialize(devKey: AppsFlyerConfig.devKey, appId: AppsFlyerConfig.appleAppID)
         appsFlyer.deepLinkDelegate = self
+        // OneLink template used for short share links
+        appsFlyer.appInviteOneLinkID = AppsFlyerConfig.oneLinkTemplateID
         #if DEBUG
         appsFlyer.isDebug = true
         #endif
 
         appsFlyer.registerSessionReadyListener {
             AppsFlyerLib.shared().start()
+        }
+    }
+
+    /// Short OneLink (e.g. saltrecipes.onelink.me/ked7/ab12cd34) whose parameters are stored
+    /// by AppsFlyer. Nil if it couldn't be created in time; callers then use the long link.
+    func shortLink(parameters: [String: String], campaign: String, timeout: Duration = .seconds(5)) async -> URL? {
+        guard AppsFlyerConfig.isConfigured, !AppsFlyerConfig.oneLinkTemplateID.isEmpty else { return nil }
+
+        return await withCheckedContinuation { continuation in
+            // Resumes once: with the link, or with nil on error or timeout
+            let once = ResumeOnce(continuation)
+
+            AppsFlyerShareInviteHelper.generateInviteLink(linkGenerator: { generator in
+                generator.setCampaign(campaign)
+                for (key, value) in parameters {
+                    generator.addParameterValue(value, forKey: key)
+                }
+                return generator
+            }, completionHandler: { url, error in
+                if let error {
+                    print("⚠️ AppsFlyer short link failed: \(error)")
+                }
+                once.resume(with: error == nil ? url : nil)
+            })
+
+            Task {
+                try? await Task.sleep(for: timeout)
+                once.resume(with: nil)
+            }
         }
     }
 
@@ -40,6 +71,24 @@ final class AppsFlyerManager: NSObject {
     func handle(_ url: URL) {
         guard AppsFlyerConfig.isConfigured else { return }
         AppsFlyerLib.shared().handleUniversalLink(url)
+    }
+}
+
+/// Resumes a continuation only the first time, so a late callback after a timeout is ignored
+private final class ResumeOnce: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<URL?, Never>?
+
+    init(_ continuation: CheckedContinuation<URL?, Never>) {
+        self.continuation = continuation
+    }
+
+    func resume(with url: URL?) {
+        lock.lock()
+        let continuation = self.continuation
+        self.continuation = nil
+        lock.unlock()
+        continuation?.resume(returning: url)
     }
 }
 
