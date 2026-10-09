@@ -75,6 +75,7 @@ final class LoginViewModel: ObservableObject {
 
         do {
             try await authManager.signIn(email: email.inputText, password: password.inputText)
+            Analytics.log(.signedIn, ["method": "email", "screen": "login"])
             // Navigation will be handled by AuthManager state change
         } catch let error as AuthError {
             handleAuthError(error)
@@ -91,6 +92,7 @@ final class LoginViewModel: ObservableObject {
 
         do {
             try await authManager.signInWithGoogle()
+            Analytics.log(.signedIn, ["method": "google", "screen": "login"])
         } catch let error as AuthError {
             handleAuthError(error)
         } catch {
@@ -108,6 +110,7 @@ final class LoginViewModel: ObservableObject {
             let helper = AppleSignInHelper()
             let credential = try await helper.signIn()
             try await authManager.signInWithApple(credential: credential)
+            Analytics.log(.signedIn, ["method": "apple", "screen": "login"])
         } catch let error as AuthError {
             handleAuthError(error)
         } catch {
@@ -119,6 +122,7 @@ final class LoginViewModel: ObservableObject {
 
     // MARK: - Error Handling
     private func handleAuthError(_ error: AuthError) {
+        Analytics.log(.authFailed, ["screen": "login", "error": String(describing: error)])
         switch error {
         case .invalidEmail:
             var updated = email

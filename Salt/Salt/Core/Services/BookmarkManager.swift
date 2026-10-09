@@ -72,6 +72,7 @@ class BookmarkManager: ObservableObject {
             return wasBookmarked
         }
 
+        Analytics.log(newState ? .recipeBookmarked : .recipeUnbookmarked)
         return newState
     }
 }

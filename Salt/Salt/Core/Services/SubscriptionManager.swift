@@ -90,5 +90,6 @@ final class SubscriptionManager: ObservableObject {
     /// without waiting for `customerInfoStream` to deliver it.
     func update(with customerInfo: CustomerInfo) {
         isPremium = customerInfo.entitlements[RevenueCatConfig.premiumEntitlementID]?.isActive == true
+        Analytics.setPremium(isPremium)
     }
 }

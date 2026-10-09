@@ -168,6 +168,7 @@ final class SignUpViewModel: ObservableObject {
             )
 
             print("SignUpViewModel: Sign up successful!")
+            Analytics.log(.signedUp, ["method": "email"])
             // Show success message
             showSuccessMessage = true
             alertMessage = "Account created successfully! Please check your email to verify your account."
@@ -189,6 +190,7 @@ final class SignUpViewModel: ObservableObject {
 
         do {
             try await authManager.signInWithGoogle()
+            Analytics.log(.signedIn, ["method": "google", "screen": "sign_up"])
         } catch let error as AuthError {
             handleAuthError(error)
         } catch {
@@ -206,6 +208,7 @@ final class SignUpViewModel: ObservableObject {
             let helper = AppleSignInHelper()
             let credential = try await helper.signIn()
             try await authManager.signInWithApple(credential: credential)
+            Analytics.log(.signedIn, ["method": "apple", "screen": "sign_up"])
         } catch let error as AuthError {
             handleAuthError(error)
         } catch {
@@ -217,6 +220,7 @@ final class SignUpViewModel: ObservableObject {
 
     // MARK: - Error Handling
     private func handleAuthError(_ error: AuthError) {
+        Analytics.log(.authFailed, ["screen": "sign_up", "error": String(describing: error)])
         switch error {
         case .invalidEmail:
             var updated = email

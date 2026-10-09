@@ -49,7 +49,9 @@ struct SharedRecipeView: View {
         sharedRecipe = nil
         errorMessage = nil
         do {
-            sharedRecipe = try await SharedRecipeService.shared.fetchRecipe(code: code)
+            let recipe = try await SharedRecipeService.shared.fetchRecipe(code: code)
+            sharedRecipe = recipe
+            Analytics.log(.sharedRecipeOpened, ["recipe_type": recipe.originalRecipeId == nil ? "own" : "explore"])
         } catch {
             errorMessage = (error as? SharedRecipeError)?.errorDescription
                 ?? "Couldn't load the recipe. Check your connection and try again."
@@ -77,6 +79,7 @@ struct SharedRecipeView: View {
             } else {
                 _ = try await viewModel.saveSharedRecipe(from: detail, newPhotos: photos)
             }
+            Analytics.log(.sharedRecipeSaved, ["recipe_type": shared.originalRecipeId == nil ? "own" : "explore"])
             return true
         } catch {
             print("❌ Failed to save shared recipe: \(error)")

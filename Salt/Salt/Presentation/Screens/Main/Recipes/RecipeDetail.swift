@@ -430,6 +430,9 @@ struct RecipeDetailView: View {
             // just saved whose estimate is still running) and show it as soon as it arrives
             await estimateNutritionIfNeeded()
         }
+        .onAppear {
+            Analytics.screen(mode == .preview ? "Recipe Preview" : "Recipe Detail")
+        }
         .onChange(of: isCookingModeOn) { _, isOn in
             UIApplication.shared.isIdleTimerDisabled = isOn
         }
@@ -525,6 +528,7 @@ struct RecipeDetailView: View {
                 originalRecipeId: userRecipeId == nil ? recipeId : nil
             )
             shareLink = ShareLinkItem(url: url)
+            Analytics.log(.recipeShared, ["recipe_type": userRecipeId == nil ? "explore" : "own"])
         } catch {
             shareErrorMessage = error.localizedDescription
         }
