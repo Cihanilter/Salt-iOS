@@ -187,6 +187,7 @@ class CreateRecipeViewModel: ObservableObject {
             }
 
             _ = try await recipeService.createRecipe(recipe)
+            Analytics.log(.recipeCreated, ["photos": recipe.photos?.count ?? 0])
             savedSuccessfully = true
             clearForm()
             return true
@@ -235,6 +236,7 @@ class CreateRecipeViewModel: ObservableObject {
             )
 
             _ = try await RecipeService.shared.saveRecipeDetail(finalRecipeDetail)
+            Analytics.log(.recipeCreated, ["photos": imageUrls.count])
             savedSuccessfully = true
             clearForm()
             return true

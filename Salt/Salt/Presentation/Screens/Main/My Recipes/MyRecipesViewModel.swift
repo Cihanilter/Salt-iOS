@@ -132,6 +132,7 @@ class MyRecipesViewModel: ObservableObject {
         do {
             try await recipeService.deleteRecipe(recipe.id)
             userRecipes.removeAll { $0.id == recipe.id }
+            Analytics.log(.recipeDeleted, ["screen": "my_recipes"])
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -140,6 +141,7 @@ class MyRecipesViewModel: ObservableObject {
     func deleteRecipe(id: UUID) async throws {
         try await recipeService.deleteRecipe(id)
         userRecipes.removeAll { $0.id == id }
+        Analytics.log(.recipeDeleted, ["screen": "recipe_detail"])
     }
 
     // MARK: - Edit Recipe
@@ -165,6 +167,10 @@ class MyRecipesViewModel: ObservableObject {
         }
 
         try await recipeService.updateRecipe(updated, clearNutrition: nutritionIsStale)
+        Analytics.log(.recipeEdited, [
+            "ingredients_changed": updated.ingredients != original.ingredients,
+            "photos_added": newPhotos.count
+        ])
         // The list may have changed while saving
         if let index = userRecipes.firstIndex(where: { $0.id == id }) {
             userRecipes[index] = updated
@@ -190,6 +196,7 @@ class MyRecipesViewModel: ObservableObject {
         // "manual" so the copy isn't logged as an import (free-tier limit)
         let created = try await recipeService.createRecipe(copy, source: "manual", estimateNutrition: false)
         userRecipes.insert(created, at: 0)
+        Analytics.log(.recipeCustomized)
 
         // Customizing also saves the original, so it shows as bookmarked in Explore.
         // My Recipes lists the copy in its place.

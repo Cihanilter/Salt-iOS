@@ -205,10 +205,15 @@ struct ImportRecipeView: View {
         .sheet(isPresented: $showingPaywall) {
             // Remote paywall: shows whatever is attached to the current offering in the RevenueCat dashboard
             PaywallView(displayCloseButton: true)
+                .onAppear {
+                    Analytics.log(.paywallShown, ["source": "import_limit"])
+                }
                 .onPurchaseCompleted { customerInfo in
+                    Analytics.log(.subscriptionStarted, ["source": "import_limit"])
                     continueImportAfterUpgrade(customerInfo)
                 }
                 .onRestoreCompleted { customerInfo in
+                    Analytics.log(.purchasesRestored, ["source": "import_limit"])
                     continueImportAfterUpgrade(customerInfo)
                 }
         }

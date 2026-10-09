@@ -43,6 +43,10 @@ class RecipeImportViewModel: ObservableObject {
         errorMessage = nil
         importedRecipe = nil
 
+        let source = Analytics.importSource(for: finalUrl)
+        Analytics.log(.importStarted, ["source": source])
+        let startedAt = Date()
+
         do {
             let recipe = try await importService.importRecipe(from: finalUrl)
             importedRecipe = recipe
@@ -56,6 +60,14 @@ class RecipeImportViewModel: ObservableObject {
             print("❌ Import error: \(error)")
         }
 
+        if let errorMessage {
+            Analytics.log(.importFailed, [
+                "source": source,
+                "error": errorMessage,
+                "duration_seconds": Int(Date().timeIntervalSince(startedAt))
+            ])
+        }
+
         isLoading = false
     }
 
@@ -66,6 +78,7 @@ class RecipeImportViewModel: ObservableObject {
         do {
             _ = try await RecipeService.shared.saveImportedRecipe(recipe)
             print("✅ Saved recipe: \(recipe.title)")
+            Analytics.log(.recipeImported, ["source": Analytics.importSource(for: recipe.sourceUrl)])
             savedSuccessfully = true
             // Note: Don't clear import here - let the preview screen handle it
             return true
@@ -108,6 +121,10 @@ class RecipeImportViewModel: ObservableObject {
 
             _ = try await RecipeService.shared.saveRecipeDetail(finalRecipeDetail, sourceUrl: importedRecipe?.sourceUrl)
             print("✅ Saved edited recipe: \(recipeDetail.title)")
+            Analytics.log(.recipeImported, [
+                "source": Analytics.importSource(for: importedRecipe?.sourceUrl),
+                "photos_added": validPhotos.count
+            ])
             savedSuccessfully = true
             return true
         } catch {

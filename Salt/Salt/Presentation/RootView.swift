@@ -35,6 +35,7 @@ struct RootView: View {
         .task(id: authManager.currentUser?.id) {
             // Link RevenueCat purchases to the signed-in account (or log out on sign out)
             await SubscriptionManager.shared.setUser(id: authManager.currentUser?.id)
+            Analytics.setUser(id: authManager.currentUser?.id)
         }
         .onAppear {
             // Keep splash visible for 1 second, then fade out

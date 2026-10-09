@@ -14,6 +14,7 @@ struct SaltApp: App {
     init() {
         SubscriptionManager.shared.configure()
         AppsFlyerManager.shared.configure()
+        Analytics.configure()
     }
 
     var body: some Scene {

@@ -17,8 +17,9 @@ struct ProfileView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 12) {
-                // Header with gradient
+                // Header with gradient (photo and name hidden in session recordings)
                 profileHeader
+                    .analyticsMasked()
 
                 // Content
                 VStack(spacing: 16) {
@@ -32,10 +33,12 @@ struct ProfileView: View {
 
                     // About Me Section
                     aboutMeSection
+                        .analyticsMasked()
 
                     if viewModel.userProfile?.location != nil || viewModel.memberSince != nil || viewModel.email != nil {
-                        // Contact Info
+                        // Contact Info (hidden in session recordings)
                         contactInfoSection
+                            .analyticsMasked()
                     }
 
                     // Favorite Cuisines
@@ -64,11 +67,16 @@ struct ProfileView: View {
         .sheet(isPresented: $showingPaywall) {
             // Remote paywall: shows whatever is attached to the current offering in the RevenueCat dashboard
             PaywallView(displayCloseButton: true)
+                .onAppear {
+                    Analytics.log(.paywallShown, ["source": "profile"])
+                }
                 .onPurchaseCompleted { customerInfo in
+                    Analytics.log(.subscriptionStarted, ["source": "profile"])
                     subscriptionManager.update(with: customerInfo)
                     showingPaywall = false
                 }
                 .onRestoreCompleted { customerInfo in
+                    Analytics.log(.purchasesRestored, ["source": "profile"])
                     subscriptionManager.update(with: customerInfo)
                     if subscriptionManager.isPremium {
                         showingPaywall = false

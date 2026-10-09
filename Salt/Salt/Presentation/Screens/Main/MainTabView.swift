@@ -105,6 +105,9 @@ struct MainTabView: View {
                 selectedTab = 1
             }
         }
+        .onChange(of: selectedTab, initial: true) { _, tab in
+            Analytics.screen(["Explore", "Add Recipe", "My Recipes", "Profile"][tab])
+        }
         .fullScreenCover(item: sharedRecipeCode) { sharedCode in
             SharedRecipeView(
                 code: sharedCode.id,
