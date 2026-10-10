@@ -20,6 +20,8 @@ struct ImportedRecipe {
     let sourceUrl: String
     let sourceName: String?
     let author: String?
+    /// The caption had no recipe, so it was put together from what's said in the video
+    var isFromVideoAudio: Bool = false
 
     // Convert to Recipe for saving
     func toRecipe() -> Recipe {
@@ -163,6 +165,8 @@ class RecipeImportService {
 
         var request = URLRequest(url: apiUrl)
         request.httpMethod = "POST"
+        // Listening to the video's audio (when the caption has no recipe) takes longer than the default 60s
+        request.timeoutInterval = 180
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let body: [String: Any] = [
@@ -225,7 +229,8 @@ class RecipeImportService {
             instructions: data["instructions"] as? [String] ?? [],
             sourceUrl: sourceUrl,
             sourceName: data["sourceName"] as? String,
-            author: nil
+            author: nil,
+            isFromVideoAudio: data["importSource"] as? String == "audio"
         )
     }
 
