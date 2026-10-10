@@ -70,9 +70,9 @@ struct RecipeSearchFilters: Equatable {
     }
 }
 
-/// Meal types, each matching a category in the recipes table
+/// Meal types; raw values match the recipes table's meal_types
 enum MealType: String, CaseIterable, Identifiable {
-    case breakfast, mainDish, appetizers, soups, salads, sides, desserts, bread, drinks
+    case breakfast, mainDish, appetizers, soups, salads, sides, desserts, bread, drinks, sauces
 
     var id: String { rawValue }
 
@@ -87,10 +87,11 @@ enum MealType: String, CaseIterable, Identifiable {
         case .desserts: "Desserts"
         case .bread: "Bread"
         case .drinks: "Drinks"
+        case .sauces: "Sauces"
         }
     }
 
-    /// Value in the recipes table's categories
+    /// Source category, used for recipes that don't have meal_types yet
     var category: String {
         switch self {
         case .breakfast: "Breakfast and Brunch"
@@ -102,6 +103,13 @@ enum MealType: String, CaseIterable, Identifiable {
         case .desserts: "Desserts"
         case .bread: "Bread"
         case .drinks: "Drink Recipes"
+        case .sauces: "Sauces and Condiments"
         }
+    }
+
+    /// Matches recipes with this meal type, or the source category if they aren't classified yet.
+    /// PostgREST `or` filter; mirrors the meal type logic in the search_recipes function.
+    var recipesFilter: String {
+        "meal_types.cs.{\(rawValue)},and(meal_types.is.null,categories.cs.{\"\(category)\"})"
     }
 }
