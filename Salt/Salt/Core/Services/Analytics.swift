@@ -31,6 +31,12 @@ enum Analytics {
         case recipeBookmarked = "recipe_bookmarked"
         case recipeUnbookmarked = "recipe_unbookmarked"
 
+        // Collections
+        case collectionCreated = "collection_created"
+        case collectionDeleted = "collection_deleted"
+        case recipeAddedToCollection = "recipe_added_to_collection"
+        case recipeRemovedFromCollection = "recipe_removed_from_collection"
+
         // Sharing
         case recipeShared = "recipe_shared"
         case sharedRecipeOpened = "shared_recipe_opened"
