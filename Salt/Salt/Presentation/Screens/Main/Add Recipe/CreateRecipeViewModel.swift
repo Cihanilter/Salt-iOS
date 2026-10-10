@@ -10,14 +10,47 @@ import SwiftUI
 import PhotosUI
 import Combine
 
+/// One ingredient in the step-by-step form, saved as a single line ("2 cups flour")
+struct IngredientRow: Identifiable, Equatable {
+    let id = UUID()
+    var amount = ""
+    var unit = ""
+    var name = ""
+
+    init(amount: String = "", unit: String = "", name: String = "") {
+        self.amount = amount
+        self.unit = unit
+        self.name = name
+    }
+
+    /// Splits a saved line back into amount, unit and name for editing
+    init(line: String) {
+        let parts = IngredientScaler.parts(of: line)
+        self.init(amount: parts.amount, unit: parts.unit, name: parts.name)
+    }
+
+    var line: String {
+        [amount, unit, name]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+}
+
+/// One numbered step in the step-by-step form
+struct InstructionStep: Identifiable, Equatable {
+    let id = UUID()
+    var text = ""
+}
+
 @MainActor
 class CreateRecipeViewModel: ObservableObject {
     // MARK: - Published Properties
 
     @Published var title = ""
     @Published var description = ""
-    @Published var ingredientsText = ""
-    @Published var instructionsText = ""
+    @Published var ingredientRows: [IngredientRow] = [IngredientRow()]
+    @Published var instructionSteps: [InstructionStep] = [InstructionStep()]
     @Published var prepTime = ""
     @Published var cookTime = ""
     @Published var servings = ""
@@ -48,21 +81,96 @@ class CreateRecipeViewModel: ObservableObject {
 
     var isValid: Bool {
         !title.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !ingredientsText.trimmingCharacters(in: .whitespaces).isEmpty
+        !ingredientsList.isEmpty &&
+        !instructionsList.isEmpty
     }
 
     var ingredientsList: [String] {
-        ingredientsText
-            .components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
+        ingredientRows.map(\.line).filter { !$0.isEmpty }
     }
 
     var instructionsList: [String] {
-        instructionsText
-            .components(separatedBy: .newlines)
+        instructionSteps
+            .map { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    // MARK: - Ingredient & Step Rows
+
+    /// Adds an empty ingredient row and returns its id so the view can focus it
+    @discardableResult
+    func addIngredient(after id: IngredientRow.ID? = nil) -> IngredientRow.ID {
+        let row = IngredientRow()
+        if let id, let index = ingredientRows.firstIndex(where: { $0.id == id }) {
+            ingredientRows.insert(row, at: index + 1)
+        } else {
+            ingredientRows.append(row)
+        }
+        return row.id
+    }
+
+    /// The form always keeps one row to type into
+    func removeIngredient(_ id: IngredientRow.ID) {
+        ingredientRows.removeAll { $0.id == id }
+        if ingredientRows.isEmpty { ingredientRows = [IngredientRow()] }
+    }
+
+    @discardableResult
+    func addStep(after id: InstructionStep.ID? = nil) -> InstructionStep.ID {
+        let step = InstructionStep()
+        if let id, let index = instructionSteps.firstIndex(where: { $0.id == id }) {
+            instructionSteps.insert(step, at: index + 1)
+        } else {
+            instructionSteps.append(step)
+        }
+        return step.id
+    }
+
+    func removeStep(_ id: InstructionStep.ID) {
+        instructionSteps.removeAll { $0.id == id }
+        if instructionSteps.isEmpty { instructionSteps = [InstructionStep()] }
+    }
+
+    /// A name with line breaks (a pasted list, or Return pressed) becomes one row per line.
+    /// Returns the last new row so the view can move the cursor there.
+    func splitMultilineIngredients() -> IngredientRow.ID? {
+        guard let index = ingredientRows.firstIndex(where: { $0.name.contains(where: \.isNewline) }) else { return nil }
+
+        let lines = ingredientRows[index].name.components(separatedBy: .newlines)
+        let first = lines[0].trimmingCharacters(in: .whitespaces)
+        let pasted = lines.dropFirst()
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
+
+        // A whole pasted line in an empty row is split into its amount, unit and name
+        if ingredientRows[index].amount.isEmpty && ingredientRows[index].unit.isEmpty {
+            let parts = IngredientScaler.parts(of: first)
+            ingredientRows[index].amount = parts.amount
+            ingredientRows[index].unit = parts.unit
+            ingredientRows[index].name = parts.name
+        } else {
+            ingredientRows[index].name = first
+        }
+
+        // Return on its own adds an empty row; pasted lines add one row each
+        let newRows = pasted.isEmpty ? [IngredientRow()] : pasted.map(IngredientRow.init(line:))
+        ingredientRows.insert(contentsOf: newRows, at: index + 1)
+        return newRows.last?.id
+    }
+
+    /// Same for steps: Return starts the next step, a pasted list becomes one step per line
+    func splitMultilineSteps() -> InstructionStep.ID? {
+        guard let index = instructionSteps.firstIndex(where: { $0.text.contains(where: \.isNewline) }) else { return nil }
+
+        let lines = instructionSteps[index].text.components(separatedBy: .newlines)
+        let pasted = lines.dropFirst()
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+
+        instructionSteps[index].text = lines[0].trimmingCharacters(in: .whitespaces)
+        let newSteps = pasted.isEmpty ? [InstructionStep()] : pasted.map { InstructionStep(text: $0) }
+        instructionSteps.insert(contentsOf: newSteps, at: index + 1)
+        return newSteps.last?.id
     }
 
     var prepTimeMinutes: Int? {
@@ -145,7 +253,7 @@ class CreateRecipeViewModel: ObservableObject {
 
     func saveRecipe() async -> Bool {
         guard isValid else {
-            errorMessage = "Please fill in the title and at least one ingredient"
+            errorMessage = "Please fill in the title, at least one ingredient and one step"
             return false
         }
 
@@ -288,8 +396,10 @@ class CreateRecipeViewModel: ObservableObject {
         title = recipe.title
         let descriptionPlaceholders = ["No description", "No description available"]
         description = descriptionPlaceholders.contains(recipe.description) ? "" : recipe.description
-        ingredientsText = recipe.ingredients.joined(separator: "\n")
-        instructionsText = recipe.instructions.joined(separator: "\n")
+        let rows = recipe.ingredients.map(IngredientRow.init(line:))
+        ingredientRows = rows.isEmpty ? [IngredientRow()] : rows
+        let steps = recipe.instructions.map { InstructionStep(text: $0) }
+        instructionSteps = steps.isEmpty ? [InstructionStep()] : steps
 
         // The servings stepper works with a plain number ("4 servings" -> "4")
         let servingsNumber = recipe.servings
@@ -313,8 +423,8 @@ class CreateRecipeViewModel: ObservableObject {
     func reset() {
         title = ""
         description = ""
-        ingredientsText = ""
-        instructionsText = ""
+        ingredientRows = [IngredientRow()]
+        instructionSteps = [InstructionStep()]
         prepTime = ""
         cookTime = ""
         servings = ""
