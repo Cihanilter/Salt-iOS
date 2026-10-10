@@ -120,6 +120,7 @@ struct ImportRecipeView: View {
     @StateObject private var viewModel = RecipeImportViewModel()
     @State private var navigateToPreview = false
     @State private var showingPaywall = false
+    @FocusState private var isLinkFieldFocused: Bool
     @ObservedObject private var shareImportRouter = ShareImportRouter.shared
 
     // Callback to switch to My Recipes tab
@@ -148,6 +149,7 @@ struct ImportRecipeView: View {
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
                         .keyboardType(.URL)
+                        .focused($isLinkFieldFocused)
                         .padding(.horizontal, 16)
                 }
                 .frame(height: 35)
@@ -271,6 +273,10 @@ struct ImportRecipeView: View {
     }
 
     private func startImport() async {
+        // End editing first: a pasted link leaves the field focused, and a focused field can
+        // put its text back after the link is cleared on save
+        isLinkFieldFocused = false
+
         // Free users who've used all their imports see the paywall instead.
         // The link stays in the field so the import can continue after upgrading.
         guard await SubscriptionManager.shared.canImportRecipe() else {

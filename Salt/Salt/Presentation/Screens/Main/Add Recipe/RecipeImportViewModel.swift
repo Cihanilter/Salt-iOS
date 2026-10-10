@@ -42,6 +42,8 @@ class RecipeImportViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         importedRecipe = nil
+        // Reset so the view sees this import's save as a change and clears the link again
+        savedSuccessfully = false
 
         let source = Analytics.importSource(for: finalUrl)
         Analytics.log(.importStarted, ["source": source])
