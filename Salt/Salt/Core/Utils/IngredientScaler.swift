@@ -202,6 +202,40 @@ enum IngredientScaler {
         return trimmed
     }
 
+    // MARK: Amount, unit and name
+
+    /// Splits a line for the step-by-step ingredient form: "2 cups flour" → ("2", "cups", "flour"),
+    /// "1 can (15 ounce) beans" → ("1", "can", "(15 ounce) beans"), "Salt to taste" → ("", "", "Salt to taste").
+    /// Joining the non-empty parts with spaces gives the line back.
+    static func parts(of line: String) -> (amount: String, unit: String, name: String) {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        let ns = trimmed as NSString
+        // Headings ("For the sauce:") have no amount, so they stay whole in the name
+        guard let match = leadingAmount.firstMatch(in: trimmed, range: NSRange(location: 0, length: ns.length)) else {
+            return ("", "", trimmed)
+        }
+
+        let amount = ns.substring(with: match.range).trimmingCharacters(in: .whitespaces)
+        var rest = ns.substring(from: NSMaxRange(match.range)).trimmingCharacters(in: .whitespaces)
+        var unit = ""
+        if let first = rest.split(separator: " ", maxSplits: 1).first {
+            let word = String(first)
+            let bare = word.trimmingCharacters(in: CharacterSet(charactersIn: ".,")).lowercased()
+            if unitKinds[bare] != nil || containerUnits.contains(bare) {
+                unit = word
+                rest = String(rest.dropFirst(word.count)).trimmingCharacters(in: .whitespaces)
+            }
+        }
+        return (amount, unit, rest)
+    }
+
+    /// Counted units that read as a unit in the form ("2 cloves garlic"), on top of the measuring ones
+    private static let containerUnits: Set<String> = [
+        "can", "cans", "clove", "cloves", "slice", "slices", "piece", "pieces", "sprig", "sprigs",
+        "bunch", "bunches", "handful", "handfuls", "package", "packages", "packet", "packets",
+        "jar", "jars", "bottle", "bottles", "head", "heads", "stalk", "stalks", "bag", "bags", "box", "boxes"
+    ]
+
     /// Splits at the first comma outside parentheses
     private static func splitAtTopLevelComma(_ text: String) -> (String, String) {
         var depth = 0

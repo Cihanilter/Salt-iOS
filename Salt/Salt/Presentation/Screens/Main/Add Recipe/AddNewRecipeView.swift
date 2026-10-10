@@ -496,9 +496,13 @@ struct CreateRecipeView: View {
     var editNotice: String? = nil  // Shown above the form, e.g. that a copy is saved
     @State private var isSavingChanges = false
 
-    enum CreateRecipeField {
-        case title, description, ingredients, instructions, prep, cook, servings, notes
+    enum CreateRecipeField: Hashable {
+        case title, description, prep, cook, servings, notes
+        case ingredientAmount(UUID), ingredientUnit(UUID), ingredientName(UUID)
+        case step(UUID)
     }
+
+    private static let maxPhotos = 6
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -521,7 +525,8 @@ struct CreateRecipeView: View {
                 CreateRecipeTextField(
                     title: "Title",
                     placeholder: "Give your recipe a name",
-                    text: $viewModel.title
+                    text: $viewModel.title,
+                    isRequired: true
                 )
                 .focused($focusedField, equals: .title)
 
@@ -530,27 +535,13 @@ struct CreateRecipeView: View {
                     title: "Description",
                     placeholder: "Describe your recipe in a few words (e.g., quick, family-favorite, or festive)",
                     text: $viewModel.description,
-                    
+                    isOptional: true
                 )
                 .focused($focusedField, equals: .description)
 
-                // Ingredients
-                CreateRecipeTextEditor(
-                    title: "Ingredients",
-                    placeholder: "Add or paste here all the ingredients\n(one per line)",
-                    text: $viewModel.ingredientsText,
-                 
-                )
-                .focused($focusedField, equals: .ingredients)
+                ingredientsSection
 
-                // Instructions
-                CreateRecipeTextEditor(
-                    title: "Instructions",
-                    placeholder: "Describe each step of the process (e.g., Preheat oven to 350°F)\n(one step per line)",
-                    text: $viewModel.instructionsText,
-                
-                )
-                .focused($focusedField, equals: .instructions)
+                instructionsSection
 
                 // Time & Servings Row
                 HStack {
@@ -645,69 +636,12 @@ struct CreateRecipeView: View {
                     title: "Notes & Tips",
                     placeholder: "Add any tips, tricks, or substitutions",
                     text: $viewModel.notes,
-                  
+                    isOptional: true,
+                    minLines: 3
                 )
                 .focused($focusedField, equals: .notes)
 
-                // Photo Section
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Photo")
-                        .font(.custom("Playfair9pt-Regular", size: 24))
-
-                    // Photo Grid
-                    LazyVGrid(columns: [
-                        GridItem(.flexible(), spacing: 18),
-                          GridItem(.flexible(), spacing: 18),
-                        GridItem(.flexible())
-                    ], spacing: 18) {
-                        ForEach(0..<6, id: \.self) { index in
-                            if index < viewModel.photoImages.count {
-                                // Show photo
-                                Image(uiImage: viewModel.photoImages[index])
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 110, height: 100)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    .overlay(
-                                        Button(action: {
-                                            viewModel.removePhoto(at: index)
-                                        }) {
-                                            Image(systemName: "xmark.circle.fill")
-                                                .foregroundColor(.white)
-                                                .background(Circle().fill(Color.black.opacity(0.5)))
-                                        }
-                                        .padding(4),
-                                        alignment: .topTrailing
-                                    )
-                            } else {
-                                // Empty placeholder
-                                Button(action: {
-                                    if index == viewModel.photoImages.count {
-                                        showingPhotoOptions = true
-                                    }
-                                }) {
-                                    VStack(spacing: 8) {
-                                        Image("addPhotoIcon")
-                                            .resizable()
-                                            .renderingMode(.template)
-                                            .frame(width: 24, height: 24)
-                                            .foregroundColor(Color("GraniteGray"))
-
-                                        Text("\(index + 1)")
-                                            .font(.custom("OpenSans-Regular", size: 14))
-                                            .foregroundColor(Color("GraniteGray"))
-                                    }
-                                    .frame(width: 110, height: 100)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(Color("DarkSilver"), lineWidth: 1)
-                                    )
-                                }
-                                .disabled(index != viewModel.photoImages.count)
-                            }
-                        }
-                    }
-                }
+                photoSection
 
                 // Error Message
                 if let error = viewModel.errorMessage {
@@ -804,7 +738,7 @@ struct CreateRecipeView: View {
         .photosPicker(
             isPresented: $showingPhotoPicker,
             selection: $selectedPhotoItems,
-            maxSelectionCount: 6 - viewModel.photoImages.count,
+            maxSelectionCount: max(1, Self.maxPhotos - viewModel.photoImages.count),
             matching: .images
         )
         .confirmationDialog("Add Photo", isPresented: $showingPhotoOptions, titleVisibility: .visible) {
@@ -815,6 +749,17 @@ struct CreateRecipeView: View {
                 showingPhotoPicker = true
             }
             Button("Cancel", role: .cancel) {}
+        }
+        .onChange(of: viewModel.ingredientRows) { _, _ in
+            // Return in a name field, or a pasted list, adds rows; move the cursor to the last one
+            if let id = viewModel.splitMultilineIngredients() {
+                focusedField = .ingredientName(id)
+            }
+        }
+        .onChange(of: viewModel.instructionSteps) { _, _ in
+            if let id = viewModel.splitMultilineSteps() {
+                focusedField = .step(id)
+            }
         }
         .onChange(of: capturedImage) { _, newImage in
             if let image = newImage {
@@ -835,6 +780,173 @@ struct CreateRecipeView: View {
         }
     }
 
+    // MARK: - Ingredients
+
+    private var ingredientsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            CreateRecipeSectionHeader(title: "Ingredients", isRequired: true, addTitle: "Add") {
+                focusedField = .ingredientAmount(viewModel.addIngredient())
+            }
+
+            ForEach($viewModel.ingredientRows) { $row in
+                HStack(spacing: 8) {
+                    CreateRecipeInputField(placeholder: "2", text: $row.amount)
+                        .keyboardType(.numbersAndPunctuation)
+                        .submitLabel(.next)
+                        .focused($focusedField, equals: .ingredientAmount(row.id))
+                        .onSubmit { focusedField = .ingredientUnit(row.id) }
+                        .frame(width: 56)
+                        .accessibilityLabel("Amount")
+
+                    CreateRecipeInputField(placeholder: "cups", text: $row.unit)
+                        .submitLabel(.next)
+                        .focused($focusedField, equals: .ingredientUnit(row.id))
+                        .onSubmit { focusedField = .ingredientName(row.id) }
+                        .frame(width: 76)
+                        .accessibilityLabel("Unit")
+
+                    // Multiline so Return (or pasting a list) can start the next ingredient
+                    CreateRecipeInputField(placeholder: "Ingredient", text: $row.name, axis: .vertical)
+                        .focused($focusedField, equals: .ingredientName(row.id))
+                        .accessibilityLabel("Ingredient")
+
+                    if viewModel.ingredientRows.count > 1 {
+                        CreateRecipeDeleteButton(label: "Remove ingredient") {
+                            withAnimation { viewModel.removeIngredient(row.id) }
+                        }
+                    }
+                }
+            }
+
+            Text("Tip: Enter amount, unit, and ingredient name separately")
+                .font(.custom("OpenSans-Regular", size: 12))
+                .foregroundColor(Color("GraniteGray"))
+        }
+    }
+
+    // MARK: - Instructions
+
+    private var instructionsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            CreateRecipeSectionHeader(title: "Instructions", isRequired: true, addTitle: "Add Step") {
+                focusedField = .step(viewModel.addStep())
+            }
+
+            ForEach(Array($viewModel.instructionSteps.enumerated()), id: \.element.id) { index, $step in
+                HStack(alignment: .top, spacing: 10) {
+                    Text("\(index + 1)")
+                        .font(.custom("OpenSans-SemiBold", size: 12))
+                        .foregroundColor(.white)
+                        .frame(width: 24, height: 24)
+                        .background(Circle().fill(Color("OrangeRed")))
+                        .padding(.top, 10)
+                        .accessibilityHidden(true)
+
+                    CreateRecipeInputField(
+                        placeholder: "Step \(index + 1): Describe what to do",
+                        text: $step.text,
+                        axis: .vertical,
+                        minLines: 2
+                    )
+                    .focused($focusedField, equals: .step(step.id))
+                    .accessibilityLabel("Step \(index + 1)")
+
+                    if viewModel.instructionSteps.count > 1 {
+                        CreateRecipeDeleteButton(label: "Remove step \(index + 1)") {
+                            withAnimation { viewModel.removeStep(step.id) }
+                        }
+                        .padding(.top, 10)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Photos
+
+    private var photoSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            CreateRecipeSectionTitle(title: "Photo", isOptional: true)
+
+            if viewModel.photoImages.isEmpty {
+                Button {
+                    showingPhotoOptions = true
+                } label: {
+                    VStack(spacing: 10) {
+                        PhotoUploadIcon()
+                        Text("Tap to upload photo")
+                            .font(.custom("OpenSans-Regular", size: 14))
+                            .foregroundColor(Color("GraniteGray"))
+                        Text("Up to \(Self.maxPhotos) photos")
+                            .font(.custom("OpenSans-Regular", size: 12))
+                            .foregroundColor(Color("DarkSilver"))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 170)
+                    .background(PhotoUploadBackground())
+                }
+                .buttonStyle(.plain)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(Array(viewModel.photoImages.enumerated()), id: \.offset) { index, image in
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 110, height: 110)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(alignment: .topTrailing) {
+                                    Button {
+                                        withAnimation { viewModel.removePhoto(at: index) }
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(.white, Color.black.opacity(0.55))
+                                    }
+                                    .padding(6)
+                                    .accessibilityLabel("Remove photo \(index + 1)")
+                                }
+                                .overlay(alignment: .bottomLeading) {
+                                    // The first photo is the recipe's main image
+                                    if index == 0 {
+                                        Text("Cover")
+                                            .font(.custom("OpenSans-SemiBold", size: 11))
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 3)
+                                            .background(Capsule().fill(Color.black.opacity(0.55)))
+                                            .padding(6)
+                                    }
+                                }
+                        }
+
+                        if viewModel.photoImages.count < Self.maxPhotos {
+                            Button {
+                                showingPhotoOptions = true
+                            } label: {
+                                VStack(spacing: 6) {
+                                    PhotoUploadIcon(size: 40)
+                                    Text("Add")
+                                        .font(.custom("OpenSans-Regular", size: 12))
+                                        .foregroundColor(Color("GraniteGray"))
+                                }
+                                .frame(width: 110, height: 110)
+                                .background(PhotoUploadBackground())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Add photo")
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+
+                Text("\(viewModel.photoImages.count) of \(Self.maxPhotos) photos")
+                    .font(.custom("OpenSans-Regular", size: 12))
+                    .foregroundColor(Color("GraniteGray"))
+            }
+        }
+    }
+
     /// Deep copy of the new photos BEFORE passing them to a callback, to avoid memory issues
     private func copiedPhotos() -> [UIImage] {
         viewModel.photoImages.compactMap { image in
@@ -847,34 +959,166 @@ struct CreateRecipeView: View {
     }
 }
 
+// MARK: - Create Recipe Section Title
+
+/// Section title with a red asterisk for required fields or "(Optional)"
+struct CreateRecipeSectionTitle: View {
+    let title: String
+    var isRequired = false
+    var isOptional = false
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(title)
+                .font(.custom("Playfair9pt-Regular", size: 24))
+            if isRequired {
+                Text("*")
+                    .font(.custom("OpenSans-SemiBold", size: 18))
+                    .foregroundColor(Color("OrangeRed"))
+                    .accessibilityLabel("required")
+            }
+            if isOptional {
+                Text("(Optional)")
+                    .font(.custom("OpenSans-Regular", size: 13))
+                    .foregroundColor(Color("GraniteGray"))
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+    }
+}
+
+// MARK: - Create Recipe Section Header
+
+/// Section title with an orange "+ Add" button on the right
+struct CreateRecipeSectionHeader: View {
+    let title: String
+    var isRequired = false
+    let addTitle: String
+    let onAdd: () -> Void
+
+    var body: some View {
+        HStack {
+            CreateRecipeSectionTitle(title: title, isRequired: isRequired)
+            Spacer()
+            Button(action: onAdd) {
+                HStack(spacing: 4) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 11, weight: .bold))
+                    Text(addTitle)
+                        .font(.custom("OpenSans-SemiBold", size: 13))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(Capsule().fill(Color("OrangeRed")))
+            }
+        }
+    }
+}
+
+// MARK: - Create Recipe Input Field
+
+/// Bordered text field used for ingredient parts and steps
+struct CreateRecipeInputField: View {
+    let placeholder: String
+    @Binding var text: String
+    var axis: Axis = .horizontal
+    var minLines = 1
+
+    var body: some View {
+        TextField(
+            "",
+            text: $text,
+            prompt: Text(placeholder).foregroundColor(Color("DarkSilver")),
+            axis: axis
+        )
+        .font(.custom("OpenSans-Regular", size: 14))
+        .foregroundColor(.primary)
+        .lineLimit(axis == .vertical ? minLines...8 : 1...1)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(minHeight: 40)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color("DarkSilver"), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Create Recipe Delete Button
+
+struct CreateRecipeDeleteButton: View {
+    let label: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "trash")
+                .font(.system(size: 15))
+                .foregroundColor(Color("GraniteGray"))
+                .frame(width: 24, height: 40)
+        }
+        .accessibilityLabel(label)
+    }
+}
+
+// MARK: - Photo Upload
+
+/// Camera icon in a white circle, as on the photo upload card
+struct PhotoUploadIcon: View {
+    var size: CGFloat = 52
+
+    var body: some View {
+        Image(systemName: "camera")
+            .font(.system(size: size * 0.38, weight: .medium))
+            .foregroundColor(Color("OrangeRed"))
+            .frame(width: size, height: size)
+            .background(Circle().fill(Color.white))
+            .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
+    }
+}
+
+/// Soft peach card with a light border
+struct PhotoUploadBackground: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: 14)
+            .fill(Color("PeachCream").opacity(0.5))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color("DarkSilver").opacity(0.5), lineWidth: 1)
+            )
+    }
+}
+
 // MARK: - Create Recipe Text Field
 
 struct CreateRecipeTextField: View {
     let title: String
     let placeholder: String
     @Binding var text: String
+    var isRequired = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.custom("Playfair9pt-Regular", size: 24))
+            CreateRecipeSectionTitle(title: title, isRequired: isRequired)
 
             ZStack(alignment: .topLeading) {
-                           if text.isEmpty {
-                               Text(placeholder)
-                                   .font(.custom("OpenSans-Regular", size: 14))
-                                   .foregroundColor(Color("DarkSilver"))
-                                   .padding(.horizontal, 16)
-                                   .padding(.vertical, 12)
-                           }
-                           
-                           TextField("", text: $text, axis: .vertical)
-                               .font(.custom("OpenSans-Regular", size: 14))
-                               .foregroundColor(.primary)
-                               .lineLimit(1...5)
-                               .padding(.horizontal, 16)
-                               .padding(.vertical, 12)
-                       }
+                if text.isEmpty {
+                    Text(placeholder)
+                        .font(.custom("OpenSans-Regular", size: 14))
+                        .foregroundColor(Color("DarkSilver"))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                }
+
+                TextField("", text: $text, axis: .vertical)
+                    .font(.custom("OpenSans-Regular", size: 14))
+                    .foregroundColor(.primary)
+                    .lineLimit(1...5)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+            }
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(Color("DarkSilver"), lineWidth: 1)
@@ -889,29 +1133,29 @@ struct CreateRecipeTextEditor: View {
     let title: String
     let placeholder: String
     @Binding var text: String
-  
+    var isOptional = false
+    var minLines = 1
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.custom("Playfair9pt-Regular", size: 24))
+            CreateRecipeSectionTitle(title: title, isOptional: isOptional)
 
             ZStack(alignment: .topLeading) {
-                            if text.isEmpty {
-                                Text(placeholder)
-                                    .font(.custom("OpenSans-Regular", size: 14))
-                                    .foregroundColor(Color("DarkSilver"))
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
-                            }
-                            
-                            TextField("", text: $text, axis: .vertical)
-                                .font(.custom("OpenSans-Regular", size: 14))
-                                .foregroundColor(.primary)
-                                .lineLimit(1...10)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 12)
-                        }
+                if text.isEmpty {
+                    Text(placeholder)
+                        .font(.custom("OpenSans-Regular", size: 14))
+                        .foregroundColor(Color("DarkSilver"))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                }
+
+                TextField("", text: $text, axis: .vertical)
+                    .font(.custom("OpenSans-Regular", size: 14))
+                    .foregroundColor(.primary)
+                    .lineLimit(minLines...10)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+            }
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(Color("DarkSilver"), lineWidth: 1)
@@ -1057,4 +1301,10 @@ struct CreateRecipePreviewView: View {
 
 #Preview {
     AddNewRecipeView()
+}
+
+#Preview("Create Recipe") {
+    NavigationStack {
+        CreateRecipeView()
+    }
 }
