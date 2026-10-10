@@ -43,6 +43,8 @@ struct MyRecipesView: View {
     @ObservedObject private var viewModel = MyRecipesViewModel.shared
     @FocusState private var isSearchFocused: Bool
     @State private var selectedTab: MyRecipesTab = .imports
+    /// Recipe long-pressed for Add to Collection
+    @State private var collectionTarget: CollectionRecipeRef?
 
     // Callback to switch to Add Recipe tab
     var switchToAddRecipe: (() -> Void)?
@@ -125,6 +127,10 @@ struct MyRecipesView: View {
                         .scaleEffect(1.2)
                     Spacer()
                 } else if items(for: selectedTab).isEmpty {
+                    if showsCollections {
+                        CollectionsRow()
+                            .padding(.top, 20)
+                    }
                     emptyStateView
                 } else {
                     recipesContent
@@ -132,10 +138,17 @@ struct MyRecipesView: View {
             }
             .background(Color(.systemBackground))
             .task {
-                await viewModel.loadRecipes()
+                async let recipes: Void = viewModel.loadRecipes()
+                async let collections: Void = CollectionsManager.shared.load()
+                _ = await (recipes, collections)
             }
             .refreshable {
-                await viewModel.refresh()
+                async let recipes: Void = viewModel.refresh()
+                async let collections: Void = CollectionsManager.shared.load()
+                _ = await (recipes, collections)
+            }
+            .sheet(item: $collectionTarget) { ref in
+                AddToCollectionSheet(ref: ref, source: "my_recipes_long_press")
             }
         }
     }
@@ -151,23 +164,7 @@ struct MyRecipesView: View {
 
     /// Recipes shown for a tab, filtered by the search text.
     private func items(for tab: MyRecipesTab) -> [MyRecipeItem] {
-        let userRecipes = viewModel.filteredUserRecipes
-        let own = userRecipes.filter { !$0.isCustomizedCopy }.map(MyRecipeItem.own)
-        // Customized copies of the app's recipes sit with the bookmarks, but open as the
-        // user's own recipe (Edit / Delete). A customized original stays bookmarked;
-        // only its copy is listed so it doesn't appear twice.
-        let copies = userRecipes.filter(\.isCustomizedCopy)
-        let customizedIds = Set(viewModel.userRecipes.compactMap(\.originalRecipeId))
-        let saved = copies.map(MyRecipeItem.own)
-            + viewModel.filteredBookmarkedRecipes
-                .filter { !customizedIds.contains($0.id) }
-                .map(MyRecipeItem.saved)
-
-        switch tab {
-        case .all: return own + saved
-        case .imports: return own
-        case .saved: return saved
-        }
+        viewModel.items(for: tab, searchFiltered: true)
     }
 
     // MARK: - Empty State
@@ -226,18 +223,46 @@ struct MyRecipesView: View {
 
     // MARK: - Recipes Content
 
+    /// Collections show with every toggle; they're hidden while searching
+    private var showsCollections: Bool {
+        viewModel.searchText.isEmpty
+    }
+
     private var recipesContent: some View {
         ScrollView(showsIndicators: false) {
-            LazyVGrid(columns: [
-                GridItem(.fixed(MyRecipeCard.width), spacing: 30, alignment: .top),
-                GridItem(.fixed(MyRecipeCard.width), alignment: .top)
-            ], spacing: 30) {
-                ForEach(items(for: selectedTab)) { item in
-                    MyRecipeCard(item: item)
+            VStack(alignment: .leading, spacing: 0) {
+                if showsCollections {
+                    CollectionsRow()
+                        .padding(.top, 20)
+
+                    // Same style as the Collections heading, to separate the two sections
+                    Text("Recipes")
+                        .font(.custom("Playfair9pt-SemiBold", size: 20))
+                        .padding(.horizontal, 18)
+                        .padding(.top, 28)
+                        .accessibilityAddTraits(.isHeader)
                 }
+
+                LazyVGrid(columns: [
+                    GridItem(.fixed(MyRecipeCard.width), spacing: 30, alignment: .top),
+                    GridItem(.fixed(MyRecipeCard.width), alignment: .top)
+                ], spacing: 30) {
+                    ForEach(items(for: selectedTab)) { item in
+                        MyRecipeCard(item: item)
+                            .contextMenu {
+                                Button {
+                                    collectionTarget = CollectionRecipeRef(item)
+                                } label: {
+                                    Label("Add to Collection", systemImage: "folder.badge.plus")
+                                }
+                            }
+                    }
+                }
+                .padding(.horizontal, 18)
+                // Closer to the Recipes heading, like the collections are to theirs
+                .padding(.top, showsCollections ? 14 : 20)
+                .padding(.bottom, 20)
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 20)
         }
     }
 }

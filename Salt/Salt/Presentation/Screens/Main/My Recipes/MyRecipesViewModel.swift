@@ -120,6 +120,31 @@ class MyRecipesViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Tab Items
+
+    /// Recipes for a My Recipes tab, optionally filtered by the search text
+    func items(for tab: MyRecipesTab, searchFiltered: Bool) -> [MyRecipeItem] {
+        let userRecipes = searchFiltered ? filteredUserRecipes : self.userRecipes
+        let bookmarked = searchFiltered ? filteredBookmarkedRecipes : bookmarkedRecipes
+
+        let own = userRecipes.filter { !$0.isCustomizedCopy }.map(MyRecipeItem.own)
+        // Customized copies of the app's recipes sit with the bookmarks, but open as the
+        // user's own recipe (Edit / Delete). A customized original stays bookmarked;
+        // only its copy is listed so it doesn't appear twice.
+        let copies = userRecipes.filter(\.isCustomizedCopy)
+        let customizedIds = Set(self.userRecipes.compactMap(\.originalRecipeId))
+        let saved = copies.map(MyRecipeItem.own)
+            + bookmarked
+                .filter { !customizedIds.contains($0.id) }
+                .map(MyRecipeItem.saved)
+
+        switch tab {
+        case .all: return own + saved
+        case .imports: return own
+        case .saved: return saved
+        }
+    }
+
     // MARK: - Refresh
 
     func refresh() async {
@@ -132,6 +157,7 @@ class MyRecipesViewModel: ObservableObject {
         do {
             try await recipeService.deleteRecipe(recipe.id)
             userRecipes.removeAll { $0.id == recipe.id }
+            CollectionsManager.shared.recipeWasDeleted(.own(recipe.id))
             Analytics.log(.recipeDeleted, ["screen": "my_recipes"])
         } catch {
             errorMessage = error.localizedDescription
@@ -141,6 +167,7 @@ class MyRecipesViewModel: ObservableObject {
     func deleteRecipe(id: UUID) async throws {
         try await recipeService.deleteRecipe(id)
         userRecipes.removeAll { $0.id == id }
+        CollectionsManager.shared.recipeWasDeleted(.own(id))
         Analytics.log(.recipeDeleted, ["screen": "recipe_detail"])
     }
 

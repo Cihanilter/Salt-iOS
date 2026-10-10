@@ -162,6 +162,7 @@ struct RecipeDetailView: View {
     @State private var isCreatingShareLink = false
     @State private var shareLink: ShareLinkItem?
     @State private var shareErrorMessage: String?
+    @State private var collectionTarget: CollectionRecipeRef?
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var bookmarkManager = BookmarkManager.shared
 
@@ -217,6 +218,14 @@ struct RecipeDetailView: View {
         mode == .regular && (userRecipeId ?? recipeId) != nil
     }
 
+    /// The recipe as a collection entry; nil for unsaved previews
+    private var collectionRef: CollectionRecipeRef? {
+        guard mode == .regular else { return nil }
+        if let userRecipeId { return .own(userRecipeId) }
+        if let recipeId { return .explore(recipeId) }
+        return nil
+    }
+
     /// Message for the blurred Nutrition placeholder while there are no values yet, and whether
     /// it's in progress (spinner); nil hides the placeholder. Tells users nutrition is coming
     /// for their own recipes. "Estimated" is left to the real values' label.
@@ -261,7 +270,8 @@ struct RecipeDetailView: View {
                         // Discards the unsaved recipe and goes back to the form / link field
                         onCancel: isUnsavedPreview ? { dismiss() } : nil,
                         onCustomize: canCustomize ? { editSheet = .customize } : nil,
-                        onShare: canShare ? { Task { await createShareLink() } } : nil
+                        onShare: canShare ? { Task { await createShareLink() } } : nil,
+                        onAddToCollection: collectionRef.map { ref in { collectionTarget = ref } }
                     )
                     .id("top")  // Anchor for scrolling to top
 
@@ -383,6 +393,9 @@ struct RecipeDetailView: View {
                     }
                 }
             }
+        }
+        .sheet(item: $collectionTarget) { ref in
+            AddToCollectionSheet(ref: ref, source: "recipe_menu")
         }
         .sheet(item: $shareLink) { link in
             ActivityView(items: [link.url])
@@ -711,13 +724,16 @@ struct ImageCarousel: View {
     var onCustomize: (() -> Void)? = nil
     // Saved recipes: share with a link
     var onShare: (() -> Void)? = nil
+    // Saved recipes: add to or remove from collections
+    var onAddToCollection: (() -> Void)? = nil
 
     private var totalImageCount: Int {
         images.count + pendingImages.count
     }
 
     private var hasMenuActions: Bool {
-        (showMenuButton && onDelete != nil) || onEdit != nil || onCancel != nil || onCustomize != nil || onShare != nil
+        (showMenuButton && onDelete != nil) || onEdit != nil || onCancel != nil || onCustomize != nil
+            || onShare != nil || onAddToCollection != nil
     }
 
     var body: some View {
@@ -803,6 +819,11 @@ struct ImageCarousel: View {
                             if let onShare {
                                 Button(action: onShare) {
                                     Label("Share", systemImage: "square.and.arrow.up")
+                                }
+                            }
+                            if let onAddToCollection {
+                                Button(action: onAddToCollection) {
+                                    Label("Add to Collection", systemImage: "folder.badge.plus")
                                 }
                             }
                             if let onEdit {
