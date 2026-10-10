@@ -20,6 +20,29 @@ struct CuisineSection: Identifiable {
     var totalCount: Int = 0  // Total number of recipes in DB for this cuisine
 }
 
+// MARK: - Filtered Search Types (search_recipes)
+
+/// One row of search_recipes: the recipe and the total number of matches
+private nonisolated struct FilteredSearchRow: Decodable {
+    let recipe: Recipe
+    let totalCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case recipe
+        case totalCount = "total_count"
+    }
+}
+
+private nonisolated struct FilteredSearchParams: Encodable, Sendable {
+    let p_query: String?
+    let p_ingredients: [String]?
+    let p_max_minutes: Int?
+    let p_cuisines: [String]?
+    let p_categories: [String]?
+    let p_offset: Int
+    let p_limit: Int
+}
+
 @MainActor
 class ExploreViewModel: ObservableObject {
     // MARK: - Published Properties
@@ -36,6 +59,8 @@ class ExploreViewModel: ObservableObject {
     @Published var categoryHasMore = false  // Whether there are more category results
     @Published var totalResultsCount: Int = 0  // Total count for search/category results
     @Published var errorMessage: String?
+    /// Search filters (ingredients, time, cuisine, meal type); searches with any filter use search_recipes
+    @Published var filters = RecipeSearchFilters()
 
     private var autocompleteTask: Task<Void, Never>?  // For debouncing
     private var currentSearchQuery: String = ""  // Current search query for pagination
@@ -238,6 +263,12 @@ class ExploreViewModel: ObservableObject {
     /// Search recipes by text query (with pagination support)
     /// First shows local curated results instantly, then fetches from server
     func searchRecipes(_ query: String) async {
+        // With filters, search runs in the database (ingredients can only be matched there)
+        if filters.isActive {
+            await searchWithFilters(query)
+            return
+        }
+
         guard !query.isEmpty else {
             searchResults = []
             currentFilterTitle = nil
@@ -392,6 +423,10 @@ class ExploreViewModel: ObservableObject {
     /// Load more search results (pagination)
     /// Sorting: curated first, then by total_rating (rating * rating_count), with tie-breakers
     func loadMoreSearchResults() async {
+        if filters.isActive {
+            await loadMoreFilteredResults()
+            return
+        }
         guard !currentSearchQuery.isEmpty, searchHasMore, !isLoadingMore else { return }
 
         isLoadingMore = true
@@ -432,6 +467,71 @@ class ExploreViewModel: ObservableObject {
             isLoadingMore = false
             print("❌ Load more error: \(error)")
         }
+    }
+
+    // MARK: - Filtered Search
+
+    /// One page of search_recipes results for the current text and filters
+    private func fetchFilteredPage(query: String, offset: Int) async throws -> (recipes: [Recipe], total: Int) {
+        let params = FilteredSearchParams(
+            p_query: query.isEmpty ? nil : query,
+            p_ingredients: filters.ingredients.isEmpty ? nil : filters.ingredients,
+            p_max_minutes: filters.maxTotalMinutes,
+            p_cuisines: filters.cuisines.isEmpty ? nil : Array(filters.cuisines),
+            p_categories: filters.mealTypes.isEmpty ? nil : filters.mealTypes.map(\.category),
+            p_offset: offset,
+            p_limit: searchPageSize
+        )
+        let response = try await supabase.rpc("search_recipes", params: params).execute()
+        let rows = try JSONDecoder().decode([FilteredSearchRow].self, from: response.data)
+        return (rows.map(\.recipe), rows.first?.totalCount ?? 0)
+    }
+
+    private func searchWithFilters(_ query: String) async {
+        currentSearchQuery = query
+        searchOffset = 0
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            let page = try await fetchFilteredPage(query: query, offset: 0)
+            searchResults = page.recipes
+            searchOffset = page.recipes.count
+            totalResultsCount = page.total
+            searchHasMore = page.recipes.count < page.total
+            currentFilterTitle = nil
+            Analytics.log(.searchFiltered, [
+                "has_text": !query.isEmpty,
+                "filters": filters.activeCount,
+                "results": page.total
+            ])
+        } catch {
+            print("❌ Filtered search failed: \(error)")
+            errorMessage = "Search failed. Please try again."
+            searchResults = []
+            totalResultsCount = 0
+            searchHasMore = false
+        }
+        isLoading = false
+    }
+
+    private func loadMoreFilteredResults() async {
+        guard searchHasMore, !isLoadingMore else { return }
+        isLoadingMore = true
+        do {
+            let page = try await fetchFilteredPage(query: currentSearchQuery, offset: searchOffset)
+            let existingIds = Set(searchResults.map(\.id))
+            searchResults.append(contentsOf: page.recipes.filter { !existingIds.contains($0.id) })
+            searchOffset += page.recipes.count
+            searchHasMore = !page.recipes.isEmpty && searchResults.count < totalResultsCount
+        } catch {
+            print("❌ Load more filtered results failed: \(error)")
+        }
+        isLoadingMore = false
+    }
+
+    func clearFilters() {
+        filters = RecipeSearchFilters()
     }
 
     /// Clear search results

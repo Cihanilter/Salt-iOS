@@ -31,6 +31,9 @@ enum Analytics {
         case recipeBookmarked = "recipe_bookmarked"
         case recipeUnbookmarked = "recipe_unbookmarked"
 
+        // Explore
+        case searchFiltered = "search_filtered"
+
         // Collections
         case collectionCreated = "collection_created"
         case collectionDeleted = "collection_deleted"

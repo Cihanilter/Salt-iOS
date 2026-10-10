@@ -26,6 +26,8 @@ struct ExploreRecipesView: View {
     @State private var searchText = ""
     @State private var searchState: SearchState = .idle
     @FocusState private var isSearchFocused: Bool
+    /// Filter sheet being edited (Ingredients, Total time, Cuisine, Meal type)
+    @State private var activeFilter: SearchFilterKind?
 
     // Trigger to scroll to top and reset (from tab bar tap)
     var scrollToTopTrigger: UUID = UUID()
@@ -88,7 +90,25 @@ struct ExploreRecipesView: View {
                     }
                     .animation(.easeInOut(duration: 0.2), value: searchState == .focused)
                     .padding(.horizontal, 18)
-                    .padding(.bottom, 30)
+                    .padding(.bottom, searchState == .idle ? 30 : 12)
+
+                    // Filters while searching
+                    if searchState != .idle {
+                        SearchFiltersBar(
+                            filters: viewModel.filters,
+                            onSelect: { kind in
+                                // Set first, so losing focus doesn't leave search
+                                activeFilter = kind
+                                // The search keyboard would otherwise stay up over the sheet
+                                isSearchFocused = false
+                            },
+                            onClearAll: clearFilters
+                        )
+                        // Keeps scrolled results from running into the filters, like the
+                        // category row on Explore
+                        .padding(.bottom, 12)
+                        .transition(.opacity)
+                    }
                 }
                 .background(Color(.systemBackground))
                 .zIndex(1) // Keep header above content
@@ -151,8 +171,10 @@ struct ExploreRecipesView: View {
                         await viewModel.fetchAutocompleteSuggestions(searchText)
                     }
                 }
-            } else if !focused && searchText.isEmpty && searchState == .focused {
-                // Keyboard closed with nothing typed: leave search, since the clear button is hidden
+            } else if !focused && searchText.isEmpty && searchState == .focused
+                        && activeFilter == nil && !viewModel.filters.isActive {
+                // Keyboard closed with nothing typed and no filters: leave search, since the
+                // clear button is hidden (a filter sheet opening also closes the keyboard)
                 withAnimation(.easeInOut(duration: 0.2)) {
                     searchState = .idle
                 }
@@ -169,6 +191,9 @@ struct ExploreRecipesView: View {
                     }
                 }
             }
+        }
+        .sheet(item: $activeFilter) { kind in
+            SearchFilterSheet(kind: kind, filters: $viewModel.filters, onApply: filtersChanged)
         }
         .onChange(of: scrollToTopTrigger) { _, _ in
             // Tab was tapped while already on Explore - scroll to top and reset
@@ -187,6 +212,7 @@ struct ExploreRecipesView: View {
 
             // Clear filters
             viewModel.clearFilter()
+            viewModel.clearFilters()
             viewModel.clearSearchResults()
 
             // Change content ID to force scroll view to reset to top
@@ -391,7 +417,7 @@ struct ExploreRecipesView: View {
                         Text("No recipes found")
                             .font(.custom("Playfair9pt-Medium", size: 20))
                             .foregroundColor(.gray)
-                        Text("Try a different search term")
+                        Text(viewModel.filters.isActive ? "Try removing a filter" : "Try a different search term")
                             .font(.custom("OpenSans-Regular", size: 14))
                             .foregroundColor(Color("GraniteGray"))
                     }
@@ -541,7 +567,8 @@ struct ExploreRecipesView: View {
     // MARK: - Actions
 
     private func performSearch() {
-        guard !searchText.isEmpty else { return }
+        // Filters alone are enough to search (e.g. Italian, under 30 minutes)
+        guard !searchText.isEmpty || viewModel.filters.isActive else { return }
 
         isSearchFocused = false
         searchState = .searching
@@ -558,7 +585,26 @@ struct ExploreRecipesView: View {
         searchText = ""
         isSearchFocused = false
         searchState = .idle
+        viewModel.clearFilters()
         viewModel.clearSearchResults()
+    }
+
+    /// Searches again with the new filters, or goes back to the search suggestions
+    /// when there's neither text nor a filter left
+    private func filtersChanged() {
+        if searchText.isEmpty && !viewModel.filters.isActive {
+            viewModel.clearSearchResults()
+            withAnimation(.easeInOut(duration: 0.2)) {
+                searchState = .focused
+            }
+        } else {
+            performSearch()
+        }
+    }
+
+    private func clearFilters() {
+        viewModel.clearFilters()
+        filtersChanged()
     }
 }
 
