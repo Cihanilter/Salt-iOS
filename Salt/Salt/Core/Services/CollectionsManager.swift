@@ -16,8 +16,8 @@ final class CollectionsManager: ObservableObject {
     @Published private(set) var collections: [RecipeCollection] = []
     @Published private(set) var hasLoaded = false
 
-    /// Empty example collections every new user starts with
-    static let starterNames = ["Weeknight Dinners", "Planned"]
+    /// Empty example collection every new user starts with
+    static let starterNames = ["Planned"]
 
     private let service = CollectionService.shared
 
