@@ -10,11 +10,20 @@ struct MainTabView: View {
     @State private var exploreScrollToTop = UUID()
     @ObservedObject private var shareImportRouter = ShareImportRouter.shared
     @ObservedObject private var sharedRecipeRouter = SharedRecipeRouter.shared
+    @ObservedObject private var collectionInviteRouter = CollectionInviteRouter.shared
+
+    /// Collection invite opened from a link; closing the screen clears the link
+    private var collectionInviteCode: Binding<LinkCode?> {
+        Binding(
+            get: { collectionInviteRouter.pendingCode.map(LinkCode.init) },
+            set: { if $0 == nil { collectionInviteRouter.clear() } }
+        )
+    }
 
     /// Recipe opened from a share link; closing the screen clears the link
-    private var sharedRecipeCode: Binding<SharedRecipeCode?> {
+    private var sharedRecipeCode: Binding<LinkCode?> {
         Binding(
-            get: { sharedRecipeRouter.pendingCode.map(SharedRecipeCode.init) },
+            get: { sharedRecipeRouter.pendingCode.map(LinkCode.init) },
             set: { if $0 == nil { sharedRecipeRouter.clear() } }
         )
     }
@@ -121,6 +130,12 @@ struct MainTabView: View {
                 }
             )
         }
+        .sheet(item: collectionInviteCode) { invite in
+            CollectionInviteView(code: invite.id) {
+                collectionInviteRouter.clear()
+                selectedTab = 2
+            }
+        }
         .task {
             // Prefetch My Recipes data in background while user is on Explore
             await MyRecipesViewModel.shared.prefetch()
@@ -128,8 +143,8 @@ struct MainTabView: View {
     }
 }
 
-/// Code of a recipe share link, as the item of its full-screen cover
-private struct SharedRecipeCode: Identifiable {
+/// Code of a recipe share link or collection invite, as the item of its screen
+private struct LinkCode: Identifiable {
     let id: String
 }
 

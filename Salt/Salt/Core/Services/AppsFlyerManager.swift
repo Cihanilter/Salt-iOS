@@ -32,6 +32,30 @@ final class AppsFlyerManager: NSObject {
         }
     }
 
+    /// Share link that opens Salt (or the App Store, then the app after install): a short
+    /// OneLink, or the long one with the parameters in the URL if AppsFlyer can't make it.
+    func oneLink(parameters: [String: String], campaign: String) async -> URL? {
+        if let shortLink = await shortLink(parameters: parameters, campaign: campaign) {
+            return shortLink
+        }
+        return Self.longLink(parameters: parameters, campaign: campaign)
+    }
+
+    /// OneLink URL with all parameters in it
+    static func longLink(parameters: [String: String], campaign: String) -> URL? {
+        guard !AppsFlyerConfig.oneLinkTemplateID.isEmpty else { return nil }
+
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = AppsFlyerConfig.oneLinkDomain
+        components.path = "/\(AppsFlyerConfig.oneLinkTemplateID)"
+        components.queryItems = [
+            URLQueryItem(name: "pid", value: "af_app_invites"),
+            URLQueryItem(name: "c", value: campaign)
+        ] + parameters.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+        return components.url
+    }
+
     /// Short OneLink (e.g. saltrecipes.onelink.me/ked7/ab12cd34) whose parameters are stored
     /// by AppsFlyer. Nil if it couldn't be created in time; callers then use the long link.
     func shortLink(parameters: [String: String], campaign: String, timeout: Duration = .seconds(5)) async -> URL? {
@@ -103,13 +127,16 @@ extension AppsFlyerManager: AppsFlyerDeepLinkDelegate {
             return
         }
 
-        guard deepLink.deeplinkValue == SharedRecipeRouter.deepLinkValue,
-              let code = deepLink.clickEvent[SharedRecipeRouter.codeParameter] as? String else {
-            return
-        }
+        guard let code = deepLink.clickEvent[SharedRecipeRouter.codeParameter] as? String else { return }
 
-        Task { @MainActor in
-            SharedRecipeRouter.shared.receive(code: code)
+        // Recipe share links and collection invites carry their code the same way
+        switch deepLink.deeplinkValue {
+        case SharedRecipeRouter.deepLinkValue:
+            Task { @MainActor in SharedRecipeRouter.shared.receive(code: code) }
+        case CollectionInviteRouter.deepLinkValue:
+            Task { @MainActor in CollectionInviteRouter.shared.receive(code: code) }
+        default:
+            break
         }
     }
 }

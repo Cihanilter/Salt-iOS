@@ -243,10 +243,7 @@ struct MyRecipesView: View {
                         .accessibilityAddTraits(.isHeader)
                 }
 
-                LazyVGrid(columns: [
-                    GridItem(.fixed(MyRecipeCard.width), spacing: 30, alignment: .top),
-                    GridItem(.fixed(MyRecipeCard.width), alignment: .top)
-                ], spacing: 30) {
+                LazyVGrid(columns: MyRecipeCard.gridColumns, spacing: 30) {
                     ForEach(items(for: selectedTab)) { item in
                         MyRecipeCard(item: item)
                             .contextMenu {
@@ -316,8 +313,16 @@ struct MyRecipeCard: View {
     let item: MyRecipeItem
     @ObservedObject private var bookmarkManager = BookmarkManager.shared
 
-    /// Card width; two columns of 168 with 30pt spacing fill the screen inside 18pt margins
+    /// Card width on 402pt-wide screens, where two columns with 30pt spacing fill the screen
+    /// inside 18pt margins. Narrower phones (e.g. 393pt) get slightly narrower cards.
     static let width: CGFloat = 168
+
+    /// Two columns of cards that fit the screen. Fixed 168pt columns were wider than 393pt
+    /// screens, which pushed the whole page (title and search bar too) to the left.
+    static let gridColumns = [
+        GridItem(.flexible(maximum: width), spacing: 30, alignment: .top),
+        GridItem(.flexible(maximum: width), alignment: .top)
+    ]
 
     var body: some View {
         NavigationLink(destination: destination) {
@@ -352,6 +357,9 @@ struct MyRecipeCard: View {
     @ViewBuilder
     private var destination: some View {
         switch item {
+        case .own(let recipe) where !recipe.isByCurrentUser:
+            // Someone else's recipe in a shared collection: viewed and saved as a copy
+            CollectionRecipeCopyView(recipe: recipe)
         case .own(let recipe):
             RecipeDetailView(recipe: recipe.toRecipeDetail(), userRecipeId: recipe.id)
         case .saved(let recipe):
@@ -384,10 +392,11 @@ struct MyRecipeCard: View {
 
     // MARK: Photo
 
-    /// Fixed 168 × 140 frame; the image fills it and is cropped from the center.
+    /// Column-wide (168 at most) × 140 frame; the image fills it and is cropped from the center.
     private var photo: some View {
         Color("LightGrayishPink")
-            .frame(width: Self.width, height: 140)
+            .frame(maxWidth: Self.width)
+            .frame(height: 140)
             .overlay {
                 if let imageUrl {
                     CachedAsyncImage(url: imageUrl) { phase in
