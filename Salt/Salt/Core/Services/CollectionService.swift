@@ -17,7 +17,8 @@ final class CollectionService {
 
     /// Collection columns with each entry's recipe embedded, so a collection can be shown
     /// without loading the recipes separately
-    private static let collectionSelect = "id, name, created_at, collection_recipes(\(entrySelect))"
+    private static let collectionSelect =
+        "id, owner_id, name, created_at, collection_members(user_id), collection_recipes(\(entrySelect))"
     private static let entrySelect = "id, user_recipe_id, recipe_id, added_at, user_recipes(*), recipes(*)"
 
     private init() {}
@@ -29,13 +30,13 @@ final class CollectionService {
         return userId
     }
 
-    /// The user's collections, oldest first
+    /// The user's own collections and the ones they joined, oldest first
+    /// (access rules only return collections the user is in)
     func fetchCollections() async throws -> [RecipeCollection] {
-        let userId = try await userId()
+        _ = try await userId()
         let response = try await supabase
             .from("collections")
             .select(Self.collectionSelect)
-            .eq("owner_id", value: userId.uuidString)
             .order("created_at", ascending: true)
             .execute()
         return try JSONDecoder().decode([RecipeCollection].self, from: response.data)
@@ -84,6 +85,75 @@ final class CollectionService {
             .execute()
         return try JSONDecoder().decode(CollectionEntry.self, from: response.data)
     }
+
+    // MARK: - Sharing
+
+    /// The collection's invite code, created the first time (owner only)
+    func inviteCode(for collectionId: UUID) async throws -> String {
+        try await supabase
+            .rpc("create_collection_invite", params: ["p_collection_id": collectionId.uuidString])
+            .execute()
+            .value
+    }
+
+    /// A new code; links sent before stop working (owner only)
+    func resetInviteCode(for collectionId: UUID) async throws -> String {
+        try await supabase
+            .rpc("reset_collection_invite", params: ["p_collection_id": collectionId.uuidString])
+            .execute()
+            .value
+    }
+
+    /// Turns the invite link off (owner only)
+    func disableInvite(for collectionId: UUID) async throws {
+        try await supabase
+            .rpc("disable_collection_invite", params: ["p_collection_id": collectionId.uuidString])
+            .execute()
+    }
+
+    /// What an invite link shows before joining; nil if the link isn't valid anymore
+    func invite(code: String) async throws -> CollectionInvite? {
+        let invites: [CollectionInvite] = try await supabase
+            .rpc("get_collection_invite", params: ["p_code": code])
+            .execute()
+            .value
+        return invites.first
+    }
+
+    /// Joins the collection and returns its id
+    func join(code: String) async throws -> UUID {
+        do {
+            return try await supabase
+                .rpc("join_collection", params: ["p_code": code])
+                .execute()
+                .value
+        } catch {
+            throw CollectionShareError(error)
+        }
+    }
+
+    func members(of collectionId: UUID) async throws -> [CollectionMember] {
+        try await supabase
+            .rpc("get_collection_members", params: ["p_collection_id": collectionId.uuidString])
+            .execute()
+            .value
+    }
+
+    /// Removes a member (owner), or the user themselves (leaving)
+    func removeMember(_ userId: UUID, from collectionId: UUID) async throws {
+        try await supabase
+            .from("collection_members")
+            .delete()
+            .eq("collection_id", value: collectionId.uuidString)
+            .eq("user_id", value: userId.uuidString)
+            .execute()
+    }
+
+    func leave(_ collectionId: UUID) async throws {
+        try await removeMember(try await userId(), from: collectionId)
+    }
+
+    // MARK: - Recipes
 
     func removeRecipe(_ ref: CollectionRecipeRef, from collectionId: UUID) async throws {
         let query = supabase

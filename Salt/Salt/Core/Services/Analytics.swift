@@ -36,6 +36,12 @@ enum Analytics {
         case collectionDeleted = "collection_deleted"
         case recipeAddedToCollection = "recipe_added_to_collection"
         case recipeRemovedFromCollection = "recipe_removed_from_collection"
+        case collectionInviteCreated = "collection_invite_created"
+        case collectionInviteOpened = "collection_invite_opened"
+        case collectionJoined = "collection_joined"
+        case collectionLeft = "collection_left"
+        case collectionMemberRemoved = "collection_member_removed"
+        case recipeCopiedFromCollection = "recipe_copied_from_collection"
 
         // Sharing
         case recipeShared = "recipe_shared"

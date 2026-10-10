@@ -46,12 +46,8 @@ final class SharedRecipeService {
             .execute()
             .value
 
-        // Short link from AppsFlyer; the long link (same parameters in the URL) if that fails
         let parameters = Self.linkParameters(code: row.code, recipe: recipe)
-        if let shortLink = await AppsFlyerManager.shared.shortLink(parameters: parameters, campaign: Self.campaign) {
-            return shortLink
-        }
-        guard let url = Self.oneLink(parameters: parameters) else {
+        guard let url = await AppsFlyerManager.shared.oneLink(parameters: parameters, campaign: Self.campaign) else {
             throw SharedRecipeError.linkUnavailable
         }
         return url
@@ -85,22 +81,6 @@ final class SharedRecipeService {
             parameters["af_og_image"] = image
         }
         return parameters
-    }
-
-    /// Long OneLink URL with all parameters in it, used when a short link can't be created.
-    /// Opens Salt, or the App Store and then the recipe after install.
-    static func oneLink(parameters: [String: String]) -> URL? {
-        guard !AppsFlyerConfig.oneLinkTemplateID.isEmpty else { return nil }
-
-        var components = URLComponents()
-        components.scheme = "https"
-        components.host = AppsFlyerConfig.oneLinkDomain
-        components.path = "/\(AppsFlyerConfig.oneLinkTemplateID)"
-        components.queryItems = [
-            URLQueryItem(name: "pid", value: "af_app_invites"),
-            URLQueryItem(name: "c", value: campaign)
-        ] + parameters.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
-        return components.url
     }
 }
 

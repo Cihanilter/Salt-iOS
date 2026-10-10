@@ -87,8 +87,20 @@ struct CollectionTile: View {
                     .foregroundColor(.primary)
                     .lineLimit(1)
                 Text(recipeCountText(collection.items.count))
+                    .lineLimit(1)
                     .font(.custom("OpenSans-Regular", size: 12))
                     .foregroundColor(Color("GraniteGray"))
+
+                // On its own line so the count isn't cut off in narrow tiles
+                if collection.isShared {
+                    HStack(spacing: 4) {
+                        Image(systemName: "person.2.fill")
+                            .font(.system(size: 10))
+                        Text("Shared")
+                    }
+                    .font(.custom("OpenSans-Regular", size: 12))
+                    .foregroundColor(Color("Orange"))
+                }
             }
             .frame(width: size, alignment: .leading)
         }
@@ -223,8 +235,12 @@ private extension View {
 struct AllCollectionsView: View {
     @ObservedObject private var manager = CollectionsManager.shared
     @State private var showingNewCollection = false
+    /// Screen width, so two square tiles fit on any phone
+    @State private var availableWidth: CGFloat = 402
 
-    private let tileSize = MyRecipeCard.width
+    private var tileSize: CGFloat {
+        min(MyRecipeCard.width, (availableWidth - 36 - 30) / 2)
+    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -248,6 +264,7 @@ struct AllCollectionsView: View {
             .padding(.horizontal, 18)
             .padding(.vertical, 20)
         }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { availableWidth = $0 }
         .navigationTitle("Collections")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -274,10 +291,18 @@ struct CollectionDetailView: View {
     @State private var showingRename = false
     @State private var showingAddRecipes = false
     @State private var showingDeleteAlert = false
+    @State private var showingLeaveAlert = false
+    @State private var showingMembers = false
+    @StateObject private var invite = CollectionInviteState()
     @State private var errorMessage: String?
 
     private var collection: RecipeCollection? {
         manager.collection(id: collectionId)
+    }
+
+    /// Owners can rename, delete and invite; members can leave
+    private var isOwner: Bool {
+        collection?.isOwnedByCurrentUser ?? false
     }
 
     /// The collection's recipes, using the latest version of the user's own recipes
@@ -311,11 +336,28 @@ struct CollectionDetailView: View {
                     Button(action: { showingAddRecipes = true }) {
                         Label("Add Recipes", systemImage: "plus")
                     }
-                    Button(action: { showingRename = true }) {
-                        Label("Rename", systemImage: "pencil")
+                    if isOwner {
+                        Button(action: { Task { await invite.create(for: collectionId, reset: false) } }) {
+                            Label("Invite People", systemImage: "person.badge.plus")
+                        }
+                        .disabled(collection?.isFull ?? true)
                     }
-                    Button(role: .destructive, action: { showingDeleteAlert = true }) {
-                        Label("Delete Collection", systemImage: "trash")
+                    if isOwner == false || collection?.isShared == true {
+                        Button(action: { showingMembers = true }) {
+                            Label("Members", systemImage: "person.2")
+                        }
+                    }
+                    if isOwner {
+                        Button(action: { showingRename = true }) {
+                            Label("Rename", systemImage: "pencil")
+                        }
+                        Button(role: .destructive, action: { showingDeleteAlert = true }) {
+                            Label("Delete Collection", systemImage: "trash")
+                        }
+                    } else {
+                        Button(role: .destructive, action: { showingLeaveAlert = true }) {
+                            Label("Leave Collection", systemImage: "rectangle.portrait.and.arrow.right")
+                        }
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -327,8 +369,39 @@ struct CollectionDetailView: View {
         .refreshable {
             await manager.load()
         }
+        .task {
+            // Picks up recipes others added to a shared collection
+            await manager.load()
+        }
         .onAppear {
             Analytics.screen("Collection")
+        }
+        .navigationDestination(isPresented: $showingMembers) {
+            CollectionMembersView(collectionId: collectionId)
+        }
+        .overlay(alignment: .bottom) {
+            if invite.isCreating {
+                CreatingLinkToast()
+            }
+        }
+        .sheet(item: $invite.shareItem) { item in
+            ActivityView(items: [item.message, item.url])
+                .presentationDetents([.medium, .large])
+        }
+        .alert("Leave \u{201C}\(collection?.name ?? "")\u{201D}?", isPresented: $showingLeaveAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Leave", role: .destructive) {
+                Task {
+                    do {
+                        try await manager.leave(collectionId)
+                        dismiss()
+                    } catch {
+                        errorMessage = "Couldn't leave the collection."
+                    }
+                }
+            }
+        } message: {
+            Text("You won't see its recipes anymore. Recipes you added stay in it.")
         }
         .sheet(isPresented: $showingRename) {
             CollectionNameSheet(
@@ -355,15 +428,17 @@ struct CollectionDetailView: View {
                 }
             }
         } message: {
-            Text("The recipes stay in My Recipes.")
+            Text(collection?.isShared == true
+                 ? "Everyone in it loses access. The recipes stay in My Recipes."
+                 : "The recipes stay in My Recipes.")
         }
         .alert("Something Went Wrong", isPresented: Binding(
-            get: { errorMessage != nil },
-            set: { if !$0 { errorMessage = nil } }
+            get: { (errorMessage ?? invite.errorMessage) != nil },
+            set: { if !$0 { errorMessage = nil; invite.errorMessage = nil } }
         )) {
             Button("OK", role: .cancel) { }
         } message: {
-            Text(errorMessage ?? "")
+            Text(errorMessage ?? invite.errorMessage ?? "")
         }
     }
 
@@ -375,10 +450,7 @@ struct CollectionDetailView: View {
                     .foregroundColor(Color("GraniteGray"))
                     .padding(.horizontal, 18)
 
-                LazyVGrid(columns: [
-                    GridItem(.fixed(MyRecipeCard.width), spacing: 30, alignment: .top),
-                    GridItem(.fixed(MyRecipeCard.width), alignment: .top)
-                ], spacing: 30) {
+                LazyVGrid(columns: MyRecipeCard.gridColumns, spacing: 30) {
                     ForEach(items) { item in
                         MyRecipeCard(item: item)
                             .contextMenu {
