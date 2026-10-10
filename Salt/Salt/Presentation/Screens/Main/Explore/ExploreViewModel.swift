@@ -7,6 +7,22 @@ import Foundation
 import Supabase
 import Combine
 
+// MARK: - Category Filtering
+
+private extension PostgrestFilterBuilder {
+    /// Recipes in a cuisine or category. Categories that are meal types filter on
+    /// meal_types, falling back to categories for recipes that aren't classified yet.
+    func matching(_ name: String, isCuisine: Bool = false) -> PostgrestFilterBuilder {
+        if isCuisine {
+            return filter("cuisines", operator: "cs", value: "{\"\(name)\"}")
+        }
+        if let mealType = MealType.allCases.first(where: { $0.category == name }) {
+            return or(mealType.recipesFilter)
+        }
+        return filter("categories", operator: "cs", value: "{\"\(name)\"}")
+    }
+}
+
 // MARK: - Cuisine Section Model
 
 struct CuisineSection: Identifiable {
@@ -39,6 +55,7 @@ private nonisolated struct FilteredSearchParams: Encodable, Sendable {
     let p_max_minutes: Int?
     let p_cuisines: [String]?
     let p_categories: [String]?
+    let p_meal_types: [String]?
     let p_offset: Int
     let p_limit: Int
 }
@@ -478,7 +495,8 @@ class ExploreViewModel: ObservableObject {
             p_ingredients: filters.ingredients.isEmpty ? nil : filters.ingredients,
             p_max_minutes: filters.maxTotalMinutes,
             p_cuisines: filters.cuisines.isEmpty ? nil : Array(filters.cuisines),
-            p_categories: filters.mealTypes.isEmpty ? nil : filters.mealTypes.map(\.category),
+            p_categories: nil,
+            p_meal_types: filters.mealTypes.isEmpty ? nil : filters.mealTypes.map(\.rawValue),
             p_offset: offset,
             p_limit: searchPageSize
         )
@@ -653,15 +671,12 @@ class ExploreViewModel: ObservableObject {
         let from = page * limit
         let to = from + limit - 1
 
-        // Use different field based on whether it's a cuisine or category
-        let field = section.isCuisine ? "cuisines" : "categories"
-
         do {
             // Try with curated sorting first
             let response = try await supabase
                 .from("recipes")
                 .select()
-                .filter(field, operator: "cs", value: "{\"\(section.name)\"}")
+                .matching(section.name, isCuisine: section.isCuisine)
                 .order("is_curated", ascending: false)
                 .order("total_rating", ascending: false)
                 .order("id", ascending: true)
@@ -678,7 +693,7 @@ class ExploreViewModel: ObservableObject {
             let response = try await supabase
                 .from("recipes")
                 .select()
-                .filter(field, operator: "cs", value: "{\"\(section.name)\"}")
+                .matching(section.name, isCuisine: section.isCuisine)
                 .order("rating", ascending: false)
                 .range(from: from, to: to)
                 .execute()
@@ -700,7 +715,7 @@ class ExploreViewModel: ObservableObject {
         let response = try await supabase
             .from("recipes")
             .select()
-            .filter("categories", operator: "cs", value: "{\"\(dishType)\"}")
+            .matching(dishType)
             .order("is_curated", ascending: false)
             .order("total_rating", ascending: false)
             .order("rating_count", ascending: false)
@@ -721,7 +736,7 @@ class ExploreViewModel: ObservableObject {
             let response = try await supabase
                 .from("recipes")
                 .select("id", head: true, count: .exact)
-                .filter("categories", operator: "cs", value: "{\"\(dishType)\"}")
+                .matching(dishType)
                 .execute()
 
             return response.count ?? 0
