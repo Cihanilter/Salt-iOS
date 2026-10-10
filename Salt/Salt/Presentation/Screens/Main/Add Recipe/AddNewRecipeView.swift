@@ -222,6 +222,9 @@ struct ImportRecipeView: View {
                 RecipeDetailView(
                     recipe: recipe.toRecipeDetail(),
                     mode: .preview,
+                    previewNotice: recipe.isFromVideoAudio
+                        ? "This recipe wasn't in the post's caption, so we put it together from what's said in the video. Some ingredients, amounts or steps may be missing. Please check it before saving; you can fix anything with Edit in the menu."
+                        : nil,
                     onSave: {
                         // Get ALL data from shared storage - no closure parameters!
                         let savedData = PendingSaveDataStorage.shared.retrieve()

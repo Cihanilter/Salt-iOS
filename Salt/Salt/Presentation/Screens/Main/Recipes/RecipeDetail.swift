@@ -140,6 +140,8 @@ struct RecipeDetailView: View {
     @State private var recipeId: UUID?
     @State private var userRecipeId: UUID?  // For user-created/imported recipes (enables edit/delete)
     var mode: RecipeDetailMode = .regular
+    /// Shown above the content while reviewing an unsaved recipe (e.g. one taken from a video's audio)
+    var previewNotice: String? = nil
 
     // Callbacks for preview mode - no parameters, data is in PendingSaveDataStorage
     var onSave: (() async -> Bool)? = nil
@@ -172,6 +174,7 @@ struct RecipeDetailView: View {
         recipeId: UUID? = nil,
         userRecipeId: UUID? = nil,
         mode: RecipeDetailMode = .regular,
+        previewNotice: String? = nil,
         pendingPhotos: [UIImage] = [],
         onSave: (() async -> Bool)? = nil,
         onAddMoreRecipes: (() -> Void)? = nil,
@@ -181,6 +184,7 @@ struct RecipeDetailView: View {
         self._recipeId = State(initialValue: recipeId)
         self._userRecipeId = State(initialValue: userRecipeId)
         self.mode = mode
+        self.previewNotice = previewNotice
         self._pendingPhotoImages = State(initialValue: pendingPhotos)
         self.onSave = onSave
         self.onAddMoreRecipes = onAddMoreRecipes
@@ -301,6 +305,10 @@ struct RecipeDetailView: View {
 
                     // Content
                     VStack(alignment: .leading, spacing: 20) {
+                        if isUnsavedPreview, let previewNotice {
+                            PreviewNoticeBanner(text: previewNotice)
+                        }
+
                         // Description
                         DescriptionSection(text: recipe.description)
 
@@ -984,6 +992,31 @@ struct RecipeInfoCard: View {
         .cornerRadius(10)
         .shadow(color: Color.black.opacity(0.25), radius: 4, x: 0, y: 4)
         .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Preview Notice Banner
+
+/// Heads-up shown on an unsaved preview, e.g. when the recipe was taken from a video's audio
+struct PreviewNoticeBanner: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "waveform")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(Color("OrangeRed"))
+                .padding(.top, 2)
+
+            Text(text)
+                .font(.custom("OpenSans-Regular", size: 14))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color("OrangeRed").opacity(0.08))
+        .cornerRadius(10)
+        .accessibilityElement(children: .combine)
     }
 }
 
