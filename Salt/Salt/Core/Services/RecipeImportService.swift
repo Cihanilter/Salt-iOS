@@ -123,6 +123,8 @@ class RecipeImportService {
 
     // Backend URL for social media import (Railway - supports yt-dlp)
     private let socialImportApiUrl = "https://salt-backend-production.up.railway.app/api/import-social-recipe"
+    // AI fallback for recipe pages without Schema.org markup (the recipe is only in the page text)
+    private let webImportApiUrl = "https://salt-backend-production.up.railway.app/api/import-web-recipe"
 
     private init() {}
 
@@ -159,21 +161,41 @@ class RecipeImportService {
 
     /// Import from social media using backend API
     private func importFromSocialMedia(_ urlString: String) async throws -> ImportedRecipe {
-        guard let apiUrl = URL(string: socialImportApiUrl) else {
+        let body: [String: Any] = [
+            "url": urlString,
+            "saveToDatabase": false
+        ]
+        // Listening to the video's audio (when the caption has no recipe) takes longer than the default 60s
+        return try await importFromBackend(apiUrlString: socialImportApiUrl, body: body, timeout: 180, sourceUrl: urlString)
+    }
+
+    /// Sends the page's visible text to the backend, which has the AI find the recipe in it
+    private func importFromPageText(html: String, urlString: String) async throws -> ImportedRecipe {
+        let text = extractVisibleText(from: html)
+        // Too little text to hold a recipe (e.g. a page that's built by JavaScript)
+        guard text.count > 200 else { throw RecipeImportError.noRecipeFound }
+
+        var body: [String: Any] = [
+            "url": urlString,
+            "title": extractPageTitle(from: html) ?? "",
+            "text": String(text.prefix(40000))
+        ]
+        if let imageUrl = extractOpenGraphImage(from: html, pageUrl: urlString) {
+            body["imageUrl"] = imageUrl
+        }
+        return try await importFromBackend(apiUrlString: webImportApiUrl, body: body, timeout: 90, sourceUrl: urlString)
+    }
+
+    /// POSTs to a Salt backend import endpoint; both return `{ success, isRecipe, recipe }`
+    private func importFromBackend(apiUrlString: String, body: [String: Any], timeout: TimeInterval, sourceUrl: String) async throws -> ImportedRecipe {
+        guard let apiUrl = URL(string: apiUrlString) else {
             throw RecipeImportError.parsingError("Invalid API URL")
         }
 
         var request = URLRequest(url: apiUrl)
         request.httpMethod = "POST"
-        // Listening to the video's audio (when the caption has no recipe) takes longer than the default 60s
-        request.timeoutInterval = 180
+        request.timeoutInterval = timeout
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let body: [String: Any] = [
-            "url": urlString,
-            "saveToDatabase": false
-        ]
-
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
         do {
@@ -206,7 +228,7 @@ class RecipeImportService {
                 throw RecipeImportError.noRecipeFound
             }
 
-            return parseApiRecipe(from: recipeData, sourceUrl: urlString)
+            return parseApiRecipe(from: recipeData, sourceUrl: sourceUrl)
 
         } catch let error as RecipeImportError {
             throw error
@@ -299,12 +321,69 @@ class RecipeImportService {
         }
 
         #if DEBUG
-        print("[RecipeImport] ❌ No recipe found in any format")
-        // Print first 2000 chars of HTML for debugging
-        print("[RecipeImport] HTML preview: \(String(html.prefix(2000)))")
+        print("[RecipeImport] No recipe markup found, asking the AI to read the page text...")
         #endif
 
-        throw RecipeImportError.noRecipeFound
+        // Some sites have the recipe only as plain text, without any recipe markup
+        return try await importFromPageText(html: html, urlString: urlString)
+    }
+
+    // MARK: - Page Text (AI fallback)
+
+    /// The page's readable text: scripts, styles and tags removed, one block per line
+    private func extractVisibleText(from html: String) -> String {
+        var text = html
+        let removals = [
+            #"<!--[\s\S]*?-->"#,
+            #"<(script|style|noscript|svg|iframe|template|head)\b[\s\S]*?</\1>"#,
+            #"<(nav|footer)\b[\s\S]*?</\1>"#
+        ]
+        for pattern in removals {
+            text = text.replacingOccurrences(of: pattern, with: " ", options: [.regularExpression, .caseInsensitive])
+        }
+        // Block-level tags end a line, so ingredients and steps stay on their own lines
+        text = text.replacingOccurrences(
+            of: #"<(br|/p|/li|/h[1-6]|/div|/tr|/section|/article)\b[^>]*>"#,
+            with: "\n",
+            options: [.regularExpression, .caseInsensitive]
+        )
+        text = text.replacingOccurrences(of: #"<[^>]+>"#, with: " ", options: .regularExpression)
+        text = decodeHTMLEntities(text)
+
+        return text
+            .components(separatedBy: .newlines)
+            .map { $0.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression).trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n")
+    }
+
+    /// og:title, or the <title> tag
+    private func extractPageTitle(from html: String) -> String? {
+        let patterns = [
+            #"<meta[^>]+property\s*=\s*["']og:title["'][^>]+content\s*=\s*["']([^"']+)["']"#,
+            #"<title[^>]*>([^<]+)</title>"#
+        ]
+        for pattern in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+               let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+               let range = Range(match.range(at: 1), in: html) {
+                return decodeHTMLEntities(String(html[range])).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+        return nil
+    }
+
+    /// First og:image as an absolute https URL
+    private func extractOpenGraphImage(from html: String, pageUrl: String) -> String? {
+        let pattern = #"<meta[^>]+property\s*=\s*["']og:image["'][^>]+content\s*=\s*["']([^"']+)["']"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+              let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+              let range = Range(match.range(at: 1), in: html) else {
+            return nil
+        }
+        let image = String(html[range])
+        if image.hasPrefix("//") { return "https:" + image }
+        return URL(string: image, relativeTo: URL(string: pageUrl))?.absoluteString
     }
 
     // MARK: - Private Methods
