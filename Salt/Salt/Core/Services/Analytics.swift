@@ -52,6 +52,7 @@ enum Analytics {
         case sharedRecipeSaved = "shared_recipe_saved"
 
         // Subscription
+        case importLimitReached = "import_limit_reached"
         case paywallShown = "paywall_shown"
         case subscriptionStarted = "subscription_started"
         case purchasesRestored = "purchases_restored"

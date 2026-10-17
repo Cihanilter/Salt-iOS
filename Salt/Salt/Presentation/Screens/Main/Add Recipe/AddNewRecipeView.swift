@@ -120,6 +120,7 @@ struct ImportRecipeView: View {
     @StateObject private var viewModel = RecipeImportViewModel()
     @State private var navigateToPreview = false
     @State private var showingPaywall = false
+    @State private var showingImportLimitAlert = false
     @FocusState private var isLinkFieldFocused: Bool
     @ObservedObject private var shareImportRouter = ShareImportRouter.shared
 
@@ -204,6 +205,14 @@ struct ImportRecipeView: View {
             .padding(.bottom, 24)
         }
         .scrollDismissesKeyboard(.interactively)
+        .alert("You've used your free imports", isPresented: $showingImportLimitAlert) {
+            Button("Start Free Trial") {
+                showingPaywall = true
+            }
+            Button("Not Now", role: .cancel) {}
+        } message: {
+            Text("You used all \(RevenueCatConfig.freeImportLimit) free imports. Start a free trial of Premium for unlimited imports.")
+        }
         .sheet(isPresented: $showingPaywall) {
             // Remote paywall: shows whatever is attached to the current offering in the RevenueCat dashboard
             PaywallView(displayCloseButton: true)
@@ -277,10 +286,11 @@ struct ImportRecipeView: View {
         // put its text back after the link is cleared on save
         isLinkFieldFocused = false
 
-        // Free users who've used all their imports see the paywall instead.
+        // Free users who've used all their imports are told so, then offered the paywall.
         // The link stays in the field so the import can continue after upgrading.
         guard await SubscriptionManager.shared.canImportRecipe() else {
-            showingPaywall = true
+            Analytics.log(.importLimitReached)
+            showingImportLimitAlert = true
             return
         }
 

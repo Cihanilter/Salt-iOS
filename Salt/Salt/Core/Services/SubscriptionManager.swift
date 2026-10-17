@@ -17,6 +17,11 @@ final class SubscriptionManager: ObservableObject {
     /// True while the user has an active "premium" entitlement (monthly or yearly)
     @Published private(set) var isPremium = false
 
+    /// Premium features are open when the user has Premium, or when subscriptions are switched off
+    var hasPremiumAccess: Bool {
+        !RevenueCatConfig.isEnabled || isPremium
+    }
+
     private var customerInfoTask: Task<Void, Never>?
 
     private init() {}

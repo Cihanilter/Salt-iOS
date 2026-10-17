@@ -5,6 +5,8 @@
 
 
 import SwiftUI
+import RevenueCat
+import RevenueCatUI
 
 // MARK: - Recipe Detail Model
 
@@ -167,6 +169,8 @@ struct RecipeDetailView: View {
     @State private var collectionTarget: CollectionRecipeRef?
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var bookmarkManager = BookmarkManager.shared
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
+    @State private var showingPaywall = false
 
     // Custom init to handle @State initialization
     init(
@@ -228,6 +232,17 @@ struct RecipeDetailView: View {
         if let userRecipeId { return .own(userRecipeId) }
         if let recipeId { return .explore(recipeId) }
         return nil
+    }
+
+    /// Nutrition is a Premium feature: free users see a locked card instead of the values
+    private var isNutritionLocked: Bool {
+        !subscriptionManager.hasPremiumAccess
+    }
+
+    /// Whether the recipe has (or can get) nutrition, i.e. whether the locked card is worth showing
+    private var hasNutritionToUnlock: Bool {
+        recipe.nutrition.map(NutritionSection.hasValues) == true
+            || RecipeService.canEstimateNutrition(from: recipe.ingredients)
     }
 
     /// Message for the blurred Nutrition placeholder while there are no values yet, and whether
@@ -335,7 +350,15 @@ struct RecipeDetailView: View {
 
                         // Nutrition (per serving), at the very bottom; hidden when there's no data
                         // and no estimate coming
-                        if let nutrition = recipe.nutrition, NutritionSection.hasValues(nutrition) {
+                        if isNutritionLocked {
+                            if hasNutritionToUnlock {
+                                // Sample values only, so the real ones aren't on screen or read out
+                                NutritionSection(
+                                    nutrition: NutritionSection.placeholderValues,
+                                    onUnlock: { showingPaywall = true }
+                                )
+                            }
+                        } else if let nutrition = recipe.nutrition, NutritionSection.hasValues(nutrition) {
                             NutritionSection(nutrition: nutrition, isEstimated: recipe.nutritionEstimated)
                         } else if let placeholder = nutritionPlaceholder {
                             NutritionSection(
@@ -401,6 +424,21 @@ struct RecipeDetailView: View {
                     }
                 }
             }
+        }
+        .sheet(isPresented: $showingPaywall) {
+            // Remote paywall: shows whatever is attached to the current offering in the RevenueCat dashboard
+            PaywallView(displayCloseButton: true)
+                .onAppear {
+                    Analytics.log(.paywallShown, ["source": "nutrition_lock"])
+                }
+                .onPurchaseCompleted { customerInfo in
+                    Analytics.log(.subscriptionStarted, ["source": "nutrition_lock"])
+                    unlockNutritionAfterUpgrade(customerInfo)
+                }
+                .onRestoreCompleted { customerInfo in
+                    Analytics.log(.purchasesRestored, ["source": "nutrition_lock"])
+                    unlockNutritionAfterUpgrade(customerInfo)
+                }
         }
         .sheet(item: $collectionTarget) { ref in
             AddToCollectionSheet(ref: ref, source: "recipe_menu")
@@ -514,8 +552,19 @@ struct RecipeDetailView: View {
     }
 
     /// Estimates nutrition for a user recipe that has none and shows it once it arrives
+    /// Closes the paywall once the user has Premium and gets this recipe's nutrition if it has none yet
+    private func unlockNutritionAfterUpgrade(_ customerInfo: CustomerInfo) {
+        subscriptionManager.update(with: customerInfo)
+        // A restore with no active subscription leaves the paywall open
+        guard subscriptionManager.hasPremiumAccess else { return }
+
+        showingPaywall = false
+        Task { await estimateNutritionIfNeeded() }
+    }
+
     private func estimateNutritionIfNeeded() async {
-        guard let userRecipeId, recipe.nutrition == nil,
+        guard subscriptionManager.hasPremiumAccess,
+              let userRecipeId, recipe.nutrition == nil,
               RecipeService.canEstimateNutrition(from: recipe.ingredients) else { return }
 
         isEstimatingNutrition = true
@@ -1279,6 +1328,9 @@ struct NutritionSection: View {
     var isEstimated = false  // AI-estimated values get a label and a short disclaimer
     var placeholderMessage: String? = nil  // When set, the values are blurred sample data under this message
     var placeholderInProgress = false      // Spinner instead of the sparkles icon next to the message
+    var onUnlock: (() -> Void)? = nil      // When set, the values are locked for free users (blurred, with an upgrade button)
+
+    private var isBlurred: Bool { placeholderMessage != nil || onUnlock != nil }
 
     /// Sample values shown blurred while a recipe's real nutrition isn't available yet
     static let placeholderValues = NutritionInfo(
@@ -1379,19 +1431,21 @@ struct NutritionSection: View {
                 }
             }
             // Sample values are blurred so they read as "something's coming", not as data
-            .blur(radius: placeholderMessage == nil ? 0 : 6)
-            .accessibilityHidden(placeholderMessage != nil)
+            .blur(radius: isBlurred ? 6 : 0)
+            .accessibilityHidden(isBlurred)
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
             .background(Color(red: 1.0, green: 0.941, blue: 0.855)) // #FFF0DA
             .cornerRadius(25)
             .overlay {
-                if let placeholderMessage {
+                if let onUnlock {
+                    lockedOverlay(onUnlock: onUnlock)
+                } else if let placeholderMessage {
                     placeholderOverlay(placeholderMessage)
                 }
             }
 
-            if isEstimated && placeholderMessage == nil {
+            if isEstimated && !isBlurred {
                 Text("Estimated with AI from the ingredients. Values are approximate.")
                     .font(.custom("OpenSans-Regular", size: 12))
                     .foregroundColor(Color("GraniteGray"))
@@ -1422,6 +1476,37 @@ struct NutritionSection: View {
         )
         .padding(.horizontal, 24)
         .accessibilityElement(children: .combine)
+    }
+
+    /// Premium lock centered over the blurred sample values
+    private func lockedOverlay(onUnlock: @escaping () -> Void) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 18))
+                .foregroundColor(Color("Orange"))
+                .accessibilityHidden(true)
+
+            Text("See calories, carbs, protein and more for every recipe with Premium.")
+                .font(.custom("OpenSans-SemiBold", size: 15))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button(action: onUnlock) {
+                Text("Unlock with Premium")
+                    .font(.custom("OpenSans-SemiBold", size: 14))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 9)
+                    .background(Capsule().fill(Color("Orange")))
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(.systemBackground).opacity(0.92))
+        )
+        .padding(.horizontal, 20)
     }
 
     // MARK: Formatting
@@ -1484,4 +1569,3 @@ struct NutritionSection: View {
         )
     )
 }
-

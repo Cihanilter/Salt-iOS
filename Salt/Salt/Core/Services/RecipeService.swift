@@ -300,6 +300,10 @@ class RecipeService {
     @MainActor
     @discardableResult
     func estimateNutrition(recipeId: UUID, title: String, servings: String?, ingredients: [String]) async -> NutritionInfo? {
+        // Nutrition is a Premium feature; free users' recipes are estimated once they upgrade
+        // (when the recipe is opened), so there's no AI cost for values they can't see
+        guard SubscriptionManager.shared.hasPremiumAccess else { return nil }
+
         if let running = inFlightEstimates[recipeId], running.ingredients == ingredients {
             return await running.task.value
         }
