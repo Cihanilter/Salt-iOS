@@ -1486,7 +1486,7 @@ struct NutritionSection: View {
                 .foregroundColor(Color("Orange"))
                 .accessibilityHidden(true)
 
-            Text("See calories, carbs, protein and more for every recipe with Premium.")
+            Text("See calories, carbs, protein and more with Premium.")
                 .font(.custom("OpenSans-SemiBold", size: 15))
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
