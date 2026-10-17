@@ -1,0 +1,417 @@
+[
+  { "names": ["buttermilk"], "substitutes": [
+    { "name": "milk with lemon juice", "note": "Stir 1 tbsp lemon juice or vinegar into each cup of milk and let it sit 5 minutes.", "diets": ["gluten_free"] },
+    { "name": "plain yogurt thinned with milk", "note": "Use about ¾ yogurt and ¼ milk.", "diets": ["gluten_free"] },
+    { "name": "soy milk with lemon juice", "note": "Stir 1 tbsp lemon juice into each cup and let it curdle 5 minutes.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["butter", "unsalted butter", "salted butter"], "excludes": ["peanut", "almond", "cashew", "nut", "apple", "cocoa", "shea", "sunflower", "seed"], "substitutes": [
+    { "name": "vegan butter", "note": "Swaps 1:1 in baking and cooking.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "coconut oil", "note": "Works in baking; it's solid at room temperature like butter.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "olive oil", "factor": 0.75, "note": "Best for cooking rather than baking. Use ¾ of the amount.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "margarine", "note": "Swaps 1:1; check the label if it needs to be dairy-free.", "diets": ["gluten_free"] }
+  ]},
+  { "names": ["egg", "large egg", "eggs"], "excludes": ["noodle", "noodles", "wash", "white", "whites", "yolk", "yolks"], "substitutes": [
+    { "name": "flax eggs", "note": "For each egg, mix 1 tbsp ground flaxseed with 3 tbsp water and let it sit 5 minutes. Best for binding.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "unsweetened applesauce", "per": "¼ cup", "note": "Keeps cakes and muffins moist; adds a little sweetness.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "mashed ripe banana", "per": "¼ cup", "note": "Good in pancakes and quick breads; adds banana flavor.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "aquafaba", "per": "3 tbsp", "note": "The liquid from a can of chickpeas. Whips like egg whites.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["milk", "whole milk", "skim milk", "2% milk"], "excludes": ["coconut", "almond", "oat", "soy", "condensed", "evaporated", "butter"], "substitutes": [
+    { "name": "oat milk", "note": "Creamy and neutral; good in baking and sauces.", "diets": ["vegan", "dairy_free"] },
+    { "name": "soy milk", "note": "Closest to dairy milk in protein; works everywhere.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "almond milk", "note": "Thinner and slightly nutty.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "evaporated milk mixed with equal parts water", "note": "Swaps 1:1 once diluted.", "diets": ["gluten_free"] }
+  ]},
+  { "names": ["heavy cream", "heavy whipping cream", "whipping cream", "double cream", "thickened cream"], "substitutes": [
+    { "name": "coconut cream", "note": "Whips like cream when well chilled; adds a light coconut flavor.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "milk with melted butter", "note": "Use ¾ milk and ¼ melted butter. Fine for sauces and baking; won't whip.", "diets": ["gluten_free"] },
+    { "name": "half-and-half", "note": "Lighter; good in sauces and soups but won't whip.", "diets": ["gluten_free"] },
+    { "name": "cashew cream", "note": "Blend soaked cashews with water until smooth. Great in soups and sauces.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["half-and-half", "half and half"], "substitutes": [
+    { "name": "whole milk with heavy cream", "note": "Use equal parts.", "diets": ["gluten_free"] },
+    { "name": "oat milk", "note": "Thinner; use a barista-style one for creaminess.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["sour cream"], "substitutes": [
+    { "name": "plain Greek yogurt", "note": "Swaps 1:1; a little tangier.", "diets": ["gluten_free"] },
+    { "name": "crème fraîche", "note": "Richer and milder; doesn't curdle when heated.", "diets": ["gluten_free"] },
+    { "name": "cashew cream with lemon juice", "note": "Blend soaked cashews with water and a squeeze of lemon.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["greek yogurt", "plain yogurt", "yogurt", "yoghurt"], "excludes": ["coconut", "frozen"], "substitutes": [
+    { "name": "sour cream", "note": "Swaps 1:1; richer.", "diets": ["gluten_free"] },
+    { "name": "coconut yogurt", "note": "Swaps 1:1; slightly sweeter.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "skyr", "note": "Thick and tangy like Greek yogurt.", "diets": ["gluten_free"] }
+  ]},
+  { "names": ["cream cheese"], "substitutes": [
+    { "name": "mascarpone", "note": "Richer and less tangy.", "diets": ["gluten_free"] },
+    { "name": "strained Greek yogurt", "note": "Lighter and tangier; strain overnight for a thicker texture.", "diets": ["gluten_free"] },
+    { "name": "vegan cream cheese", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["mascarpone"], "substitutes": [
+    { "name": "cream cheese", "note": "Tangier; beat with a splash of cream to soften.", "diets": ["gluten_free"] },
+    { "name": "ricotta", "note": "Lighter; blend until smooth.", "diets": ["gluten_free"] }
+  ]},
+  { "names": ["crème fraîche", "creme fraiche"], "substitutes": [
+    { "name": "sour cream", "note": "Tangier; may split if boiled.", "diets": ["gluten_free"] },
+    { "name": "Greek yogurt", "note": "Stir in off the heat so it doesn't curdle.", "diets": ["gluten_free"] }
+  ]},
+  { "names": ["ricotta"], "substitutes": [
+    { "name": "cottage cheese", "note": "Blend it for a smoother texture.", "diets": ["gluten_free"] },
+    { "name": "mascarpone", "note": "Richer and creamier.", "diets": ["gluten_free"] },
+    { "name": "crumbled firm tofu with lemon juice", "note": "Blend with a pinch of salt for a ricotta-like texture.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["parmesan", "parmesan cheese", "parmigiano-reggiano", "parmigiano reggiano"], "substitutes": [
+    { "name": "pecorino romano", "note": "Saltier and sharper; you may need less salt.", "diets": ["gluten_free"] },
+    { "name": "grana padano", "note": "Very close in flavor; a little milder.", "diets": ["gluten_free"] },
+    { "name": "nutritional yeast", "factor": 0.5, "note": "Cheesy and savory. Use about half the amount.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["mozzarella"], "substitutes": [
+    { "name": "provolone", "note": "Melts the same way with more flavor.", "diets": ["gluten_free"] },
+    { "name": "Monterey Jack", "note": "Melts smoothly; milder.", "diets": ["gluten_free"] },
+    { "name": "vegan mozzarella", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["cheddar", "cheddar cheese"], "substitutes": [
+    { "name": "Monterey Jack", "note": "Milder and melts very smoothly.", "diets": ["gluten_free"] },
+    { "name": "Gruyère", "note": "Nuttier; melts beautifully.", "diets": ["gluten_free"] },
+    { "name": "vegan cheddar", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["feta", "feta cheese"], "substitutes": [
+    { "name": "goat cheese", "note": "Creamier and less salty.", "diets": ["gluten_free"] },
+    { "name": "ricotta salata", "note": "Crumbles the same way; milder.", "diets": ["gluten_free"] },
+    { "name": "crumbled firm tofu with lemon juice and salt", "note": "Let it marinate 15 minutes.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["mayonnaise", "mayo"], "substitutes": [
+    { "name": "plain Greek yogurt", "note": "Lighter and tangier.", "diets": ["gluten_free"] },
+    { "name": "sour cream", "note": "Works in dips and dressings.", "diets": ["gluten_free"] },
+    { "name": "vegan mayo", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["coconut milk"], "substitutes": [
+    { "name": "heavy cream", "note": "Richer and without the coconut flavor.", "diets": ["gluten_free"] },
+    { "name": "cashew cream", "note": "Blend soaked cashews with water until smooth.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "evaporated milk", "note": "Lighter; stir in at the end.", "diets": ["gluten_free"] }
+  ]},
+  { "names": ["sweetened condensed milk"], "substitutes": [
+    { "name": "coconut condensed milk", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["evaporated milk"], "substitutes": [
+    { "name": "half-and-half", "note": "Swaps 1:1.", "diets": ["gluten_free"] },
+    { "name": "whole milk", "note": "Thinner; simmer it down by about half first for the same richness.", "diets": ["gluten_free"] }
+  ]},
+  { "names": ["flour", "all-purpose flour", "all purpose flour", "plain flour"], "excludes": ["almond", "coconut", "rice", "corn", "chickpea", "oat", "tapioca", "cassava", "buckwheat", "bread", "cake", "self-rising", "self-raising", "tortilla", "tortillas", "whole wheat"], "substitutes": [
+    { "name": "gluten-free flour blend (1:1)", "note": "Use a cup-for-cup blend with xanthan gum.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "bread flour", "note": "Makes baked goods a bit chewier.", "diets": ["vegan", "dairy_free"] },
+    { "name": "whole wheat flour", "note": "Denser and nuttier; best for up to half the flour.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["bread flour"], "substitutes": [
+    { "name": "all-purpose flour", "note": "Slightly less chewy; works fine for most breads.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["cake flour"], "substitutes": [
+    { "name": "all-purpose flour with cornstarch", "note": "For each cup, remove 2 tbsp flour and add 2 tbsp cornstarch.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["self-rising flour", "self-raising flour"], "substitutes": [
+    { "name": "all-purpose flour with baking powder", "note": "For each cup, add 1 ½ tsp baking powder and ¼ tsp salt.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["cornstarch", "corn starch", "cornflour"], "substitutes": [
+    { "name": "arrowroot powder", "note": "Swaps 1:1; gives a glossier sauce.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "potato starch", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "all-purpose flour", "factor": 2, "note": "Use twice as much and simmer a few minutes longer.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["baking powder"], "substitutes": [
+    { "name": "baking soda with cream of tartar", "note": "For each tsp, use ¼ tsp baking soda and ½ tsp cream of tartar.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["baking soda", "bicarbonate of soda"], "substitutes": [
+    { "name": "baking powder", "factor": 3, "note": "Use 3 times as much; browns a little less.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["brown sugar", "light brown sugar", "dark brown sugar"], "substitutes": [
+    { "name": "white sugar with molasses", "note": "For each cup of sugar, mix in 1 tbsp molasses (2 tbsp for dark).", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "coconut sugar", "note": "Swaps 1:1; similar caramel flavor.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "white sugar", "note": "Less caramel flavor and slightly crisper bakes.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["sugar", "white sugar", "granulated sugar", "caster sugar", "castor sugar"], "excludes": ["brown", "powdered", "icing", "confectioners", "coconut", "snap", "syrup"], "substitutes": [
+    { "name": "honey", "factor": 0.75, "note": "Use ¾ of the amount and cut other liquids by 3 tbsp per cup.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "maple syrup", "factor": 0.75, "note": "Use ¾ of the amount and cut other liquids by 3 tbsp per cup.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "coconut sugar", "note": "Swaps 1:1; adds a light caramel flavor.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["powdered sugar", "icing sugar", "confectioners sugar", "confectioners' sugar"], "substitutes": [
+    { "name": "granulated sugar blended with cornstarch", "note": "Blend 1 cup sugar with 1 tbsp cornstarch until powdery.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["honey"], "substitutes": [
+    { "name": "maple syrup", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "agave syrup", "note": "Swaps 1:1; a little sweeter.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "golden syrup", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["maple syrup"], "substitutes": [
+    { "name": "honey", "note": "Swaps 1:1.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "agave syrup", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["molasses"], "substitutes": [
+    { "name": "dark corn syrup", "note": "Milder flavor.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "maple syrup", "note": "Lighter flavor.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["corn syrup", "light corn syrup"], "substitutes": [
+    { "name": "golden syrup", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "honey", "note": "Swaps 1:1; adds honey flavor.", "diets": ["dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["vanilla extract", "vanilla"], "excludes": ["bean", "pod", "ice", "yogurt"], "substitutes": [
+    { "name": "vanilla bean paste", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "maple syrup", "note": "Adds a similar warm sweetness.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "almond extract", "factor": 0.5, "note": "Much stronger; use half.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["cocoa powder", "cocoa", "unsweetened cocoa powder"], "substitutes": [
+    { "name": "unsweetened chocolate, melted", "note": "For each 3 tbsp cocoa use 1 oz chocolate and cut 1 tbsp fat.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "carob powder", "note": "Swaps 1:1; sweeter and caffeine-free.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["chocolate chips", "semisweet chocolate chips", "semi-sweet chocolate chips"], "substitutes": [
+    { "name": "chopped chocolate bar", "note": "Swaps 1:1; melts into pools.", "diets": ["gluten_free"] },
+    { "name": "dairy-free chocolate chips", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["gelatin", "gelatine"], "substitutes": [
+    { "name": "agar agar powder", "factor": 0.5, "note": "Use half; it sets firmer and must be boiled.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["lemon juice"], "substitutes": [
+    { "name": "lime juice", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "white wine vinegar", "factor": 0.5, "note": "Sharper; use half.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["lime juice"], "substitutes": [
+    { "name": "lemon juice", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["lemon zest", "zest of lemon"], "substitutes": [
+    { "name": "lime zest", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "orange zest", "note": "Sweeter and less sharp.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["white wine", "dry white wine"], "excludes": ["vinegar"], "substitutes": [
+    { "name": "chicken or vegetable broth with a splash of white wine vinegar", "note": "Use about 1 tsp vinegar per cup of broth.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "dry vermouth", "note": "Swaps 1:1; slightly more herbal.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["red wine", "dry red wine"], "excludes": ["vinegar"], "substitutes": [
+    { "name": "beef broth with a splash of red wine vinegar", "note": "Use about 1 tsp vinegar per cup of broth.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "unsweetened grape juice with a splash of vinegar", "note": "Good in sauces and stews.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["white wine vinegar"], "substitutes": [
+    { "name": "apple cider vinegar", "note": "Swaps 1:1; slightly fruitier.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "rice vinegar", "note": "Milder and a little sweet.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "lemon juice", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["red wine vinegar"], "substitutes": [
+    { "name": "balsamic vinegar", "note": "Sweeter; use a little less.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "apple cider vinegar", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["apple cider vinegar", "cider vinegar"], "substitutes": [
+    { "name": "white wine vinegar", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "lemon juice", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["rice vinegar", "rice wine vinegar"], "substitutes": [
+    { "name": "apple cider vinegar with a pinch of sugar", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "white wine vinegar", "note": "A bit sharper.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["balsamic vinegar"], "substitutes": [
+    { "name": "red wine vinegar with a pinch of sugar", "note": "About ½ tsp sugar per tbsp vinegar.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["soy sauce"], "substitutes": [
+    { "name": "tamari", "note": "Swaps 1:1 and is usually gluten-free.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "coconut aminos", "note": "Sweeter and less salty.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["fish sauce"], "substitutes": [
+    { "name": "soy sauce", "note": "Swaps 1:1; less funky.", "diets": ["vegan", "dairy_free"] },
+    { "name": "tamari with a squeeze of lime", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["worcestershire sauce", "worcestershire"], "substitutes": [
+    { "name": "soy sauce with a splash of vinegar", "note": "Use equal parts.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["chicken broth", "chicken stock"], "substitutes": [
+    { "name": "vegetable broth", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "water with a bouillon cube", "note": "One cube per 2 cups of water.", "diets": ["dairy_free"] }
+  ]},
+  { "names": ["beef broth", "beef stock"], "substitutes": [
+    { "name": "mushroom broth", "note": "Rich and savory.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "chicken broth", "note": "Lighter flavor.", "diets": ["dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["vegetable broth", "vegetable stock"], "substitutes": [
+    { "name": "chicken broth", "note": "Swaps 1:1.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "water with a bouillon cube", "note": "One cube per 2 cups of water.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["shallot", "shallots"], "substitutes": [
+    { "name": "red onion", "note": "Stronger; use a little less.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "yellow onion", "note": "Less delicate; add a little garlic.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["onion", "yellow onion", "white onion", "red onion", "onions"], "excludes": ["green", "spring", "powder", "flakes"], "substitutes": [
+    { "name": "shallots", "per": "3", "note": "Milder and sweeter; about 3 shallots per onion.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "leek", "note": "Milder; use the white and light green parts.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "onion powder", "per": "1 tsp", "note": "About 1 tsp per medium onion; no texture.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["garlic", "garlic clove", "garlic cloves"], "excludes": ["powder", "salt", "granulated"], "substitutes": [
+    { "name": "garlic powder", "per": "⅛ tsp", "note": "About ⅛ tsp per clove.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "minced shallot", "per": "1 tsp", "note": "Milder; about 1 tsp per clove.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["green onion", "green onions", "scallion", "scallions", "spring onion", "spring onions"], "substitutes": [
+    { "name": "chives", "note": "Milder; add at the end.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "finely chopped shallot", "note": "Stronger; use a little less.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["basil", "fresh basil"], "excludes": ["dried"], "substitutes": [
+    { "name": "dried basil", "factor": 0.33, "note": "Use a third of the amount and add it earlier.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "fresh spinach with a little oregano", "note": "Good in pesto and sauces.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["parsley", "fresh parsley", "flat-leaf parsley", "italian parsley"], "excludes": ["dried"], "substitutes": [
+    { "name": "fresh cilantro", "note": "Brighter, more citrusy flavor.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "dried parsley", "factor": 0.33, "note": "Use a third of the amount.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "celery leaves", "note": "Similar fresh, green flavor.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["cilantro", "fresh cilantro", "coriander leaves", "fresh coriander"], "excludes": ["dried", "ground", "seeds"], "substitutes": [
+    { "name": "flat-leaf parsley", "note": "No soapy taste; add a squeeze of lime for brightness.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "fresh mint", "note": "Fresh and bright; good in salsas and salads.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "fresh basil", "note": "Works well in Thai and Vietnamese dishes.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["thyme", "fresh thyme"], "excludes": ["dried"], "substitutes": [
+    { "name": "dried thyme", "factor": 0.33, "note": "Use a third of the amount.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "fresh oregano", "note": "A bit stronger.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["rosemary", "fresh rosemary"], "excludes": ["dried"], "substitutes": [
+    { "name": "dried rosemary", "factor": 0.33, "note": "Use a third of the amount; crush it first.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "fresh thyme", "note": "Milder.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["dill", "fresh dill"], "excludes": ["dried", "pickle", "pickles"], "substitutes": [
+    { "name": "dried dill", "factor": 0.33, "note": "Use a third of the amount.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "fresh tarragon", "note": "Slightly anise-like.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["ginger", "fresh ginger"], "excludes": ["ground", "ale", "beer"], "substitutes": [
+    { "name": "ginger paste", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "ground ginger", "factor": 0.25, "note": "Much stronger; use about ¼ tsp per tbsp of fresh.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["jalapeño", "jalapeno", "jalapeños", "jalapenos"], "substitutes": [
+    { "name": "serrano pepper", "note": "Hotter; use a little less.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "red pepper flakes", "per": "¼ tsp", "note": "Heat without the fresh crunch.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["red pepper flakes", "crushed red pepper", "chili flakes", "chilli flakes"], "substitutes": [
+    { "name": "cayenne pepper", "factor": 0.5, "note": "Hotter; use half.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "hot sauce", "note": "Add to taste.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["cayenne", "cayenne pepper"], "substitutes": [
+    { "name": "red pepper flakes", "factor": 2, "note": "Milder; use twice as much.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "hot paprika", "note": "Milder and smokier.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["smoked paprika"], "substitutes": [
+    { "name": "sweet paprika with a pinch of cumin", "note": "Less smoky.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "chipotle powder", "factor": 0.5, "note": "Smoky and hotter; use half.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["cumin", "ground cumin"], "substitutes": [
+    { "name": "ground coriander", "note": "Lighter and more citrusy.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "chili powder", "note": "Contains cumin plus some heat.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["cinnamon", "ground cinnamon"], "excludes": ["stick", "sticks"], "substitutes": [
+    { "name": "allspice", "factor": 0.25, "note": "Stronger; use about a quarter.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "pumpkin pie spice", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["nutmeg", "ground nutmeg"], "substitutes": [
+    { "name": "mace", "note": "Swaps 1:1; slightly milder.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "allspice", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["dijon mustard", "dijon"], "substitutes": [
+    { "name": "whole-grain mustard", "note": "Swaps 1:1; more texture.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "yellow mustard", "note": "Milder and tangier.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["tomato paste"], "substitutes": [
+    { "name": "tomato sauce", "factor": 3, "note": "Use 3 times as much and simmer it down.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "ketchup", "note": "Sweeter; cut any sugar in the recipe.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["ketchup"], "substitutes": [
+    { "name": "tomato paste with a little vinegar and sugar", "note": "Thin with water to taste.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["capers"], "substitutes": [
+    { "name": "chopped green olives", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["anchovies", "anchovy", "anchovy fillets"], "substitutes": [
+    { "name": "miso paste", "note": "About 1 tsp per anchovy for the same savory depth.", "diets": ["vegan", "dairy_free"] },
+    { "name": "chopped capers", "note": "Salty and briny.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["breadcrumbs", "bread crumbs", "panko", "panko breadcrumbs"], "substitutes": [
+    { "name": "crushed crackers", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free"] },
+    { "name": "rolled oats", "note": "Pulse briefly for binding meatballs and meatloaf.", "diets": ["vegan", "dairy_free"] },
+    { "name": "gluten-free breadcrumbs", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "crushed cornflakes", "note": "Extra crunchy coating.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["pasta", "spaghetti", "penne", "penne pasta", "linguine", "fettuccine", "rigatoni", "macaroni", "elbow macaroni", "fusilli", "farfalle", "rotini"], "excludes": ["sauce", "water", "gluten-free"], "substitutes": [
+    { "name": "pasta in another shape", "note": "Any shape works; check the cooking time on the package.", "diets": ["vegan", "dairy_free"] },
+    { "name": "gluten-free pasta", "note": "Cook a minute less and rinse to stop it going soft.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "zucchini noodles", "note": "Light and low-carb; cook only 1–2 minutes.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["ground beef", "minced beef", "beef mince", "lean ground beef"], "substitutes": [
+    { "name": "ground turkey", "note": "Leaner; add a little oil when browning.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "ground pork", "note": "Richer and juicier.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "plant-based ground meat", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free"] },
+    { "name": "cooked lentils", "note": "Great in sauces, tacos and chili.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["chicken breast", "chicken breasts", "boneless skinless chicken breasts", "boneless skinless chicken breast"], "substitutes": [
+    { "name": "chicken thighs", "note": "Juicier and more forgiving; cook a few minutes longer.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "turkey breast", "note": "Similar lean texture.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "extra-firm tofu", "note": "Press it first so it browns well.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["chicken thighs", "chicken thigh", "boneless skinless chicken thighs"], "substitutes": [
+    { "name": "chicken breasts", "note": "Leaner; cooks faster, so watch it doesn't dry out.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "extra-firm tofu", "note": "Press it first so it browns well.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["bacon"], "excludes": ["turkey", "bits"], "substitutes": [
+    { "name": "pancetta", "note": "Swaps 1:1; not smoked.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "turkey bacon", "note": "Leaner; add a little oil.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "smoked tempeh", "note": "Smoky and crisp when fried.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["pancetta"], "substitutes": [
+    { "name": "bacon", "note": "Smokier.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "prosciutto", "note": "Add near the end so it stays tender.", "diets": ["dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["shrimp", "prawns", "prawn"], "substitutes": [
+    { "name": "scallops", "note": "Sweet and tender; sear quickly.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "firm white fish, cubed", "note": "Cook gently so it doesn't fall apart.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "extra-firm tofu, cubed", "note": "Press it first.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["tofu", "firm tofu", "extra-firm tofu"], "substitutes": [
+    { "name": "tempeh", "note": "Nuttier and firmer.", "diets": ["vegan", "dairy_free"] },
+    { "name": "chickpeas", "note": "Works in curries and stir-fries.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["peanut butter"], "substitutes": [
+    { "name": "almond butter", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "sunflower seed butter", "note": "Nut-free; swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "tahini", "note": "Less sweet; great in sauces.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["tahini"], "substitutes": [
+    { "name": "sunflower seed butter", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "cashew butter", "note": "Milder and creamier.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["pine nuts"], "substitutes": [
+    { "name": "sunflower seeds", "note": "Nut-free; toast them first.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "walnuts", "note": "Earthier; toast them first.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["walnuts", "walnut"], "substitutes": [
+    { "name": "pecans", "note": "Swaps 1:1; sweeter.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "sunflower seeds", "note": "Nut-free.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["pecans", "pecan"], "substitutes": [
+    { "name": "walnuts", "note": "Swaps 1:1; a little more bitter.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "pumpkin seeds", "note": "Nut-free.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["almonds", "almond", "sliced almonds", "slivered almonds"], "excludes": ["milk", "flour", "butter", "extract"], "substitutes": [
+    { "name": "cashews", "note": "Softer and creamier.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "sunflower seeds", "note": "Nut-free.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["vegetable oil", "canola oil", "sunflower oil", "neutral oil"], "substitutes": [
+    { "name": "light olive oil", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "avocado oil", "note": "Swaps 1:1; great for high heat.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "melted butter", "note": "Richer flavor in baking.", "diets": ["gluten_free"] }
+  ]},
+  { "names": ["olive oil", "extra virgin olive oil", "extra-virgin olive oil"], "substitutes": [
+    { "name": "avocado oil", "note": "Swaps 1:1; neutral flavor.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "vegetable oil", "note": "Swaps 1:1 for cooking.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "melted butter", "note": "For cooking; adds richness.", "diets": ["gluten_free"] }
+  ]},
+  { "names": ["spinach", "baby spinach", "fresh spinach"], "substitutes": [
+    { "name": "kale", "note": "Tougher; remove the stems and cook a little longer.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "Swiss chard", "note": "Similar texture; earthier.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["zucchini", "courgette", "courgettes", "zucchinis"], "substitutes": [
+    { "name": "yellow squash", "note": "Swaps 1:1.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "eggplant", "note": "Softer and absorbs more oil.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["mushrooms", "mushroom", "cremini mushrooms", "button mushrooms"], "substitutes": [
+    { "name": "eggplant, diced", "note": "Similar meaty texture.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "zucchini, diced", "note": "Milder; cooks quickly.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]}
+]
