@@ -326,7 +326,7 @@ enum IngredientScaler {
 
     /// "180 g orecchiette", "About 1 tbsp butter", "One onion". A number that describes the
     /// ingredient rather than its amount ("2% milk", "1-inch piece") doesn't count.
-    private static let leadingAmount = try! NSRegularExpression(
+    static let leadingAmount = try! NSRegularExpression(
         pattern: "^\\s*\(approx)\(quantity)(?![\\d%°]|\\s*-?\\s*inch)", options: [.caseInsensitive]
     )
 
@@ -508,7 +508,7 @@ enum IngredientScaler {
     }
 
     /// Nearest kitchen fraction: "¾", "1 ½", "2 ⅓"; large amounts round to halves
-    private static func fraction(_ value: Double) -> String {
+    static func fraction(_ value: Double) -> String {
         let steps: [(Double, String)] = [
             (0, ""), (0.125, "⅛"), (0.25, "¼"), (1.0 / 3, "⅓"), (0.375, "⅜"), (0.5, "½"),
             (0.625, "⅝"), (2.0 / 3, "⅔"), (0.75, "¾"), (0.875, "⅞"), (1, "")

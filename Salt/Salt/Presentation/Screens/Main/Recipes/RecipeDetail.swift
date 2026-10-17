@@ -1153,14 +1153,28 @@ struct IngredientsSection: View {
     let servings: String  // The recipe's servings text, e.g. "4 servings"; scaling starts from it
 
     @State private var selectedServings: Int?  // nil = the recipe's own servings
+    /// The units the user last picked, kept for every recipe; nil = as each recipe is written
+    @AppStorage("preferredUnitSystem") private var preferredUnits: UnitSystem?
 
     private var baseServings: Int? { IngredientScaler.baseServings(from: servings) }
     private var sections: [IngredientScaler.Section] { IngredientScaler.sections(from: ingredients) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Ingredients")
-                .font(.custom("Playfair9pt-SemiBold", size: 22))
+            HStack {
+                Text("Ingredients")
+                    .font(.custom("Playfair9pt-SemiBold", size: 22))
+
+                Spacer()
+
+                // Hidden when nothing is measured in cups, grams, ounces etc.; there's nothing to convert
+                if let recipeUnits = UnitConverter.system(of: ingredients) {
+                    UnitSystemPicker(selection: Binding(
+                        get: { preferredUnits ?? recipeUnits },
+                        set: { preferredUnits = $0 }
+                    ))
+                }
+            }
 
             // Hidden when the recipe doesn't say how many it serves; there's nothing to scale from
             if let base = baseServings {
@@ -1196,12 +1210,29 @@ struct IngredientsSection: View {
         }
     }
 
-    /// Amount first ("½ cup milk"), scaled to the selected servings
+    /// Amount first ("½ cup milk"), scaled to the selected servings, in the selected units
     private func scaled(_ ingredient: String) -> String {
-        guard let base = baseServings, let selected = selectedServings else {
-            return IngredientScaler.display(ingredient)
+        var factor = 1.0
+        if let base = baseServings, let selected = selectedServings {
+            factor = Double(selected) / Double(base)
         }
-        return IngredientScaler.display(ingredient, scaledBy: Double(selected) / Double(base))
+        let line = IngredientScaler.display(ingredient, scaledBy: factor)
+        guard let preferredUnits else { return line }
+        return UnitConverter.convert(line, to: preferredUnits)
+    }
+}
+
+/// "Imperial | Metric" switch for the ingredient amounts and oven temperatures
+struct UnitSystemPicker: View {
+    @Binding var selection: UnitSystem
+
+    var body: some View {
+        Picker("Units", selection: $selection) {
+            Text("Imperial").tag(UnitSystem.imperial)
+            Text("Metric").tag(UnitSystem.metric)
+        }
+        .pickerStyle(.segmented)
+        .fixedSize()
     }
 }
 
@@ -1269,7 +1300,10 @@ struct ServingsStepper: View {
 
 struct InstructionsSection: View {
     let instructions: [String]
-    
+
+    /// Set by the units switch in the ingredients; oven temperatures follow it
+    @AppStorage("preferredUnitSystem") private var preferredUnits: UnitSystem?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Instructions")
@@ -1281,7 +1315,7 @@ struct InstructionsSection: View {
                         Text("\(index + 1).")
                             .font(.custom("OpenSans-Regular", size: 16))
                         
-                        Text(instruction)
+                        Text(preferredUnits.map { UnitConverter.convertTemperatures(in: instruction, to: $0) } ?? instruction)
                             .font(.custom("OpenSans-Regular", size: 16))
                     }
                 }
