@@ -2,7 +2,7 @@
 //  IngredientSubstitutionSheet.swift
 //  Salt
 //
-//  "Replace ingredient": pick an ingredient, then one of its substitutes, by reason
+//  "Swap an ingredient": pick an ingredient, then one of its substitutes, by reason
 //
 
 import SwiftUI
@@ -15,7 +15,7 @@ struct IngredientPosition: Hashable, Identifiable {
     var id: Self { self }
 }
 
-/// Opened from the Replace ingredient button: the recipe's ingredients, then the substitutes
+/// Opened from the Swap an ingredient link: the recipe's ingredients, then the substitutes
 /// for the one picked
 struct ReplaceIngredientSheet: View {
     let sections: [(heading: String?, positions: [IngredientPosition])]
@@ -45,7 +45,7 @@ struct ReplaceIngredientSheet: View {
                     }
                 }
             }
-            .navigationTitle("Which ingredient?")
+            .navigationTitle("Swap an ingredient")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: IngredientPosition.self) { position in
                 IngredientSubstitutesView(
@@ -88,7 +88,7 @@ struct ReplaceIngredientSheet: View {
     }
 }
 
-/// "Replace buttermilk": substitutes for one ingredient, by reason. Shown inside a navigation stack.
+/// "Swap buttermilk": substitutes for one ingredient, by reason. Shown inside a navigation stack.
 struct IngredientSubstitutesView: View {
     let line: String                  // the ingredient line as stored
     let recipeTitle: String
@@ -131,7 +131,7 @@ struct IngredientSubstitutesView: View {
             }
             .padding(20)
         }
-        .navigationTitle("Replace \(name.isEmpty ? "ingredient" : name.lowercased())")
+        .navigationTitle("Swap \(name.isEmpty ? "ingredient" : name.lowercased())")
         .navigationBarTitleDisplayMode(.inline)
         // Nothing in the built-in list for this: ask the AI straight away
         .task(id: reason) {

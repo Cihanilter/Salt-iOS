@@ -1153,13 +1153,16 @@ struct IngredientsSection: View {
     let servings: String  // The recipe's servings text, e.g. "4 servings"; scaling starts from it
     var recipeTitle: String = ""  // Helps the AI pick substitutes that suit the dish
 
-    /// The Replace ingredient button opens the list; tapping a swapped line opens just that one
+    /// The Swap an ingredient link opens the list (or the paywall for free users);
+    /// tapping a swapped line opens just that one
     private enum ReplaceSheet: Identifiable {
+        case paywall
         case pickIngredient
         case ingredient(IngredientPosition)
 
         var id: String {
             switch self {
+            case .paywall: return "paywall"
             case .pickIngredient: return "pick"
             case .ingredient(let position): return "\(position.section)-\(position.line)"
             }
@@ -1170,6 +1173,8 @@ struct IngredientsSection: View {
     /// Ingredients swapped while viewing the recipe; the recipe itself isn't changed
     @State private var swaps: [IngredientPosition: Substitute] = [:]
     @State private var replaceSheet: ReplaceSheet?
+    /// Swapping ingredients is a Premium feature
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
     /// The units the user last picked, kept for every recipe; nil = as each recipe is written
     @AppStorage("preferredUnitSystem") private var preferredUnits: UnitSystem?
 
@@ -1232,16 +1237,22 @@ struct IngredientsSection: View {
             if !ingredients.isEmpty {
                 // A quiet link like the servings Reset, so it doesn't compete with the ingredients
                 Button {
-                    replaceSheet = .pickIngredient
+                    replaceSheet = subscriptionManager.hasPremiumAccess ? .pickIngredient : .paywall
                 } label: {
                     HStack(spacing: 5) {
                         Image(systemName: "arrow.triangle.2.circlepath")
                             .font(.system(size: 12))
-                        Text("Replace an ingredient")
+                        Text("Swap an ingredient")
                             .font(.custom("OpenSans-Regular", size: 14))
+                        if !subscriptionManager.hasPremiumAccess {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(Color("GraniteGray"))
+                        }
                     }
                     .foregroundColor(Color("Orange"))
                 }
+                .accessibilityHint(subscriptionManager.hasPremiumAccess ? "" : "Premium feature")
             }
         }
         // The recipe was edited (preview mode); start again from its servings
@@ -1254,6 +1265,20 @@ struct IngredientsSection: View {
         }
         .sheet(item: $replaceSheet) { sheet in
             switch sheet {
+            case .paywall:
+                // Remote paywall: shows whatever is attached to the current offering in the RevenueCat dashboard
+                PaywallView(displayCloseButton: true)
+                    .onAppear {
+                        Analytics.log(.paywallShown, ["source": "swap_lock"])
+                    }
+                    .onPurchaseCompleted { customerInfo in
+                        Analytics.log(.subscriptionStarted, ["source": "swap_lock"])
+                        openSwapsAfterUpgrade(customerInfo)
+                    }
+                    .onRestoreCompleted { customerInfo in
+                        Analytics.log(.purchasesRestored, ["source": "swap_lock"])
+                        openSwapsAfterUpgrade(customerInfo)
+                    }
             case .pickIngredient:
                 ReplaceIngredientSheet(
                     sections: positions,
@@ -1288,6 +1313,14 @@ struct IngredientsSection: View {
                 .presentationDetents([.medium, .large])
             }
         }
+    }
+
+    /// Goes on to the ingredient list once the user has Premium; a restore with no active
+    /// subscription leaves the paywall open
+    private func openSwapsAfterUpgrade(_ customerInfo: CustomerInfo) {
+        subscriptionManager.update(with: customerInfo)
+        guard subscriptionManager.hasPremiumAccess else { return }
+        replaceSheet = .pickIngredient
     }
 
     /// The line as written, or the substitute in use with the original below it.
