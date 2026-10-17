@@ -337,7 +337,7 @@ struct RecipeDetailView: View {
                         CookingModeToggle(isOn: $isCookingModeOn)
 
                         // Ingredients
-                        IngredientsSection(ingredients: recipe.ingredients, servings: recipe.servings)
+                        IngredientsSection(ingredients: recipe.ingredients, servings: recipe.servings, recipeTitle: recipe.title)
 
                         // Instructions
                         InstructionsSection(instructions: recipe.instructions)
@@ -1151,13 +1151,39 @@ struct CookingModeToggle: View {
 struct IngredientsSection: View {
     let ingredients: [String]
     let servings: String  // The recipe's servings text, e.g. "4 servings"; scaling starts from it
+    var recipeTitle: String = ""  // Helps the AI pick substitutes that suit the dish
+
+    /// The Replace ingredient button opens the list; tapping a swapped line opens just that one
+    private enum ReplaceSheet: Identifiable {
+        case pickIngredient
+        case ingredient(IngredientPosition)
+
+        var id: String {
+            switch self {
+            case .pickIngredient: return "pick"
+            case .ingredient(let position): return "\(position.section)-\(position.line)"
+            }
+        }
+    }
 
     @State private var selectedServings: Int?  // nil = the recipe's own servings
+    /// Ingredients swapped while viewing the recipe; the recipe itself isn't changed
+    @State private var swaps: [IngredientPosition: Substitute] = [:]
+    @State private var replaceSheet: ReplaceSheet?
     /// The units the user last picked, kept for every recipe; nil = as each recipe is written
     @AppStorage("preferredUnitSystem") private var preferredUnits: UnitSystem?
 
     private var baseServings: Int? { IngredientScaler.baseServings(from: servings) }
     private var sections: [IngredientScaler.Section] { IngredientScaler.sections(from: ingredients) }
+
+    /// Every line with its place in the list, grouped like the list
+    private var positions: [(heading: String?, positions: [IngredientPosition])] {
+        sections.enumerated().map { sectionIndex, section in
+            (section.heading, section.lines.enumerated().map { lineIndex, line in
+                IngredientPosition(section: sectionIndex, line: lineIndex, text: line)
+            })
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -1188,7 +1214,7 @@ struct IngredientsSection: View {
             // Imported recipes can group ingredients (Marinade, Crema, Pico de gallo).
             // Lines can repeat (e.g. "Salt" in two groups), so everything is identified by position.
             VStack(alignment: .leading, spacing: 16) {
-                ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
+                ForEach(Array(positions.enumerated()), id: \.offset) { _, section in
                     VStack(alignment: .leading, spacing: 5) {
                         if let heading = section.heading {
                             Text(heading)
@@ -1196,17 +1222,105 @@ struct IngredientsSection: View {
                                 .padding(.bottom, 2)
                                 .accessibilityAddTraits(.isHeader)
                         }
-                        ForEach(Array(section.lines.enumerated()), id: \.offset) { _, ingredient in
-                            Text(scaled(ingredient))
-                                .font(.custom("OpenSans-Regular", size: 16))
+                        ForEach(section.positions) { position in
+                            ingredientRow(position)
                         }
                     }
+                }
+            }
+
+            if !ingredients.isEmpty {
+                // A quiet link like the servings Reset, so it doesn't compete with the ingredients
+                Button {
+                    replaceSheet = .pickIngredient
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 12))
+                        Text("Replace an ingredient")
+                            .font(.custom("OpenSans-Regular", size: 14))
+                    }
+                    .foregroundColor(Color("Orange"))
                 }
             }
         }
         // The recipe was edited (preview mode); start again from its servings
         .onChange(of: servings) { _, _ in
             selectedServings = nil
+        }
+        // Swaps are tied to positions, which no longer match after an edit
+        .onChange(of: ingredients) { _, _ in
+            swaps = [:]
+        }
+        .sheet(item: $replaceSheet) { sheet in
+            switch sheet {
+            case .pickIngredient:
+                ReplaceIngredientSheet(
+                    sections: positions,
+                    swaps: swaps,
+                    recipeTitle: recipeTitle,
+                    ingredients: ingredients,
+                    display: scaled,
+                    onSelect: { position, substitute in
+                        swaps[position] = substitute
+                        replaceSheet = nil
+                    }
+                )
+            case .ingredient(let position):
+                NavigationStack {
+                    IngredientSubstitutesView(
+                        line: position.text,
+                        recipeTitle: recipeTitle,
+                        ingredients: ingredients,
+                        current: swaps[position],
+                        display: scaled,
+                        onSelect: { substitute in
+                            swaps[position] = substitute
+                            replaceSheet = nil
+                        }
+                    )
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close") { replaceSheet = nil }
+                        }
+                    }
+                }
+                .presentationDetents([.medium, .large])
+            }
+        }
+    }
+
+    /// The line as written, or the substitute in use with the original below it.
+    /// Swapped lines can be tapped to pick another substitute or go back to the original.
+    @ViewBuilder
+    private func ingredientRow(_ position: IngredientPosition) -> some View {
+        if let swap = swaps[position] {
+            Button {
+                replaceSheet = .ingredient(position)
+            } label: {
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(Color("Orange"))
+                            .accessibilityHidden(true)
+                        Text(scaled(swap.line))
+                            .font(.custom("OpenSans-Regular", size: 16))
+                    }
+                    Text("instead of \(scaled(position.text))")
+                        .font(.custom("OpenSans-Regular", size: 13))
+                        .foregroundColor(Color("GraniteGray"))
+                }
+                .foregroundColor(.primary)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Change or undo the substitute")
+        } else {
+            Text(scaled(position.text))
+                .font(.custom("OpenSans-Regular", size: 16))
         }
     }
 
