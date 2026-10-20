@@ -77,7 +77,7 @@ final class SubscriptionManager: ObservableObject {
     /// free users are limited to `RevenueCatConfig.freeImportLimit` saved imports.
     func canImportRecipe() async -> Bool {
         guard RevenueCatConfig.isEnabled, Purchases.isConfigured else { return true }
-        if isPremium { return true }
+        if await refreshPremium() { return true }
 
         do {
             let used = try await RecipeService.shared.getImportedRecipesCount()
@@ -87,6 +87,26 @@ final class SubscriptionManager: ObservableObject {
             print("Failed to check import limit: \(error)")
             return true
         }
+    }
+
+    /// Premium status checked with RevenueCat, for decisions made right after launch. When Salt
+    /// is opened from the Share Extension, an import can start before RootView has linked
+    /// RevenueCat to the signed-in user, while `isPremium` still has its launch value (false).
+    private func refreshPremium() async -> Bool {
+        if isPremium { return true }
+
+        // Purchases belong to the Supabase user; until logIn they'd be looked up for an anonymous ID
+        if let userId = AuthManager.shared.currentUser?.id, Purchases.shared.appUserID != userId {
+            await setUser(id: userId)
+            if isPremium { return true }
+        }
+
+        do {
+            update(with: try await Purchases.shared.customerInfo())
+        } catch {
+            print("RevenueCat: Failed to refresh customer info: \(error)")
+        }
+        return isPremium
     }
 
     // MARK: - Customer Info
