@@ -85,15 +85,7 @@ struct Recipe: Identifiable, Codable {
             total = calculatedTotal > 0 ? calculatedTotal : 0
         }
 
-        if total > 0 {
-            if total >= 60 {
-                let hours = total / 60
-                let mins = total % 60
-                return mins > 0 ? "\(hours)h \(mins)m" : "\(hours)h"
-            }
-            return "\(total) min"
-        }
-        return "N/A"
+        return DisplayText.duration(minutes: total)
     }
 
     var cuisineText: String {
@@ -166,6 +158,70 @@ struct Recipe: Identifiable, Codable {
         case totalRating = "total_rating"
         case nutrition
         case publishedAt = "published_at"
+    }
+}
+
+// MARK: - Turkish Translation
+
+extension Recipe {
+    /// Turkish versions of the text fields (scripts/turkish in Salt-backend fills them)
+    private enum TurkishKeys: String, CodingKey {
+        case title = "title_tr"
+        case description = "description_tr"
+        case servingsText = "servings_text_tr"
+        case ingredients = "ingredients_tr"
+        case instructions = "instructions_tr"
+    }
+
+    /// Decodes like the synthesized init, but when the app is in Turkish the text fields come
+    /// from the Turkish columns, so every screen shows the translation. Recipes that aren't
+    /// translated yet stay in English.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let tr = AppLanguage.isTurkish ? try? decoder.container(keyedBy: TurkishKeys.self) : nil
+
+        func turkishText(_ key: TurkishKeys) -> String? {
+            guard let text = (try? tr?.decodeIfPresent(String.self, forKey: key)) ?? nil,
+                  !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+            return text
+        }
+        func turkishLines(_ key: TurkishKeys) -> [String]? {
+            guard let lines = (try? tr?.decodeIfPresent([String].self, forKey: key)) ?? nil,
+                  !lines.isEmpty else { return nil }
+            return lines
+        }
+
+        self.init(
+            id: try c.decode(UUID.self, forKey: .id),
+            createdAt: try c.decodeIfPresent(String.self, forKey: .createdAt),
+            updatedAt: try c.decodeIfPresent(String.self, forKey: .updatedAt),
+            title: try turkishText(.title) ?? c.decode(String.self, forKey: .title),
+            description: try turkishText(.description) ?? c.decodeIfPresent(String.self, forKey: .description),
+            imageUrl: try c.decodeIfPresent(String.self, forKey: .imageUrl),
+            sourceUrl: try c.decodeIfPresent(String.self, forKey: .sourceUrl),
+            sourceName: try c.decodeIfPresent(String.self, forKey: .sourceName),
+            imageWidth: try c.decodeIfPresent(Int.self, forKey: .imageWidth),
+            imageHeight: try c.decodeIfPresent(Int.self, forKey: .imageHeight),
+            prepTimeIso: try c.decodeIfPresent(String.self, forKey: .prepTimeIso),
+            cookTimeIso: try c.decodeIfPresent(String.self, forKey: .cookTimeIso),
+            totalTimeIso: try c.decodeIfPresent(String.self, forKey: .totalTimeIso),
+            prepTimeMinutes: try c.decodeIfPresent(Int.self, forKey: .prepTimeMinutes),
+            cookTimeMinutes: try c.decodeIfPresent(Int.self, forKey: .cookTimeMinutes),
+            totalTimeMinutes: try c.decodeIfPresent(Int.self, forKey: .totalTimeMinutes),
+            servings: try c.decodeIfPresent(Int.self, forKey: .servings),
+            servingsText: try turkishText(.servingsText) ?? c.decodeIfPresent(String.self, forKey: .servingsText),
+            ingredients: try turkishLines(.ingredients) ?? c.decode([String].self, forKey: .ingredients),
+            instructions: try turkishLines(.instructions) ?? c.decode([String].self, forKey: .instructions),
+            categories: try c.decodeIfPresent([String].self, forKey: .categories),
+            cuisines: try c.decodeIfPresent([String].self, forKey: .cuisines),
+            author: try c.decodeIfPresent(String.self, forKey: .author),
+            rating: try c.decodeIfPresent(Double.self, forKey: .rating),
+            ratingCount: try c.decodeIfPresent(Int.self, forKey: .ratingCount),
+            isCurated: try c.decodeIfPresent(Bool.self, forKey: .isCurated),
+            totalRating: try c.decodeIfPresent(Double.self, forKey: .totalRating),
+            nutrition: try c.decodeIfPresent(NutritionInfo.self, forKey: .nutrition),
+            publishedAt: try c.decodeIfPresent(String.self, forKey: .publishedAt)
+        )
     }
 }
 

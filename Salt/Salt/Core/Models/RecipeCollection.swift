@@ -154,7 +154,7 @@ struct CollectionMember: Decodable, Identifiable {
 
     var displayName: String {
         let name = fullName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return name.isEmpty ? "Salt user" : name
+        return name.isEmpty ? String(localized: "Salt user") : name
     }
 
     enum CodingKeys: String, CodingKey {
@@ -186,13 +186,13 @@ enum CollectionShareError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .inviteNotFound:
-            return "This invite link isn't valid anymore. Ask for a new one."
+            return String(localized: "This invite link isn't valid anymore. Ask for a new one.")
         case .collectionFull:
-            return "This collection already has \(RecipeCollection.maxPeople) people."
+            return String(localized: "This collection already has \(RecipeCollection.maxPeople) people.")
         case .linkUnavailable:
-            return "Inviting isn't available right now. Please try again later."
+            return String(localized: "Inviting isn't available right now. Please try again later.")
         case .other:
-            return "Couldn't join the collection. Check your connection and try again."
+            return String(localized: "Couldn't join the collection. Check your connection and try again.")
         }
     }
 }

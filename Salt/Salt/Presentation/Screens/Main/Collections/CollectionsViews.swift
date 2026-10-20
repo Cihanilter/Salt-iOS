@@ -186,7 +186,7 @@ struct CollectionCover: View {
 }
 
 private func recipeCountText(_ count: Int) -> String {
-    count == 1 ? "1 recipe" : "\(count) recipes"
+    String(localized: "\(count) recipes", comment: "Number of recipes in a collection")
 }
 
 // MARK: - Feedback Toast
@@ -396,7 +396,7 @@ struct CollectionDetailView: View {
                         try await manager.leave(collectionId)
                         dismiss()
                     } catch {
-                        errorMessage = "Couldn't leave the collection."
+                        errorMessage = String(localized: "Couldn't leave the collection.")
                     }
                 }
             }
@@ -429,8 +429,8 @@ struct CollectionDetailView: View {
             }
         } message: {
             Text(collection?.isShared == true
-                 ? "Everyone in it loses access. The recipes stay in My Recipes."
-                 : "The recipes stay in My Recipes.")
+                 ? String(localized: "Everyone in it loses access. The recipes stay in My Recipes.")
+                 : String(localized: "The recipes stay in My Recipes."))
         }
         .alert("Something Went Wrong", isPresented: Binding(
             get: { (errorMessage ?? invite.errorMessage) != nil },
@@ -511,8 +511,8 @@ struct CollectionDetailView: View {
 
 /// Name field for creating or renaming a collection, limited to 20 characters
 struct CollectionNameSheet: View {
-    let title: String
-    let actionTitle: String
+    let title: LocalizedStringResource
+    let actionTitle: LocalizedStringResource
     var initialName = ""
     let onSave: (String) async throws -> Void
 
@@ -558,7 +558,7 @@ struct CollectionNameSheet: View {
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
-            .navigationTitle(title)
+            .navigationTitle(Text(title))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -568,7 +568,7 @@ struct CollectionNameSheet: View {
                     if isSaving {
                         ProgressView()
                     } else {
-                        Button(actionTitle, action: save)
+                        Button(action: save) { Text(actionTitle) }
                             .disabled(trimmedName.isEmpty)
                     }
                 }
@@ -596,7 +596,7 @@ struct CollectionNameSheet: View {
                 try await onSave(trimmedName)
                 dismiss()
             } catch {
-                errorMessage = "Couldn't save. Please try again."
+                errorMessage = String(localized: "Couldn't save. Please try again.")
                 print("❌ Collection save failed: \(error)")
             }
             isSaving = false
@@ -690,7 +690,7 @@ struct AddToCollectionSheet: View {
                 // A collection made from here gets the recipe right away
                 let collection = try await manager.createCollection(named: name)
                 try await manager.addRecipe(ref, to: collection.id, source: source)
-                withAnimation { toastMessage = "Added to \(collection.name)" }
+                withAnimation { toastMessage = String(localized: "Added to \(collection.name)") }
             }
         }
     }
@@ -703,7 +703,7 @@ struct AddToCollectionSheet: View {
             do {
                 try await manager.toggle(ref, in: collectionId, source: source)
                 withAnimation {
-                    toastMessage = wasAdded ? "Removed from \(collection.name)" : "Added to \(collection.name)"
+                    toastMessage = wasAdded ? String(localized: "Removed from \(collection.name)") : String(localized: "Added to \(collection.name)")
                 }
             } catch {
                 errorMessage = error.localizedDescription
@@ -779,7 +779,7 @@ struct AddRecipesToCollectionSheet: View {
                 }
             }
             .collectionToast($toastMessage)
-            .navigationTitle("Add to \(collection?.name ?? "Collection")")
+            .navigationTitle("Add to \(collection?.name ?? String(localized: "Collection"))")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -805,7 +805,7 @@ struct AddRecipesToCollectionSheet: View {
             do {
                 try await manager.toggle(ref, in: collectionId, source: "collection_picker")
                 withAnimation {
-                    toastMessage = wasAdded ? "Removed from \(collection.name)" : "Added to \(collection.name)"
+                    toastMessage = wasAdded ? String(localized: "Removed from \(collection.name)") : String(localized: "Added to \(collection.name)")
                 }
             } catch {
                 errorMessage = error.localizedDescription

@@ -318,7 +318,7 @@ class ExploreViewModel: ObservableObject {
             let response = try await supabase
                 .from("recipes")
                 .select()
-                .ilike("title", pattern: "\(query)%")
+                .or(AppLanguage.titleFilter("\(query)%"))
                 .order("is_curated", ascending: false)
                 .order("total_rating", ascending: false)
                 .order("rating_count", ascending: false)
@@ -334,7 +334,7 @@ class ExploreViewModel: ObservableObject {
                 let containsResponse = try await supabase
                     .from("recipes")
                     .select()
-                    .ilike("title", pattern: "%\(query)%")
+                    .or(AppLanguage.titleFilter("%\(query)%"))
                     .order("is_curated", ascending: false)
                     .order("total_rating", ascending: false)
                     .order("rating_count", ascending: false)
@@ -412,7 +412,7 @@ class ExploreViewModel: ObservableObject {
             let response = try await supabase
                 .from("recipes")
                 .select()  // Need all fields for proper sorting
-                .ilike("title", pattern: "\(query)%")
+                .or(AppLanguage.titleFilter("\(query)%"))
                 .order("is_curated", ascending: false)
                 .order("total_rating", ascending: false)
                 .order("rating_count", ascending: false)
@@ -429,7 +429,7 @@ class ExploreViewModel: ObservableObject {
 
             print("✅ Simple search: found \(recipes.count) recipes")
         } catch {
-            errorMessage = "Search failed. Please try again."
+            errorMessage = String(localized: "Search failed. Please try again.")
             searchResults = []
             searchHasMore = false
             isLoading = false
@@ -455,7 +455,7 @@ class ExploreViewModel: ObservableObject {
             let response = try await supabase
                 .from("recipes")
                 .select()
-                .ilike("title", pattern: "%\(currentSearchQuery)%")
+                .or(AppLanguage.titleFilter("%\(currentSearchQuery)%"))
                 .order("is_curated", ascending: false)
                 .order("total_rating", ascending: false)
                 .order("rating_count", ascending: false)
@@ -490,6 +490,9 @@ class ExploreViewModel: ObservableObject {
 
     /// One page of search_recipes results for the current text and filters
     private func fetchFilteredPage(query: String, offset: Int) async throws -> (recipes: [Recipe], total: Int) {
+        if AppLanguage.isTurkish {
+            return try await fetchFilteredPageInTurkish(query: query, offset: offset)
+        }
         let params = FilteredSearchParams(
             p_query: query.isEmpty ? nil : query,
             p_ingredients: filters.ingredients.isEmpty ? nil : filters.ingredients,
@@ -503,6 +506,41 @@ class ExploreViewModel: ObservableObject {
         let response = try await supabase.rpc("search_recipes", params: params).execute()
         let rows = try JSONDecoder().decode([FilteredSearchRow].self, from: response.data)
         return (rows.map(\.recipe), rows.first?.totalCount ?? 0)
+    }
+
+    /// The same filters as search_recipes, matching typed text against the Turkish title and
+    /// ingredients (search_recipes only knows the English columns)
+    private func fetchFilteredPageInTurkish(query: String, offset: Int) async throws -> (recipes: [Recipe], total: Int) {
+        var request = supabase
+            .from("recipes")
+            .select("*", count: .exact)
+        if !query.isEmpty {
+            request = request.or(AppLanguage.titleFilter("%\(query)%"))
+        }
+        // Every ingredient must be in the recipe
+        for ingredient in filters.ingredients {
+            request = request.ilike("ingredients_tr_text", pattern: "%\(ingredient)%")
+        }
+        if let minutes = filters.maxTotalMinutes {
+            request = request.lte("total_time_minutes", value: minutes)
+        }
+        if !filters.cuisines.isEmpty {
+            let list = filters.cuisines.map { "\"\($0)\"" }.joined(separator: ",")
+            request = request.filter("cuisines", operator: "ov", value: "{\(list)}")
+        }
+        if !filters.mealTypes.isEmpty {
+            request = request.or(filters.mealTypes.map(\.recipesFilter).joined(separator: ","))
+        }
+
+        let response = try await request
+            .order("is_curated", ascending: false)
+            .order("total_rating", ascending: false)
+            .order("rating_count", ascending: false)
+            .order("id", ascending: true)
+            .range(from: offset, to: offset + searchPageSize - 1)
+            .execute()
+        let recipes = try JSONDecoder().decode([Recipe].self, from: response.data)
+        return (recipes, response.count ?? recipes.count)
     }
 
     private func searchWithFilters(_ query: String) async {
@@ -525,7 +563,7 @@ class ExploreViewModel: ObservableObject {
             ])
         } catch {
             print("❌ Filtered search failed: \(error)")
-            errorMessage = "Search failed. Please try again."
+            errorMessage = String(localized: "Search failed. Please try again.")
             searchResults = []
             totalResultsCount = 0
             searchHasMore = false
@@ -584,8 +622,21 @@ class ExploreViewModel: ObservableObject {
 
             do {
                 struct TitleResult: Decodable {
-                    let title: String
+                    let english: String
+                    let turkish: String?
+
+                    enum CodingKeys: String, CodingKey {
+                        case english = "title"
+                        case turkish = "title_tr"
+                    }
+
+                    /// The title as the app shows it
+                    var title: String {
+                        guard AppLanguage.isTurkish, let turkish, !turkish.isEmpty else { return english }
+                        return turkish
+                    }
                 }
+                let titleColumns = AppLanguage.isTurkish ? "title,title_tr" : "title"
 
                 // Use Set to ensure uniqueness
                 var uniqueTitles = Set<String>()
@@ -594,8 +645,8 @@ class ExploreViewModel: ObservableObject {
                 // Fetch titles that START with query (more relevant)
                 let startsWithResponse = try await supabase
                     .from("recipes")
-                    .select("title")
-                    .ilike("title", pattern: "\(query)%")
+                    .select(titleColumns)
+                    .or(AppLanguage.titleFilter("\(query)%"))
                     .limit(15)  // Fetch more to account for duplicates
                     .execute()
 
@@ -613,8 +664,8 @@ class ExploreViewModel: ObservableObject {
                 if orderedSuggestions.count < 6 {
                     let containsResponse = try await supabase
                         .from("recipes")
-                        .select("title")
-                        .ilike("title", pattern: "%\(query)%")
+                        .select(titleColumns)
+                        .or(AppLanguage.titleFilter("%\(query)%"))
                         .limit(15)
                         .execute()
 
@@ -752,7 +803,7 @@ class ExploreViewModel: ObservableObject {
             let response = try await supabase
                 .from("recipes")
                 .select("id", head: true, count: .exact)
-                .ilike("title", pattern: "%\(query)%")
+                .or(AppLanguage.titleFilter("%\(query)%"))
                 .execute()
 
             return response.count ?? 0
@@ -829,7 +880,7 @@ class ExploreViewModel: ObservableObject {
             searchResults = recipes
             isLoading = false
         } catch {
-            errorMessage = "Failed to load \(categoryName): \(error.localizedDescription)"
+            errorMessage = String(localized: "Failed to load \(DisplayText.food(categoryName)): \(error.localizedDescription)")
             isLoading = false
             print("❌ Error loading category \(categoryName): \(error)")
         }
@@ -875,7 +926,7 @@ class ExploreViewModel: ObservableObject {
             let count = await countTask
 
             searchResults = recipes
-            currentFilterTitle = displayName
+            currentFilterTitle = DisplayText.food(displayName)
             categoryOffset = recipes.count
             categoryHasMore = recipes.count >= searchPageSize
             totalResultsCount = count
@@ -891,7 +942,7 @@ class ExploreViewModel: ObservableObject {
                 print("   \(index + 1). [\(curated ? "⭐ CURATED" : "  regular")] \(recipe.title) (rating: \(totalRating))")
             }
         } catch {
-            errorMessage = "Failed to load \(dishType): \(error.localizedDescription)"
+            errorMessage = String(localized: "Failed to load \(DisplayText.food(dishType)): \(error.localizedDescription)")
             searchResults = []
             currentFilterTitle = nil
             categoryHasMore = false

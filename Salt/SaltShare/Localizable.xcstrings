@@ -1,0 +1,21 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Done" : {
+
+    },
+    "Link copied. Open Salt and paste it in Add Recipe → Import." : {
+
+    },
+    "No link found. Share a recipe link to import it into Salt." : {
+
+    },
+    "Opening in Salt…" : {
+
+    },
+    "This link can't be imported." : {
+
+    }
+  },
+  "version" : "1.0"
+}

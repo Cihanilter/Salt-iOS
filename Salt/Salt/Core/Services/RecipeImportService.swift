@@ -61,7 +61,7 @@ struct ImportedRecipe {
     // Convert to RecipeDetail for preview
     func toRecipeDetail() -> RecipeDetail {
         let totalTime = totalTimeMinutes ?? ((prepTimeMinutes ?? 0) + (cookTimeMinutes ?? 0))
-        let durationText = totalTime > 0 ? "\(totalTime) mins" : "N/A"
+        let durationText = DisplayText.duration(minutes: totalTime)
 
         // Extract number from servings string (e.g., "4 servings" -> "4")
         let servingsNumber: String
@@ -79,7 +79,7 @@ struct ImportedRecipe {
         return RecipeDetail(
             title: title,
             duration: durationText,
-            ingredientsCount: "\(ingredients.count) ingredients",
+            ingredientsCount: DisplayText.ingredientCount(ingredients.count),
             description: description ?? "No description",
             servings: servingsNumber,
             prepTime: prepTimeMinutes.map { "\($0)" } ?? "0",
@@ -105,13 +105,13 @@ enum RecipeImportError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidUrl:
-            return "Invalid URL. Please check the link and try again."
+            return String(localized: "Invalid URL. Please check the link and try again.")
         case .networkError(let error):
-            return "Network error: \(error.localizedDescription)"
+            return String(localized: "Network error: \(error.localizedDescription)")
         case .noRecipeFound:
-            return "No recipe found on this page. Make sure the link points to a recipe."
+            return String(localized: "No recipe found on this page. Make sure the link points to a recipe.")
         case .parsingError(let message):
-            return "Failed to parse recipe: \(message)"
+            return String(localized: "Failed to parse recipe: \(message)")
         }
     }
 }
@@ -221,7 +221,7 @@ class RecipeImportService {
                 if let isRecipe = json["isRecipe"] as? Bool, !isRecipe {
                     throw RecipeImportError.noRecipeFound
                 }
-                throw RecipeImportError.parsingError(json["error"] as? String ?? "Import failed")
+                throw RecipeImportError.parsingError(json["error"] as? String ?? String(localized: "Import failed"))
             }
 
             guard let recipeData = json["recipe"] as? [String: Any] else {
@@ -240,7 +240,7 @@ class RecipeImportService {
     /// Parse recipe from API response
     private func parseApiRecipe(from data: [String: Any], sourceUrl: String) -> ImportedRecipe {
         ImportedRecipe(
-            title: data["title"] as? String ?? "Untitled Recipe",
+            title: data["title"] as? String ?? String(localized: "Untitled Recipe"),
             description: data["description"] as? String,
             imageUrl: data["imageUrl"] as? String,
             prepTimeMinutes: data["prepTimeMinutes"] as? Int,

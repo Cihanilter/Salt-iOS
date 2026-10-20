@@ -1,0 +1,1980 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : ""
+          }
+        }
+      }
+    },
+    " and " : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : " ve "
+          }
+        }
+      }
+    },
+    "(Optional)" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "(İsteğe bağlı)"
+          }
+        }
+      }
+    },
+    "*" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "*"
+          }
+        }
+      }
+    },
+    "%@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ (You)" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%@ (Siz)"
+          }
+        }
+      }
+    },
+    "%@ +%lld" : {
+      "comment" : "First filter value and how many more, e.g. Chicken +2",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ +%2$lld"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%1$@ +%2$lld"
+          }
+        }
+      }
+    },
+    "%@ invited you to" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%@ sizi şu koleksiyona davet etti:"
+          }
+        }
+      }
+    },
+    "%lld" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%lld"
+          }
+        }
+      }
+    },
+    "%lld ingredients" : {
+      "comment" : "Number of ingredients in a recipe",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%lld malzeme"
+          }
+        }
+      }
+    },
+    "%lld min" : {
+      "comment" : "Cooking time in minutes, e.g. 25 min",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%lld dk"
+          }
+        }
+      }
+    },
+    "%lld of %lld free imports used" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld free imports used"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%2$lld ücretsiz içe aktarmadan %1$lld tanesi kullanıldı"
+          }
+        }
+      }
+    },
+    "%lld of %lld people" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld people"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%1$lld / %2$lld kişi"
+          }
+        }
+      }
+    },
+    "%lld of %lld photos" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld photos"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%1$lld / %2$lld fotoğraf"
+          }
+        }
+      }
+    },
+    "%lld people" : {
+      "comment" : "Number of people in a collection",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%lld kişi"
+          }
+        }
+      }
+    },
+    "%lld recipes" : {
+      "comment" : "Number of recipes in a collection",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%lld tarif"
+          }
+        }
+      }
+    },
+    "%lld servings" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%lld kişilik"
+          }
+        }
+      }
+    },
+    "%lld." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%lld."
+          }
+        }
+      }
+    },
+    "%lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "%lldh" : {
+      "comment" : "Cooking time in whole hours, e.g. 2h",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%lld sa"
+          }
+        }
+      }
+    },
+    "%lldh %lldm" : {
+      "comment" : "Cooking time in hours and minutes, e.g. 1h 30m",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lldh %2$lldm"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%1$lld sa %2$lld dk"
+          }
+        }
+      }
+    },
+    "1 serving" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "1 kişilik"
+          }
+        }
+      }
+    },
+    "2" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "2"
+          }
+        }
+      }
+    },
+    "A shared recipe collection on Salt" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Salt’ta paylaşılan bir tarif koleksiyonu"
+          }
+        }
+      }
+    },
+    "About Me" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Hakkımda"
+          }
+        }
+      }
+    },
+    "Account created successfully! Please check your email to verify your account." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Hesabınız başarıyla oluşturuldu! Hesabınızı doğrulamak için lütfen e-postanızı kontrol edin."
+          }
+        }
+      }
+    },
+    "Active Imported Recipes" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Aktif İçe Aktarılan Tarifler"
+          }
+        }
+      }
+    },
+    "Add" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Ekle"
+          }
+        }
+      }
+    },
+    "Add an ingredient" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Malzeme ekleyin"
+          }
+        }
+      }
+    },
+    "Add any tips, tricks, or substitutions" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "İpuçları, püf noktaları veya alternatifler ekleyin"
+          }
+        }
+      }
+    },
+    "Add More Recipes" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Daha Fazla Tarif Ekle"
+          }
+        }
+      }
+    },
+    "Add New Recipe" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Yeni Tarif Ekle"
+          }
+        }
+      }
+    },
+    "Add photo" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Fotoğraf ekle"
+          }
+        }
+      }
+    },
+    "Add Photo" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Fotoğraf Ekle"
+          }
+        }
+      }
+    },
+    "Add Recipe" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tarif Ekle"
+          }
+        }
+      }
+    },
+    "Add Recipes" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tarif Ekle"
+          }
+        }
+      }
+    },
+    "Add recipes from My Recipes,\nor from any recipe's ⋯ menu" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tariflerim’den veya herhangi bir tarifin\n⋯ menüsünden tarif ekleyin"
+          }
+        }
+      }
+    },
+    "Add Step" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Adım Ekle"
+          }
+        }
+      }
+    },
+    "Add to %@" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Ekle: %@"
+          }
+        }
+      }
+    },
+    "Add to Collection" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Koleksiyona Ekle"
+          }
+        }
+      }
+    },
+    "Add your favorite cuisines to personalize your experience" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Deneyiminizi kişiselleştirmek için favori mutfaklarınızı ekleyin"
+          }
+        }
+      }
+    },
+    "Add Your First Recipe" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "İlk Tarifinizi Ekleyin"
+          }
+        }
+      }
+    },
+    "Added to %@" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%@ koleksiyonuna eklendi"
+          }
+        }
+      }
+    },
+    "African" : {
+      "comment" : "Cuisine",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Afrika"
+          }
+        }
+      }
+    },
+    "AirDrop" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "AirDrop"
+          }
+        }
+      }
+    },
+    "All" : {
+      "comment" : "My Recipes tab",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tümü"
+          }
+        }
+      }
+    },
+    "Already have an account?" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Zaten hesabınız var mı?"
+          }
+        }
+      }
+    },
+    "American" : {
+      "comment" : "Cuisine",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Amerikan"
+          }
+        }
+      }
+    },
+    "Amount" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Miktar"
+          }
+        }
+      }
+    },
+    "An error occurred" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bir hata oluştu"
+          }
+        }
+      }
+    },
+    "An unexpected error occurred. Please try again." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
+          }
+        }
+      }
+    },
+    "Any time" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Süre fark etmez"
+          }
+        }
+      }
+    },
+    "Anyone with the link can join until you reset it or turn it off." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Siz bağlantıyı sıfırlayana veya kapatana kadar bağlantıya sahip olan herkes katılabilir."
+          }
+        }
+      }
+    },
+    "Are you sure you want to delete this recipe? This action cannot be undone." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bu tarifi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+          }
+        }
+      }
+    },
+    "Are you sure you want to delete your account? This action cannot be undone. All your data including saved recipes will be permanently deleted." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Hesabınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz. Kaydedilen tarifler dahil tüm verileriniz kalıcı olarak silinecek."
+          }
+        }
+      }
+    },
+    "Are you sure you want to sign out?" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Çıkış yapmak istediğinizden emin misiniz?"
+          }
+        }
+      }
+    },
+    "Asian" : {
+      "comment" : "Cuisine",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Asya"
+          }
+        }
+      }
+    },
+    "Back to Sign In" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Girişe Dön"
+          }
+        }
+      }
+    },
+    "Baking" : {
+      "comment" : "Cooking interest",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Hamur İşleri"
+          }
+        }
+      }
+    },
+    "Beef" : {
+      "comment" : "Ingredient",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Dana eti"
+          }
+        }
+      }
+    },
+    "Bio" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kısa tanıtım"
+          }
+        }
+      }
+    },
+    "Bread" : {
+      "comment" : "Recipe category",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Ekmek"
+          }
+        }
+      }
+    },
+    "Breakfast" : {
+      "comment" : "Popular search\nRecipe category",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kahvaltı"
+          }
+        }
+      }
+    },
+    "British" : {
+      "comment" : "Cuisine",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "İngiliz"
+          }
+        }
+      }
+    },
+    "Cajun" : {
+      "comment" : "Cuisine",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Cajun"
+          }
+        }
+      }
+    },
+    "Cakes" : {
+      "comment" : "Recipe category",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kekler"
+          }
+        }
+      }
+    },
+    "cal" : {
+      "comment" : "Short for calories"
+    },
+    "Calories" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kalori"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "İptal"
+          }
+        }
+      }
+    },
+    "Carbs" : {
+      "comment" : "Nutrition label",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Karbonhidrat"
+          }
+        }
+      }
+    },
+    "Caribbean" : {
+      "comment" : "Cuisine",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Karayip"
+          }
+        }
+      }
+    },
+    "Change or undo the substitute" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Alternatifi değiştirin veya geri alın"
+          }
+        }
+      }
+    },
+    "Cheese" : {
+      "comment" : "Ingredient",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Peynir"
+          }
+        }
+      }
+    },
+    "Chicken" : {
+      "comment" : "Ingredient\nPopular search",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tavuk"
+          }
+        }
+      }
+    },
+    "Chickpeas" : {
+      "comment" : "Ingredient",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Nohut"
+          }
+        }
+      }
+    },
+    "Chinese" : {
+      "comment" : "Cuisine",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Çin"
+          }
+        }
+      }
+    },
+    "Choose from Library" : {
+
+    },
+    "City, Country" : {
+
+    },
+    "Close" : {
+
+    },
+    "Collection" : {
+
+    },
+    "Collection name" : {
+
+    },
+    "Collection options" : {
+
+    },
+    "Collections" : {
+
+    },
+    "Confirm new password" : {
+
+    },
+    "Confirm Password" : {
+
+    },
+    "Confirm your password" : {
+
+    },
+    "Continue with Apple" : {
+
+    },
+    "Continue with Google" : {
+
+    },
+    "Cook" : {
+
+    },
+    "Cook time" : {
+
+    },
+    "Cookies" : {
+      "comment" : "Recipe category"
+    },
+    "Cooking Mode" : {
+
+    },
+    "Copy saved to My Recipes" : {
+
+    },
+    "Couldn't join the collection. Check your connection and try again." : {
+
+    },
+    "Couldn't leave the collection." : {
+
+    },
+    "Couldn't load suggestions." : {
+
+    },
+    "Couldn't load the members." : {
+
+    },
+    "Couldn't load the recipe. Check your connection and try again." : {
+
+    },
+    "Couldn't open the invite. Check your connection and try again." : {
+
+    },
+    "Couldn't remove %@." : {
+
+    },
+    "Couldn't save. Please try again." : {
+
+    },
+    "Couldn't Share Recipe" : {
+
+    },
+    "Couldn't turn off the link." : {
+
+    },
+    "Cover" : {
+
+    },
+    "Create" : {
+
+    },
+    "Create a password" : {
+
+    },
+    "Create Account" : {
+
+    },
+    "Creating link…" : {
+
+    },
+    "Cuisine" : {
+
+    },
+    "cups" : {
+
+    },
+    "Customize" : {
+
+    },
+    "Dairy-free" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete “%@”?" : {
+
+    },
+    "Delete Account" : {
+
+    },
+    "Delete Collection" : {
+
+    },
+    "Delete Recipe" : {
+
+    },
+    "Describe your recipe in a few words (e.g., quick, family-favorite, or festive)" : {
+
+    },
+    "Description" : {
+
+    },
+    "Dessert" : {
+      "comment" : "Recipe category"
+    },
+    "Desserts" : {
+      "comment" : "Recipe category"
+    },
+    "Don't have an account?" : {
+
+    },
+    "Don't have it" : {
+
+    },
+    "Don't like it" : {
+
+    },
+    "Done" : {
+
+    },
+    "Drinks" : {
+      "comment" : "Recipe category"
+    },
+    "e.g., Home cook & food lover" : {
+
+    },
+    "e.g., https://example.com/recipe/pancake" : {
+
+    },
+    "Eastern European" : {
+      "comment" : "Cuisine"
+    },
+    "Edit" : {
+
+    },
+    "Edit Profile" : {
+
+    },
+    "Edit Recipe" : {
+
+    },
+    "Eggs" : {
+      "comment" : "Ingredient"
+    },
+    "Email" : {
+
+    },
+    "Email Address" : {
+
+    },
+    "Email already in use" : {
+
+    },
+    "Enter new password" : {
+
+    },
+    "Enter your new password below. Make sure it's at least 10 characters with numbers and special characters." : {
+
+    },
+    "Enter your password" : {
+
+    },
+    "Enter your recipe link here" : {
+
+    },
+    "Estimated" : {
+
+    },
+    "Estimated with AI from the ingredients. Values are approximate." : {
+
+    },
+    "European" : {
+      "comment" : "Cuisine"
+    },
+    "Everyone in it loses access. The recipes stay in My Recipes." : {
+
+    },
+    "Explore" : {
+
+    },
+    "Explore Recipes" : {
+
+    },
+    "Failed to import recipe: %@" : {
+
+    },
+    "Failed to load %@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Failed to load %1$@: %2$@"
+          }
+        }
+      }
+    },
+    "Failed to parse recipe: %@" : {
+
+    },
+    "Failed to process image" : {
+
+    },
+    "Failed to save recipe: %@" : {
+
+    },
+    "Failed to sign in with Apple. Please try again." : {
+
+    },
+    "Failed to sign in with Google. Please try again." : {
+
+    },
+    "Failed to sign up with Apple. Please try again." : {
+
+    },
+    "Failed to sign up with Google. Please try again." : {
+
+    },
+    "Failed to upload image: %@" : {
+
+    },
+    "Failed to upload recipe image" : {
+
+    },
+    "Fat" : {
+      "comment" : "Nutrition label"
+    },
+    "Favorite Cuisines" : {
+
+    },
+    "Finding substitutes for this recipe…" : {
+
+    },
+    "Forgot Password?" : {
+
+    },
+    "Free Plan" : {
+
+    },
+    "French" : {
+      "comment" : "Cuisine"
+    },
+    "From %@" : {
+
+    },
+    "Full Name" : {
+
+    },
+    "German" : {
+      "comment" : "Cuisine"
+    },
+    "Get this recipe on Salt" : {
+
+    },
+    "Getting nutrition…" : {
+
+    },
+    "Getting nutrition… You'll find it in My Recipes." : {
+
+    },
+    "Give your recipe a name" : {
+
+    },
+    "Gluten-free" : {
+
+    },
+    "Go to My Recipes" : {
+
+    },
+    "Greek" : {
+      "comment" : "Cuisine"
+    },
+    "Group recipes into collections,\nlike Dinner or Kids" : {
+
+    },
+    "Healthy Eating" : {
+      "comment" : "Cooking interest"
+    },
+    "Hello, world!" : {
+
+    },
+    "I agree to the " : {
+
+    },
+    "Ideas for this recipe" : {
+
+    },
+    "Imperial" : {
+
+    },
+    "Import" : {
+
+    },
+    "Import a recipe from a link or social media,\nor create your own" : {
+
+    },
+    "Import failed" : {
+
+    },
+    "Import or create recipes, or save\nrecipes from Explore to see them here" : {
+
+    },
+    "Import the Recipe" : {
+
+    },
+    "Import, create or save recipes first,\nthen add them here" : {
+
+    },
+    "Importing from social media?" : {
+
+    },
+    "Importing..." : {
+
+    },
+    "Imports" : {
+      "comment" : "My Recipes tab: imported and created recipes"
+    },
+    "Indian" : {
+      "comment" : "Cuisine"
+    },
+    "ingredient" : {
+
+    },
+    "Ingredient" : {
+
+    },
+    "Ingredients" : {
+
+    },
+    "instead of %@" : {
+
+    },
+    "Instructions" : {
+
+    },
+    "Invalid credentials" : {
+
+    },
+    "Invalid email or password." : {
+
+    },
+    "Invalid URL. Please check the link and try again." : {
+
+    },
+    "Invite People" : {
+
+    },
+    "Inviting isn't available right now. Please try again later." : {
+
+    },
+    "Irish" : {
+      "comment" : "Cuisine"
+    },
+    "Italian" : {
+      "comment" : "Cuisine"
+    },
+    "Japanese" : {
+      "comment" : "Cuisine"
+    },
+    "Jewish" : {
+      "comment" : "Cuisine"
+    },
+    "John Doe" : {
+
+    },
+    "Join “%@” on Salt" : {
+
+    },
+    "Join Collection" : {
+
+    },
+    "Join my “%@” collection on Salt" : {
+
+    },
+    "Join us and start your culinary adventure" : {
+
+    },
+    "Keep screen awake" : {
+
+    },
+    "Korean" : {
+      "comment" : "Cuisine"
+    },
+    "Latin American" : {
+      "comment" : "Cuisine"
+    },
+    "Leave" : {
+
+    },
+    "Leave “%@”?" : {
+
+    },
+    "Leave Collection" : {
+
+    },
+    "Links you've already sent will stop working. People already in the collection stay." : {
+
+    },
+    "Loading..." : {
+
+    },
+    "Location" : {
+
+    },
+    "Mail" : {
+
+    },
+    "Main Dish" : {
+      "comment" : "Recipe category"
+    },
+    "Manage" : {
+
+    },
+    "Meal Prep" : {
+      "comment" : "Cooking interest"
+    },
+    "Meal Type" : {
+
+    },
+    "Mediterranean" : {
+      "comment" : "Cuisine"
+    },
+    "Member Since" : {
+
+    },
+    "Members" : {
+
+    },
+    "Messages" : {
+
+    },
+    "Metric" : {
+
+    },
+    "Mexican" : {
+      "comment" : "Cuisine"
+    },
+    "Middle Eastern" : {
+      "comment" : "Cuisine"
+    },
+    "mins" : {
+
+    },
+    "More ideas for this recipe" : {
+
+    },
+    "Mushroom" : {
+      "comment" : "Ingredient"
+    },
+    "my collection" : {
+
+    },
+    "My Recipes" : {
+
+    },
+    "N/A" : {
+      "comment" : "No cooking time"
+    },
+    "Network error: %@" : {
+
+    },
+    "Network error. Please check your connection." : {
+
+    },
+    "New" : {
+
+    },
+    "New collection" : {
+
+    },
+    "New Collection" : {
+
+    },
+    "New Password" : {
+
+    },
+    "No account found with this email." : {
+
+    },
+    "No description available" : {
+      "comment" : "Shown when a recipe has no description"
+    },
+    "No matching recipes" : {
+
+    },
+    "No one new can join with it. Tap Invite People to get a new link later." : {
+
+    },
+    "No other substitutes found." : {
+
+    },
+    "No photo" : {
+
+    },
+    "No recipe found on this page. Make sure the link points to a recipe." : {
+
+    },
+    "No recipes found" : {
+
+    },
+    "No recipes yet" : {
+
+    },
+    "No saved recipes yet" : {
+
+    },
+    "No worries! Enter your email address and we'll send you a link to reset your password." : {
+
+    },
+    "Nordic" : {
+      "comment" : "Cuisine"
+    },
+    "Not Now" : {
+
+    },
+    "Notes & Tips" : {
+
+    },
+    "Nothing in %@ matches “%@”" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nothing in %1$@ matches “%2$@”"
+          }
+        }
+      }
+    },
+    "Nutrition" : {
+
+    },
+    "OK" : {
+
+    },
+    "Open My Recipes" : {
+
+    },
+    "or" : {
+
+    },
+    "Original Recipe" : {
+
+    },
+    "Other ingredients" : {
+
+    },
+    "Owner" : {
+
+    },
+    "Password" : {
+
+    },
+    "Password must be at least 10 characters with numbers and special characters." : {
+
+    },
+    "Password reset link has been sent to your email. Please check your inbox." : {
+
+    },
+    "Password Update" : {
+
+    },
+    "Passwords do not match." : {
+
+    },
+    "Pasta" : {
+      "comment" : "Ingredient\nPopular search\nRecipe category"
+    },
+    "Paste the link, and we'll pull in the recipe for you to review and save." : {
+
+    },
+    "Per serving" : {
+
+    },
+    "Photo" : {
+
+    },
+    "Pizza" : {
+      "comment" : "Popular search"
+    },
+    "Planned" : {
+      "comment" : "Starter collection name for new users"
+    },
+    "Please agree to the Terms and Conditions and Privacy Policy." : {
+
+    },
+    "Please enter a recipe URL" : {
+
+    },
+    "Please enter a valid email address." : {
+
+    },
+    "Please enter a valid full name." : {
+
+    },
+    "Please enter your full name (at least 2 characters)." : {
+
+    },
+    "Please enter your password." : {
+
+    },
+    "Please fill in the title, at least one ingredient and one step" : {
+
+    },
+    "Please sign in to continue" : {
+
+    },
+    "Please verify your email" : {
+
+    },
+    "Please verify your email address first." : {
+
+    },
+    "Popular" : {
+
+    },
+    "Popular Searches" : {
+
+    },
+    "Potato" : {
+      "comment" : "Ingredient"
+    },
+    "Premium feature" : {
+
+    },
+    "Prep" : {
+
+    },
+    "Prep time" : {
+
+    },
+    "Preview" : {
+
+    },
+    "Preview & Save" : {
+
+    },
+    "Privacy Policy" : {
+
+    },
+    "Profile" : {
+
+    },
+    "Protein" : {
+      "comment" : "Nutrition label"
+    },
+    "Quick & Easy" : {
+      "comment" : "Cooking interest"
+    },
+    "Recipe not found" : {
+
+    },
+    "Recipe sharing isn't available right now" : {
+
+    },
+    "Recipes" : {
+
+    },
+    "Recipes from any of these cuisines" : {
+
+    },
+    "Recipes of any of these types" : {
+
+    },
+    "Recipes with all of these ingredients" : {
+
+    },
+    "Remember your password?" : {
+
+    },
+    "Remove" : {
+
+    },
+    "Remove %@" : {
+
+    },
+    "Remove %@?" : {
+
+    },
+    "Remove from Collection" : {
+
+    },
+    "Remove from saved" : {
+
+    },
+    "Remove ingredient" : {
+
+    },
+    "Remove photo %lld" : {
+
+    },
+    "Remove step %lld" : {
+
+    },
+    "Removed from %@" : {
+
+    },
+    "Rename" : {
+
+    },
+    "Rename Collection" : {
+
+    },
+    "required" : {
+
+    },
+    "Reset" : {
+
+    },
+    "Reset all filters" : {
+
+    },
+    "Reset Invite Link" : {
+
+    },
+    "Reset Invite Link?" : {
+
+    },
+    "Reset Password" : {
+
+    },
+    "Reset to %lld servings" : {
+
+    },
+    "Rice" : {
+      "comment" : "Ingredient"
+    },
+    "Salad" : {
+      "comment" : "Popular search\nRecipe category"
+    },
+    "Salads" : {
+      "comment" : "Recipe category"
+    },
+    "Salmon" : {
+      "comment" : "Ingredient"
+    },
+    "Salt" : {
+
+    },
+    "Salt Premium" : {
+
+    },
+    "Salt user" : {
+
+    },
+    "Sandwich" : {
+      "comment" : "Recipe category"
+    },
+    "Sauces" : {
+      "comment" : "Recipe category"
+    },
+    "Save" : {
+
+    },
+    "Save Changes" : {
+
+    },
+    "Save Copy" : {
+
+    },
+    "Save recipe" : {
+
+    },
+    "Save Recipe" : {
+
+    },
+    "Save this recipe to see its nutrition in My Recipes." : {
+
+    },
+    "Saved" : {
+      "comment" : "My Recipes tab: bookmarked recipes"
+    },
+    "Saved to My Recipes" : {
+
+    },
+    "Seafood" : {
+      "comment" : "Recipe category"
+    },
+    "Search failed. Please try again." : {
+
+    },
+    "Search for \"%@\"" : {
+
+    },
+    "Search in Imported Recipes..." : {
+
+    },
+    "Search in My Recipes..." : {
+
+    },
+    "Search in Saved Recipes..." : {
+
+    },
+    "Search recipes" : {
+
+    },
+    "Search recipes..." : {
+
+    },
+    "Search Results" : {
+
+    },
+    "search.cookies" : {
+      "comment" : "Popular search; a search term, so singular (e.g. Turkish Kurabiye)",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cookies"
+          }
+        }
+      }
+    },
+    "search.dessert" : {
+      "comment" : "Popular search; a search term, so singular (e.g. Turkish Tatlı)",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Dessert"
+          }
+        }
+      }
+    },
+    "See all" : {
+
+    },
+    "See calories, carbs, protein and more with Premium." : {
+
+    },
+    "Send Reset Link" : {
+
+    },
+    "servings" : {
+
+    },
+    "Servings" : {
+
+    },
+    "Set New Password" : {
+
+    },
+    "Share" : {
+
+    },
+    "Share to..." : {
+
+    },
+    "Shared" : {
+
+    },
+    "Short tagline shown under your name" : {
+
+    },
+    "Show Results" : {
+
+    },
+    "Shrimp" : {
+      "comment" : "Ingredient"
+    },
+    "Side Dish" : {
+      "comment" : "Recipe category"
+    },
+    "Sign In" : {
+
+    },
+    "Sign in to continue your cooking journey" : {
+
+    },
+    "Sign Out" : {
+
+    },
+    "Sign Up" : {
+
+    },
+    "Smoothies" : {
+      "comment" : "Recipe category"
+    },
+    "Snacks" : {
+      "comment" : "Recipe category"
+    },
+    "Someone" : {
+
+    },
+    "Something Went Wrong" : {
+
+    },
+    "Soup" : {
+      "comment" : "Popular search"
+    },
+    "Soups" : {
+      "comment" : "Recipe category"
+    },
+    "South American" : {
+      "comment" : "Cuisine"
+    },
+    "Southern" : {
+      "comment" : "Cuisine, food of the US South"
+    },
+    "Spanish" : {
+      "comment" : "Cuisine"
+    },
+    "Spinach" : {
+      "comment" : "Ingredient"
+    },
+    "Start Free Trial" : {
+
+    },
+    "Step %lld" : {
+
+    },
+    "Step %lld of %lld: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Step %1$lld of %2$lld: %3$@"
+          }
+        }
+      }
+    },
+    "Step %lld: Describe what to do" : {
+
+    },
+    "Sugar" : {
+      "comment" : "Nutrition label"
+    },
+    "Swap %@" : {
+
+    },
+    "Swap an ingredient" : {
+
+    },
+    "Take Photo" : {
+
+    },
+    "Tap “Share to...”" : {
+
+    },
+    "Tap Salt" : {
+
+    },
+    "Tap the bookmark on any recipe\nin Explore to save it here" : {
+
+    },
+    "Tap the share button" : {
+
+    },
+    "Tap to upload photo" : {
+
+    },
+    "Tell us about yourself and your cooking journey" : {
+
+    },
+    "Tell us about yourself and your cooking journey..." : {
+
+    },
+    "Terms and Conditions" : {
+
+    },
+    "Thai" : {
+      "comment" : "Cuisine"
+    },
+    "The recipes stay in My Recipes." : {
+
+    },
+    "They won't see this collection anymore. Recipes they added stay in it." : {
+
+    },
+    "This collection already has %lld people." : {
+
+    },
+    "This collection is full. Remove someone to invite another person." : {
+
+    },
+    "This email is already registered." : {
+
+    },
+    "This invite link isn't valid anymore. Ask for a new one." : {
+
+    },
+    "This recipe is no longer available" : {
+
+    },
+    "This recipe wasn't in the post's caption, so we put it together from what's said in the video. Some ingredients, amounts or steps may be missing. Please check it before saving; you can fix anything with Edit in the menu." : {
+
+    },
+    "Tip" : {
+
+    },
+    "Tip: Enter amount, unit, and ingredient name separately" : {
+
+    },
+    "Title" : {
+
+    },
+    "To serve" : {
+
+    },
+    "Tofu" : {
+      "comment" : "Ingredient"
+    },
+    "Tomato" : {
+      "comment" : "Ingredient"
+    },
+    "Total Imported Recipes" : {
+
+    },
+    "Total Time" : {
+
+    },
+    "Try a different search term" : {
+
+    },
+    "Try again" : {
+
+    },
+    "Try Again" : {
+
+    },
+    "Try removing a filter" : {
+
+    },
+    "Try selecting a different category" : {
+
+    },
+    "Turkish" : {
+      "comment" : "Cuisine"
+    },
+    "Turn Off" : {
+
+    },
+    "Turn Off Invite Link" : {
+
+    },
+    "Turn Off Invite Link?" : {
+
+    },
+    "Ukrainian" : {
+      "comment" : "Cuisine"
+    },
+    "Under %lld min" : {
+      "comment" : "Total time filter chip"
+    },
+    "Under %lld minutes" : {
+
+    },
+    "Unit" : {
+
+    },
+    "Units" : {
+
+    },
+    "Unlimited recipe imports" : {
+
+    },
+    "Unlock with Premium" : {
+
+    },
+    "Untitled Recipe" : {
+
+    },
+    "Up to %lld photos" : {
+
+    },
+    "Update Password" : {
+
+    },
+    "Update Preview" : {
+
+    },
+    "Upgrade" : {
+
+    },
+    "Use the original" : {
+
+    },
+    "User" : {
+      "comment" : "Fallback name on the profile"
+    },
+    "User not found" : {
+
+    },
+    "Vegan" : {
+
+    },
+    "Vegetarian" : {
+      "comment" : "Recipe category"
+    },
+    "Vietnamese" : {
+      "comment" : "Cuisine"
+    },
+    "Welcome Back" : {
+
+    },
+    "You can see, add and remove recipes, and leave at any time." : {
+
+    },
+    "You can share recipes straight to Salt from Instagram, TikTok or YouTube." : {
+
+    },
+    "You joined %@" : {
+
+    },
+    "You used all %lld free imports. Start a free trial of Premium for unlimited imports." : {
+
+    },
+    "You won't see its recipes anymore. Recipes you added stay in it." : {
+
+    },
+    "You're already in this collection" : {
+
+    },
+    "You've used your free imports" : {
+
+    },
+    "Your changes are saved as your own copy in My Recipes. The original recipe isn't affected." : {
+
+    },
+    "Your name" : {
+
+    },
+    "Your password has been updated successfully. Please sign in with your new password." : {
+
+    },
+    "your.email@example.com" : {
+
+    }
+  },
+  "version" : "1.3"
+}

@@ -7,7 +7,7 @@ import SwiftUI
 import UIKit
 
 struct GenericButton: View {
-    var textLabel: String
+    var textLabel: LocalizedStringResource
     var action: () -> Void
     var type: GenericButtonType
     var frameWidth: CGFloat?
@@ -15,7 +15,7 @@ struct GenericButton: View {
     var image: UIImage?
     
     init(
-        textLabel: String,
+        textLabel: LocalizedStringResource,
         action: @escaping () -> Void,
         type: GenericButtonType,
         frameWidth: CGFloat? = nil,

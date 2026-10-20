@@ -16,12 +16,21 @@ enum MyRecipesTab: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// The tab's name as shown
+    var title: String {
+        switch self {
+        case .all: String(localized: "All", comment: "My Recipes tab")
+        case .imports: String(localized: "Imports", comment: "My Recipes tab: imported and created recipes")
+        case .saved: String(localized: "Saved", comment: "My Recipes tab: bookmarked recipes")
+        }
+    }
+
     /// Search bar placeholder for this tab
     var searchPlaceholder: String {
         switch self {
-        case .all: "Search in My Recipes..."
-        case .imports: "Search in Imported Recipes..."
-        case .saved: "Search in Saved Recipes..."
+        case .all: String(localized: "Search in My Recipes...")
+        case .imports: String(localized: "Search in Imported Recipes...")
+        case .saved: String(localized: "Search in Saved Recipes...")
         }
     }
 }
@@ -206,18 +215,18 @@ struct MyRecipesView: View {
     }
 
     private var emptyStateTitle: String {
-        if !viewModel.searchText.isEmpty { return "No matching recipes" }
-        return selectedTab == .saved ? "No saved recipes yet" : "No recipes yet"
+        if !viewModel.searchText.isEmpty { return String(localized: "No matching recipes") }
+        return selectedTab == .saved ? String(localized: "No saved recipes yet") : String(localized: "No recipes yet")
     }
 
     private var emptyStateMessage: String {
         if !viewModel.searchText.isEmpty {
-            return "Nothing in \(selectedTab.rawValue) matches \"\(viewModel.searchText)\""
+            return String(localized: "Nothing in \(selectedTab.title) matches \u{201C}\(viewModel.searchText)\u{201D}")
         }
         switch selectedTab {
-        case .all: return "Import or create recipes, or save\nrecipes from Explore to see them here"
-        case .imports: return "Import a recipe from a link or social media,\nor create your own"
-        case .saved: return "Tap the bookmark on any recipe\nin Explore to save it here"
+        case .all: return String(localized: "Import or create recipes, or save\nrecipes from Explore to see them here")
+        case .imports: return String(localized: "Import a recipe from a link or social media,\nor create your own")
+        case .saved: return String(localized: "Tap the bookmark on any recipe\nin Explore to save it here")
         }
     }
 
@@ -279,7 +288,7 @@ struct MyRecipesTabPicker: View {
                         selection = tab
                     }
                 }) {
-                    Text(tab.rawValue)
+                    Text(tab.title)
                         .font(.custom("Playfair9pt-Regular", size: 22))
                         .lineLimit(1)
                         .foregroundColor(.black)

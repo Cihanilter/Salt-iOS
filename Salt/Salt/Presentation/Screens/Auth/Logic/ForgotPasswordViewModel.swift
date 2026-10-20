@@ -43,7 +43,7 @@ final class ForgotPasswordViewModel: ObservableObject {
         // Validate email
         guard ValidationHelper.isValidEmail(email.inputText) else {
             var updated = email
-            updated.errorText = "Please enter a valid email address."
+            updated.errorText = String(localized: "Please enter a valid email address.")
             email = updated
             return
         }
@@ -55,12 +55,12 @@ final class ForgotPasswordViewModel: ObservableObject {
 
             // Show success message
             showSuccessMessage = true
-            alertMessage = "Password reset link has been sent to your email. Please check your inbox."
+            alertMessage = String(localized: "Password reset link has been sent to your email. Please check your inbox.")
             showAlert = true
         } catch let error as AuthError {
             handleAuthError(error)
         } catch {
-            showAlertMessage("An unexpected error occurred. Please try again.")
+            showAlertMessage(String(localized: "An unexpected error occurred. Please try again."))
         }
 
         isLoading = false
@@ -74,9 +74,9 @@ final class ForgotPasswordViewModel: ObservableObject {
             updated.errorText = error.errorDescription
             email = updated
         case .userNotFound:
-            showAlertMessage(error.errorDescription ?? "User not found")
+            showAlertMessage(error.errorDescription ?? String(localized: "User not found"))
         default:
-            showAlertMessage(error.errorDescription ?? "An error occurred")
+            showAlertMessage(error.errorDescription ?? String(localized: "An error occurred"))
         }
     }
 

@@ -41,6 +41,12 @@ private struct CuratedRecipeJSON: Codable {
     let totalRating: String?  // String in JSON
     let nutrition: NutritionInfo?
     let publishedAt: String?
+    // Turkish translations (empty until the recipes are translated)
+    let titleTr: String?
+    let descriptionTr: String?
+    let servingsTextTr: String?
+    let ingredientsTr: [String]?
+    let instructionsTr: [String]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -72,6 +78,19 @@ private struct CuratedRecipeJSON: Codable {
         case totalRating = "total_rating"
         case nutrition
         case publishedAt = "published_at"
+        case titleTr = "title_tr"
+        case descriptionTr = "description_tr"
+        case servingsTextTr = "servings_text_tr"
+        case ingredientsTr = "ingredients_tr"
+        case instructionsTr = "instructions_tr"
+    }
+
+    /// The Turkish text when the app is in Turkish and the recipe has it
+    private func localized<T>(_ turkish: T?, _ english: T) -> T {
+        guard AppLanguage.isTurkish, let turkish else { return english }
+        if let text = turkish as? String, text.isEmpty { return english }
+        if let lines = turkish as? [String], lines.isEmpty { return english }
+        return turkish
     }
 
     /// Convert to Recipe model
@@ -80,8 +99,8 @@ private struct CuratedRecipeJSON: Codable {
             id: id,
             createdAt: createdAt,
             updatedAt: updatedAt,
-            title: title,
-            description: description,
+            title: localized(titleTr, title),
+            description: localized(descriptionTr, description),
             imageUrl: imageUrl,
             sourceUrl: sourceUrl,
             sourceName: sourceName,
@@ -94,9 +113,9 @@ private struct CuratedRecipeJSON: Codable {
             cookTimeMinutes: cookTimeMinutes,
             totalTimeMinutes: totalTimeMinutes,
             servings: servings,
-            servingsText: servingsText,
-            ingredients: ingredients,
-            instructions: instructions,
+            servingsText: localized(servingsTextTr, servingsText),
+            ingredients: localized(ingredientsTr, ingredients),
+            instructions: localized(instructionsTr, instructions),
             categories: categories,
             cuisines: cuisines,
             author: author,
@@ -213,13 +232,13 @@ class CuratedRecipesManager {
     func search(_ query: String, limit: Int = 20) -> [Recipe] {
         guard !query.isEmpty else { return [] }
 
-        let lowercasedQuery = query.lowercased()
-        let results = allRecipes.filter { $0.title.lowercased().contains(lowercasedQuery) }
+        let lowercasedQuery = AppLanguage.lowercased(query)
+        let results = allRecipes.filter { AppLanguage.lowercased($0.title).contains(lowercasedQuery) }
 
         // Sort: prefix matches first, then by rating
         let sorted = results.sorted { r1, r2 in
-            let r1Prefix = r1.title.lowercased().hasPrefix(lowercasedQuery)
-            let r2Prefix = r2.title.lowercased().hasPrefix(lowercasedQuery)
+            let r1Prefix = AppLanguage.lowercased(r1.title).hasPrefix(lowercasedQuery)
+            let r2Prefix = AppLanguage.lowercased(r2.title).hasPrefix(lowercasedQuery)
 
             if r1Prefix != r2Prefix {
                 return r1Prefix

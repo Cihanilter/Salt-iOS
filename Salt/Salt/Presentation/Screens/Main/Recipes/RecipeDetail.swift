@@ -37,7 +37,7 @@ extension Recipe {
         if let text = servingsText, !text.isEmpty {
             servingsDisplayText = text
         } else if let count = servings {
-            servingsDisplayText = "\(count) servings"
+            servingsDisplayText = String(localized: "\(count) servings")
         } else {
             servingsDisplayText = "N/A"
         }
@@ -52,7 +52,7 @@ extension Recipe {
         return RecipeDetail(
             title: title,
             duration: durationText,
-            ingredientsCount: "\(ingredientCount) ingredients",
+            ingredientsCount: DisplayText.ingredientCount(ingredientCount),
             description: description ?? "No description available",
             servings: servingsDisplayText,
             prepTime: prepDisplay,
@@ -143,7 +143,7 @@ struct RecipeDetailView: View {
     @State private var userRecipeId: UUID?  // For user-created/imported recipes (enables edit/delete)
     var mode: RecipeDetailMode = .regular
     /// Shown above the content while reviewing an unsaved recipe (e.g. one taken from a video's audio)
-    var previewNotice: String? = nil
+    var previewNotice: LocalizedStringResource? = nil
 
     // Callbacks for preview mode - no parameters, data is in PendingSaveDataStorage
     var onSave: (() async -> Bool)? = nil
@@ -178,7 +178,7 @@ struct RecipeDetailView: View {
         recipeId: UUID? = nil,
         userRecipeId: UUID? = nil,
         mode: RecipeDetailMode = .regular,
-        previewNotice: String? = nil,
+        previewNotice: LocalizedStringResource? = nil,
         pendingPhotos: [UIImage] = [],
         onSave: (() async -> Bool)? = nil,
         onAddMoreRecipes: (() -> Void)? = nil,
@@ -251,14 +251,14 @@ struct RecipeDetailView: View {
     private var nutritionPlaceholder: (message: String, inProgress: Bool)? {
         guard recipe.nutrition == nil, RecipeService.canEstimateNutrition(from: recipe.ingredients) else { return nil }
         if isUnsavedPreview {
-            return ("Save this recipe to see its nutrition in My Recipes.", false)
+            return (String(localized: "Save this recipe to see its nutrition in My Recipes."), false)
         }
         if mode == .preview {
             // Just saved from this screen; the estimate runs in the background
-            return ("Getting nutrition… You'll find it in My Recipes.", true)
+            return (String(localized: "Getting nutrition… You'll find it in My Recipes."), true)
         }
         if isEstimatingNutrition {
-            return ("Getting nutrition…", true)
+            return (String(localized: "Getting nutrition…"), true)
         }
         return nil
     }
@@ -1048,7 +1048,7 @@ struct RecipeInfoCard: View {
 
 /// Heads-up shown on an unsaved preview, e.g. when the recipe was taken from a video's audio
 struct PreviewNoticeBanner: View {
-    let text: String
+    let text: LocalizedStringResource
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -1079,7 +1079,7 @@ struct DescriptionSection: View {
             Text("Description")
                 .font(.custom("Playfair9pt-SemiBold", size: 22))
             
-            Text(text)
+            Text(DisplayText.description(text))
                 .font(.custom("OpenSans-Regular", size: 16))
         }
     }
@@ -1102,7 +1102,7 @@ struct TimeInfoSection: View {
 
 struct TimeInfoItem: View {
     let value: String
-    let label: String
+    let label: LocalizedStringResource
 
     var body: some View {
         VStack(spacing: 4) {
@@ -1198,8 +1198,11 @@ struct IngredientsSection: View {
 
                 Spacer()
 
-                // Hidden when nothing is measured in cups, grams, ounces etc.; there's nothing to convert
-                if let recipeUnits = UnitConverter.system(of: ingredients) {
+                // Hidden when nothing is measured in cups, grams, ounces etc.; there's nothing to convert.
+                // In Turkish only for recipes written in ounces and pounds (e.g. an imported US
+                // recipe): metric is what Turkish cooks use, so there's nothing to switch to.
+                if let recipeUnits = UnitConverter.system(of: ingredients),
+                   !AppLanguage.isTurkish || recipeUnits == .imperial {
                     UnitSystemPicker(selection: Binding(
                         get: { preferredUnits ?? recipeUnits },
                         set: { preferredUnits = $0 }
@@ -1544,10 +1547,10 @@ struct NutritionSection: View {
     // Fiber and sodium are left out: too detailed for a recipe app, and hard to estimate reliably
     private var rows: [Row] {
         let candidates: [(String, String?)] = [
-            ("Carbs", nutrition.carbohydrateContent),
-            ("Protein", nutrition.proteinContent),
-            ("Fat", nutrition.fatContent),
-            ("Sugar", nutrition.sugarContent)
+            (String(localized: "Carbs", comment: "Nutrition label"), nutrition.carbohydrateContent),
+            (String(localized: "Protein", comment: "Nutrition label"), nutrition.proteinContent),
+            (String(localized: "Fat", comment: "Nutrition label"), nutrition.fatContent),
+            (String(localized: "Sugar", comment: "Nutrition label"), nutrition.sugarContent)
         ]
         return candidates.compactMap { name, raw in
             Self.formatAmount(raw).map { Row(name: name, value: $0) }
@@ -1707,7 +1710,8 @@ struct NutritionSection: View {
     /// Value with its unit, e.g. "23 g", "4.5 g", "1,493 mg". Small gram values keep one decimal.
     static func formatAmount(_ raw: String?) -> String? {
         guard let raw, let value = number(in: raw) else { return nil }
-        let unit = raw.lowercased().contains("mg") ? "mg" : (raw.lowercased().contains("calorie") ? "cal" : "g")
+        let unit = raw.lowercased().contains("mg") ? "mg"
+            : (raw.lowercased().contains("calorie") ? String(localized: "cal", comment: "Short for calories") : "g")
         let shown = (unit == "g" && value < 10) ? value.formatted(.number.precision(.fractionLength(0...1)))
                                                 : Int(value.rounded()).formatted()
         return "\(shown) \(unit)"

@@ -33,8 +33,8 @@ struct ExploreRecipesView: View {
     var scrollToTopTrigger: UUID = UUID()
     @State private var contentID = UUID()
 
-    // Popular searches (fixed list)
-    let popularSearches = ["Chicken", "Pasta", "Salad", "Dessert", "Soup", "Breakfast", "Pizza", "Cookies"]
+    // Popular searches (fixed list, in the app's language)
+    let popularSearches = DisplayText.popularSearches
 
     // Categories from database (matches 'categories' array field)
     let dishTypes = [
@@ -228,7 +228,7 @@ struct ExploreRecipesView: View {
                 // Cuisine sections
                 ForEach(viewModel.cuisineSections) { section in
                     RecipeSection(
-                        title: section.cuisine,
+                        title: DisplayText.food(section.cuisine),
                         recipes: section.recipes,
                         section: section,
                         viewModel: viewModel
@@ -845,7 +845,7 @@ struct DishTypeItem: View {
                 )
                 .padding(2)
 
-                Text(dishType.displayName)
+                Text(DisplayText.food(dishType.displayName))
                     .font(.custom("OpenSans-Regular", size: 14))
                     .foregroundColor(isSelected ? Color("OrangeRed") : Color("DarkSilver"))
             }

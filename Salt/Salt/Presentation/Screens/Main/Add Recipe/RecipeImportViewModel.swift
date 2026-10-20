@@ -29,7 +29,7 @@ class RecipeImportViewModel: ObservableObject {
         let trimmedUrl = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedUrl.isEmpty else {
-            errorMessage = "Please enter a recipe URL"
+            errorMessage = String(localized: "Please enter a recipe URL")
             return
         }
 
@@ -58,7 +58,7 @@ class RecipeImportViewModel: ObservableObject {
             errorMessage = error.errorDescription
             print("❌ Import error: \(error.errorDescription ?? "Unknown")")
         } catch {
-            errorMessage = "Failed to import recipe: \(error.localizedDescription)"
+            errorMessage = String(localized: "Failed to import recipe: \(error.localizedDescription)")
             print("❌ Import error: \(error)")
         }
 

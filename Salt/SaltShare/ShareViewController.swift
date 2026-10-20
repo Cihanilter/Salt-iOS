@@ -39,12 +39,12 @@ class ShareViewController: UIViewController {
     @MainActor
     private func handleSharedContent() async {
         guard let sharedUrl = await extractSharedUrl() else {
-            showMessage("No link found. Share a recipe link to import it into Salt.")
+            showMessage(String(localized: "No link found. Share a recipe link to import it into Salt."))
             return
         }
 
         guard let deepLink = makeImportDeepLink(for: sharedUrl) else {
-            showMessage("This link can't be imported.")
+            showMessage(String(localized: "This link can't be imported."))
             return
         }
 
@@ -55,7 +55,7 @@ class ShareViewController: UIViewController {
         } else {
             // Fallback: the system refused to open the app, let the user paste it manually
             UIPasteboard.general.string = sharedUrl.absoluteString
-            showMessage("Link copied. Open Salt and paste it in Add Recipe → Import.")
+            showMessage(String(localized: "Link copied. Open Salt and paste it in Add Recipe → Import."))
         }
     }
 
@@ -146,13 +146,13 @@ class ShareViewController: UIViewController {
         spinner.color = UIColor(red: 1.0, green: 0.27, blue: 0.0, alpha: 1.0)
         spinner.startAnimating()
 
-        statusLabel.text = "Opening in Salt…"
+        statusLabel.text = String(localized: "Opening in Salt…")
         statusLabel.font = .preferredFont(forTextStyle: .headline)
         statusLabel.adjustsFontForContentSizeCategory = true
         statusLabel.textAlignment = .center
         statusLabel.numberOfLines = 0
 
-        doneButton.setTitle("Done", for: .normal)
+        doneButton.setTitle(String(localized: "Done"), for: .normal)
         doneButton.titleLabel?.font = .preferredFont(forTextStyle: .headline)
         doneButton.isHidden = true
         doneButton.addAction(UIAction { [weak self] _ in

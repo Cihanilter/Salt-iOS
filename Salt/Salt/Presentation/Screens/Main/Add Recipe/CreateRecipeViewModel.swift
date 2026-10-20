@@ -253,7 +253,7 @@ class CreateRecipeViewModel: ObservableObject {
 
     func saveRecipe() async -> Bool {
         guard isValid else {
-            errorMessage = "Please fill in the title, at least one ingredient and one step"
+            errorMessage = String(localized: "Please fill in the title, at least one ingredient and one step")
             return false
         }
 
@@ -360,7 +360,7 @@ class CreateRecipeViewModel: ObservableObject {
     func toRecipeDetail() -> RecipeDetail {
         // Calculate total time
         let totalTime = totalTimeMinutes ?? 0
-        let durationText = totalTime > 0 ? "\(totalTime) mins" : "N/A"
+        let durationText = DisplayText.duration(minutes: totalTime)
 
         // Preserve original image URLs (for edit mode)
         // New photos from camera will be uploaded when saved
@@ -376,7 +376,7 @@ class CreateRecipeViewModel: ObservableObject {
         return RecipeDetail(
             title: title.trimmingCharacters(in: .whitespaces),
             duration: durationText,
-            ingredientsCount: "\(ingredientsList.count) ingredients",
+            ingredientsCount: DisplayText.ingredientCount(ingredientsList.count),
             description: description.isEmpty ? "No description" : description.trimmingCharacters(in: .whitespaces),
             servings: servingsText,
             prepTime: prepTime.isEmpty ? "0" : prepTime,

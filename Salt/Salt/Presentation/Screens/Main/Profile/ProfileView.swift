@@ -275,7 +275,7 @@ struct ProfileView: View {
         .shadow(color: Color.black.opacity(0.18), radius: 1.5, y: 1)
     }
 
-    private func statItem(count: Int, label: String) -> some View {
+    private func statItem(count: Int, label: LocalizedStringResource) -> some View {
         VStack(spacing: 4) {
             Text("\(count)")
                 .font(.custom("OpenSans-SemiBold", size: 30))
@@ -336,10 +336,10 @@ struct ProfileView: View {
 
     private var premiumCardSubtitle: String {
         if subscriptionManager.isPremium {
-            return "Unlimited recipe imports"
+            return String(localized: "Unlimited recipe imports")
         }
         let used = min(viewModel.importedRecipesCount, RevenueCatConfig.freeImportLimit)
-        return "\(used) of \(RevenueCatConfig.freeImportLimit) free imports used"
+        return String(localized: "\(used) of \(RevenueCatConfig.freeImportLimit) free imports used")
     }
 
     // MARK: - About Me Section
@@ -418,7 +418,7 @@ struct ProfileView: View {
             if let cuisines = viewModel.userProfile?.favoriteCuisines, !cuisines.isEmpty {
                 FlowLayout(spacing: 8) {
                     ForEach(cuisines, id: \.self) { cuisine in
-                        CuisineTag(name: cuisine)
+                        CuisineTag(name: DisplayText.food(cuisine))
                     }
                 }
             } else {
@@ -477,7 +477,7 @@ struct ProfileView: View {
 
 struct ProfileInfoRow: View {
     let icon: String
-    let title: String
+    let title: LocalizedStringResource
     let value: String
 
     var body: some View {
@@ -656,7 +656,7 @@ struct EditProfileView: View {
                             ForEach(viewModel.availableCuisines, id: \.self) { cuisine in
                                 Button(action: { viewModel.toggleCuisine(cuisine) }) {
                                     CuisineTag(
-                                        name: cuisine,
+                                        name: DisplayText.food(cuisine),
                                         isSelected: viewModel.editFavoriteCuisines.contains(cuisine)
                                     )
                                 }

@@ -75,7 +75,7 @@ final class SharedRecipeService {
             "deep_link_value": SharedRecipeRouter.deepLinkValue,
             SharedRecipeRouter.codeParameter: code,
             "af_og_title": recipe.title,
-            "af_og_description": "Get this recipe on Salt"
+            "af_og_description": String(localized: "Get this recipe on Salt")
         ]
         if let image = recipe.images.first, !image.isEmpty {
             parameters["af_og_image"] = image
@@ -93,9 +93,9 @@ enum SharedRecipeError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notFound:
-            return "This recipe is no longer available"
+            return String(localized: "This recipe is no longer available")
         case .linkUnavailable:
-            return "Recipe sharing isn't available right now"
+            return String(localized: "Recipe sharing isn't available right now")
         }
     }
 }

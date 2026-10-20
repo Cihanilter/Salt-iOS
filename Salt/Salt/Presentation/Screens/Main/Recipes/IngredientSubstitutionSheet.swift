@@ -131,7 +131,7 @@ struct IngredientSubstitutesView: View {
             }
             .padding(20)
         }
-        .navigationTitle("Swap \(name.isEmpty ? "ingredient" : name.lowercased())")
+        .navigationTitle("Swap \(name.isEmpty ? String(localized: "ingredient") : AppLanguage.lowercased(name))")
         .navigationBarTitleDisplayMode(.inline)
         // Nothing in the built-in list for this: ask the AI straight away
         .task(id: reason) {
@@ -223,23 +223,23 @@ struct IngredientSubstitutesView: View {
         }
     }
 
-    private func ideasButton(title: String) -> some View {
+    private func ideasButton(title: LocalizedStringResource) -> some View {
         Button {
             Task { await loadIdeas() }
         } label: {
-            Label(title, systemImage: "sparkles")
+            Label { Text(title) } icon: { Image(systemName: "sparkles") }
                 .font(.custom("OpenSans-SemiBold", size: 16))
                 .foregroundColor(Color("Orange"))
         }
     }
 
-    private func sectionTitle(_ text: String) -> some View {
+    private func sectionTitle(_ text: LocalizedStringResource) -> some View {
         Text(text)
             .font(.custom("OpenSans-SemiBold", size: 16))
             .accessibilityAddTraits(.isHeader)
     }
 
-    private func message(_ text: String) -> some View {
+    private func message(_ text: LocalizedStringResource) -> some View {
         Text(text)
             .font(.custom("OpenSans-Regular", size: 14))
             .foregroundColor(Color("GraniteGray"))

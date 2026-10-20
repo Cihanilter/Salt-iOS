@@ -502,8 +502,8 @@ struct CreateRecipeView: View {
     // Editing a recipe that's already saved (own recipe, or a copy of an Explore recipe):
     // the button saves right away and the sheet stays open until it succeeds
     var onSaveChanges: ((RecipeDetail, [UIImage]) async throws -> Void)? = nil
-    var saveChangesTitle = "Save Changes"
-    var editNotice: String? = nil  // Shown above the form, e.g. that a copy is saved
+    var saveChangesTitle: LocalizedStringResource = "Save Changes"
+    var editNotice: LocalizedStringResource? = nil  // Shown above the form, e.g. that a copy is saved
     @State private var isSavingChanges = false
 
     enum CreateRecipeField: Hashable {
@@ -973,7 +973,7 @@ struct CreateRecipeView: View {
 
 /// Section title with a red asterisk for required fields or "(Optional)"
 struct CreateRecipeSectionTitle: View {
-    let title: String
+    let title: LocalizedStringResource
     var isRequired = false
     var isOptional = false
 
@@ -1002,9 +1002,9 @@ struct CreateRecipeSectionTitle: View {
 
 /// Section title with an orange "+ Add" button on the right
 struct CreateRecipeSectionHeader: View {
-    let title: String
+    let title: LocalizedStringResource
     var isRequired = false
-    let addTitle: String
+    let addTitle: LocalizedStringResource
     let onAdd: () -> Void
 
     var body: some View {
@@ -1031,7 +1031,7 @@ struct CreateRecipeSectionHeader: View {
 
 /// Bordered text field used for ingredient parts and steps
 struct CreateRecipeInputField: View {
-    let placeholder: String
+    let placeholder: LocalizedStringResource
     @Binding var text: String
     var axis: Axis = .horizontal
     var minLines = 1
@@ -1059,7 +1059,7 @@ struct CreateRecipeInputField: View {
 // MARK: - Create Recipe Delete Button
 
 struct CreateRecipeDeleteButton: View {
-    let label: String
+    let label: LocalizedStringResource
     let action: () -> Void
 
     var body: some View {
@@ -1069,7 +1069,7 @@ struct CreateRecipeDeleteButton: View {
                 .foregroundColor(Color("GraniteGray"))
                 .frame(width: 24, height: 40)
         }
-        .accessibilityLabel(label)
+        .accessibilityLabel(Text(label))
     }
 }
 
@@ -1104,8 +1104,8 @@ struct PhotoUploadBackground: View {
 // MARK: - Create Recipe Text Field
 
 struct CreateRecipeTextField: View {
-    let title: String
-    let placeholder: String
+    let title: LocalizedStringResource
+    let placeholder: LocalizedStringResource
     @Binding var text: String
     var isRequired = false
 
@@ -1140,8 +1140,8 @@ struct CreateRecipeTextField: View {
 // MARK: - Create Recipe Text Editor
 
 struct CreateRecipeTextEditor: View {
-    let title: String
-    let placeholder: String
+    let title: LocalizedStringResource
+    let placeholder: LocalizedStringResource
     @Binding var text: String
     var isOptional = false
     var minLines = 1

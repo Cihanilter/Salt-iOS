@@ -117,7 +117,7 @@ final class SignUpViewModel: ObservableObject {
         guard ValidationHelper.isValidFullName(fullName.inputText) else {
             print("SignUpViewModel: Invalid full name")
             var updated = fullName
-            updated.errorText = "Please enter your full name (at least 2 characters)."
+            updated.errorText = String(localized: "Please enter your full name (at least 2 characters).")
             fullName = updated
             return
         }
@@ -126,7 +126,7 @@ final class SignUpViewModel: ObservableObject {
         guard ValidationHelper.isValidEmail(email.inputText) else {
             print("SignUpViewModel: Invalid email")
             var updated = email
-            updated.errorText = "Please enter a valid email address."
+            updated.errorText = String(localized: "Please enter a valid email address.")
             email = updated
             return
         }
@@ -135,7 +135,7 @@ final class SignUpViewModel: ObservableObject {
         guard ValidationHelper.isValidPassword(password.inputText) else {
             print("SignUpViewModel: Invalid password")
             var updated = password
-            updated.errorText = "Password must be at least 10 characters with numbers and special characters."
+            updated.errorText = String(localized: "Password must be at least 10 characters with numbers and special characters.")
             password = updated
             return
         }
@@ -144,7 +144,7 @@ final class SignUpViewModel: ObservableObject {
         guard password.inputText == confirmPassword.inputText else {
             print("SignUpViewModel: Passwords do not match")
             var updated = confirmPassword
-            updated.errorText = "Passwords do not match."
+            updated.errorText = String(localized: "Passwords do not match.")
             confirmPassword = updated
             return
         }
@@ -152,7 +152,7 @@ final class SignUpViewModel: ObservableObject {
         // Check terms agreement
         guard agreeToTerms else {
             print("SignUpViewModel: Terms not agreed")
-            showAlertMessage("Please agree to the Terms and Conditions and Privacy Policy.")
+            showAlertMessage(String(localized: "Please agree to the Terms and Conditions and Privacy Policy."))
             return
         }
 
@@ -171,14 +171,14 @@ final class SignUpViewModel: ObservableObject {
             Analytics.log(.signedUp, ["method": "email"])
             // Show success message
             showSuccessMessage = true
-            alertMessage = "Account created successfully! Please check your email to verify your account."
+            alertMessage = String(localized: "Account created successfully! Please check your email to verify your account.")
             showAlert = true
         } catch let error as AuthError {
             print("SignUpViewModel: AuthError - \(error)")
             handleAuthError(error)
         } catch {
             print("SignUpViewModel: Unknown error - \(error)")
-            showAlertMessage("An unexpected error occurred. Please try again.")
+            showAlertMessage(String(localized: "An unexpected error occurred. Please try again."))
         }
 
         isLoading = false
@@ -194,7 +194,7 @@ final class SignUpViewModel: ObservableObject {
         } catch let error as AuthError {
             handleAuthError(error)
         } catch {
-            showAlertMessage("Failed to sign up with Google. Please try again.")
+            showAlertMessage(String(localized: "Failed to sign up with Google. Please try again."))
         }
 
         isLoading = false
@@ -212,7 +212,7 @@ final class SignUpViewModel: ObservableObject {
         } catch let error as AuthError {
             handleAuthError(error)
         } catch {
-            showAlertMessage("Failed to sign up with Apple. Please try again.")
+            showAlertMessage(String(localized: "Failed to sign up with Apple. Please try again."))
         }
 
         isLoading = false
@@ -231,9 +231,9 @@ final class SignUpViewModel: ObservableObject {
             updated.errorText = error.errorDescription
             password = updated
         case .emailAlreadyInUse:
-            showAlertMessage(error.errorDescription ?? "Email already in use")
+            showAlertMessage(error.errorDescription ?? String(localized: "Email already in use"))
         default:
-            showAlertMessage(error.errorDescription ?? "An error occurred")
+            showAlertMessage(error.errorDescription ?? String(localized: "An error occurred"))
         }
     }
 

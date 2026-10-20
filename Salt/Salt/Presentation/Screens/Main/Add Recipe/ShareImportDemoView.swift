@@ -76,9 +76,9 @@ enum ShareDemoStep: Int, CaseIterable, Identifiable {
 
     var caption: String {
         switch self {
-        case .tapShare: "Tap the share button"
-        case .tapShareTo: "Tap \u{201C}Share to...\u{201D}"
-        case .tapSalt: "Tap Salt"
+        case .tapShare: String(localized: "Tap the share button")
+        case .tapShareTo: String(localized: "Tap \u{201C}Share to...\u{201D}")
+        case .tapSalt: String(localized: "Tap Salt")
         }
     }
 }
@@ -322,7 +322,7 @@ private struct DemoActionCircle: View {
 }
 
 private struct DemoAppIcon<Icon: View>: View {
-    let label: String
+    let label: LocalizedStringResource
     @ViewBuilder var icon: Icon
 
     var body: some View {

@@ -53,7 +53,7 @@ struct CollectionInviteView: View {
         } else if let invite {
             MemberAvatar(imageUrl: invite.ownerImageUrl, size: 76)
 
-            Text("\(invite.ownerName ?? "Someone") invited you to")
+            Text("\(invite.ownerName ?? String(localized: "Someone")) invited you to")
                 .font(.custom("OpenSans-Regular", size: 16))
                 .foregroundColor(Color("GraniteGray"))
                 .multilineTextAlignment(.center)
@@ -67,7 +67,7 @@ struct CollectionInviteView: View {
                 .foregroundColor(Color("GraniteGray"))
 
             if hasJoined || invite.isMember {
-                Text(hasJoined ? "You joined \(invite.name)" : "You're already in this collection")
+                Text(hasJoined ? String(localized: "You joined \(invite.name)") : String(localized: "You're already in this collection"))
                     .font(.custom("OpenSans-SemiBold", size: 15))
                     .padding(.top, 12)
                 primaryButton("Open My Recipes") {
@@ -108,7 +108,7 @@ struct CollectionInviteView: View {
         }
     }
 
-    private func primaryButton(_ title: String, isBusy: Bool = false, action: @escaping () -> Void) -> some View {
+    private func primaryButton(_ title: LocalizedStringResource, isBusy: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 8) {
                 if isBusy {
@@ -135,7 +135,7 @@ struct CollectionInviteView: View {
                 Analytics.log(.collectionInviteOpened)
             }
         } catch {
-            errorMessage = "Couldn't open the invite. Check your connection and try again."
+            errorMessage = String(localized: "Couldn't open the invite. Check your connection and try again.")
         }
         isLoading = false
     }
@@ -216,8 +216,8 @@ struct CollectionMembersView: View {
                     }
                 } footer: {
                     Text(collection?.isFull ?? false
-                         ? "This collection is full. Remove someone to invite another person."
-                         : "Anyone with the link can join until you reset it or turn it off.")
+                         ? String(localized: "This collection is full. Remove someone to invite another person.")
+                         : String(localized: "Anyone with the link can join until you reset it or turn it off."))
                 }
             } else {
                 Section {
@@ -297,7 +297,7 @@ struct CollectionMembersView: View {
     private func memberRow(_ member: CollectionMember) -> some View {
         HStack(spacing: 12) {
             MemberAvatar(imageUrl: member.profileImageUrl, size: 40)
-            Text(member.displayName + (isCurrentUser(member) ? " (You)" : ""))
+            Text(isCurrentUser(member) ? String(localized: "\(member.displayName) (You)") : member.displayName)
                 .font(.custom("OpenSans-Regular", size: 16))
             Spacer()
             if member.isOwner {
@@ -321,7 +321,7 @@ struct CollectionMembersView: View {
         do {
             members = try await manager.members(of: collectionId)
         } catch {
-            errorMessage = "Couldn't load the members."
+            errorMessage = String(localized: "Couldn't load the members.")
         }
         isLoading = false
     }
@@ -331,7 +331,7 @@ struct CollectionMembersView: View {
             try await manager.removeMember(member.userId, from: collectionId)
             members.removeAll { $0.userId == member.userId }
         } catch {
-            errorMessage = "Couldn't remove \(member.displayName)."
+            errorMessage = String(localized: "Couldn't remove \(member.displayName).")
         }
     }
 
@@ -339,7 +339,7 @@ struct CollectionMembersView: View {
         do {
             try await manager.disableInviteLink(for: collectionId)
         } catch {
-            errorMessage = "Couldn't turn off the link."
+            errorMessage = String(localized: "Couldn't turn off the link.")
         }
     }
 
@@ -348,7 +348,7 @@ struct CollectionMembersView: View {
             try await manager.leave(collectionId)
             dismiss()
         } catch {
-            errorMessage = "Couldn't leave the collection."
+            errorMessage = String(localized: "Couldn't leave the collection.")
         }
     }
 }
@@ -371,14 +371,14 @@ final class CollectionInviteState: ObservableObject {
     func create(for collectionId: UUID, reset: Bool) async {
         guard !isCreating else { return }
         let manager = CollectionsManager.shared
-        let name = manager.collection(id: collectionId)?.name ?? "my collection"
+        let name = manager.collection(id: collectionId)?.name ?? String(localized: "my collection")
 
         withAnimation { isCreating = true }
         do {
             let url = reset
                 ? try await manager.resetInviteLink(for: collectionId)
                 : try await manager.inviteLink(for: collectionId)
-            shareItem = ShareItem(url: url, message: "Join my \u{201C}\(name)\u{201D} collection on Salt")
+            shareItem = ShareItem(url: url, message: String(localized: "Join my \u{201C}\(name)\u{201D} collection on Salt"))
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -474,9 +474,9 @@ struct CollectionRecipeCopyView: View {
 // MARK: - Text
 
 private func peopleText(_ count: Int) -> String {
-    count == 1 ? "1 person" : "\(count) people"
+    String(localized: "\(count) people", comment: "Number of people in a collection")
 }
 
 private func recipesText(_ count: Int) -> String {
-    count == 1 ? "1 recipe" : "\(count) recipes"
+    String(localized: "\(count) recipes", comment: "Number of recipes in a collection")
 }

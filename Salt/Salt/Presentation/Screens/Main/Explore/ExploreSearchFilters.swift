@@ -15,10 +15,10 @@ enum SearchFilterKind: String, Identifiable, CaseIterable {
 
     var title: String {
         switch self {
-        case .ingredients: "Ingredients"
-        case .time: "Total Time"
-        case .cuisine: "Cuisine"
-        case .mealType: "Meal Type"
+        case .ingredients: String(localized: "Ingredients")
+        case .time: String(localized: "Total Time")
+        case .cuisine: String(localized: "Cuisine")
+        case .mealType: String(localized: "Meal Type")
         }
     }
 }
@@ -210,7 +210,7 @@ struct SearchFilterSheet: View {
                 .font(.custom("Playfair9pt-SemiBold", size: 18))
                 .padding(.top, 4)
             ChipFlow(spacing: 8) {
-                ForEach(RecipeSearchFilters.suggestedIngredients.filter { suggestion in
+                ForEach(DisplayText.suggestedIngredients.filter { suggestion in
                     !draft.ingredients.contains { $0.caseInsensitiveCompare(suggestion) == .orderedSame }
                 }, id: \.self) { suggestion in
                     OptionChip(title: suggestion, isSelected: false) {
@@ -236,10 +236,10 @@ struct SearchFilterSheet: View {
 
     private var timeContent: some View {
         VStack(spacing: 0) {
-            timeRow(title: "Any time", minutes: nil)
+            timeRow(title: String(localized: "Any time"), minutes: nil)
             ForEach(RecipeSearchFilters.timeOptions, id: \.self) { minutes in
                 Divider()
-                timeRow(title: "Under \(minutes) minutes", minutes: minutes)
+                timeRow(title: String(localized: "Under \(minutes) minutes"), minutes: minutes)
             }
         }
     }
@@ -272,7 +272,7 @@ struct SearchFilterSheet: View {
                 .foregroundColor(Color("GraniteGray"))
             ChipFlow(spacing: 8) {
                 ForEach(RecipeSearchFilters.cuisineOptions, id: \.self) { cuisine in
-                    OptionChip(title: cuisine, isSelected: draft.cuisines.contains(cuisine)) {
+                    OptionChip(title: DisplayText.food(cuisine), isSelected: draft.cuisines.contains(cuisine)) {
                         if draft.cuisines.contains(cuisine) {
                             draft.cuisines.remove(cuisine)
                         } else {

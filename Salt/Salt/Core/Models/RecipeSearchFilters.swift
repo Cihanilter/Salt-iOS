@@ -31,12 +31,6 @@ struct RecipeSearchFilters: Equatable {
     /// Choices in the Total time filter
     static let timeOptions = [15, 30, 45, 60, 90]
 
-    /// Quick picks in the Ingredients filter
-    static let suggestedIngredients = [
-        "Chicken", "Beef", "Salmon", "Shrimp", "Eggs", "Pasta", "Rice",
-        "Potato", "Tomato", "Cheese", "Mushroom", "Tofu", "Chickpeas", "Spinach"
-    ]
-
     /// Cuisines as stored in the recipes table
     static let cuisineOptions = [
         "African", "American", "Asian", "British", "Cajun", "Caribbean", "Chinese",
@@ -50,23 +44,23 @@ struct RecipeSearchFilters: Equatable {
 
     var ingredientsLabel: String? {
         guard let first = ingredients.first else { return nil }
-        return ingredients.count == 1 ? first : "\(first) +\(ingredients.count - 1)"
+        return ingredients.count == 1 ? first : String(localized: "\(first) +\(ingredients.count - 1)", comment: "First filter value and how many more, e.g. Chicken +2")
     }
 
     var timeLabel: String? {
-        maxTotalMinutes.map { "Under \($0) min" }
+        maxTotalMinutes.map { String(localized: "Under \($0) min", comment: "Total time filter chip") }
     }
 
     var cuisineLabel: String? {
-        let sorted = cuisines.sorted()
+        let sorted = cuisines.map(DisplayText.food).sorted()
         guard let first = sorted.first else { return nil }
-        return sorted.count == 1 ? first : "\(first) +\(sorted.count - 1)"
+        return sorted.count == 1 ? first : String(localized: "\(first) +\(sorted.count - 1)", comment: "First filter value and how many more, e.g. Chicken +2")
     }
 
     var mealTypeLabel: String? {
         let sorted = MealType.allCases.filter(mealTypes.contains)
         guard let first = sorted.first else { return nil }
-        return sorted.count == 1 ? first.displayName : "\(first.displayName) +\(sorted.count - 1)"
+        return sorted.count == 1 ? first.displayName : String(localized: "\(first.displayName) +\(sorted.count - 1)", comment: "First filter value and how many more, e.g. Chicken +2")
     }
 }
 
@@ -78,16 +72,16 @@ enum MealType: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .breakfast: "Breakfast"
-        case .mainDish: "Main Dish"
-        case .appetizers: "Snacks"
-        case .soups: "Soups"
-        case .salads: "Salads"
-        case .sides: "Side Dish"
-        case .desserts: "Desserts"
-        case .bread: "Bread"
-        case .drinks: "Drinks"
-        case .sauces: "Sauces"
+        case .breakfast: String(localized: "Breakfast")
+        case .mainDish: String(localized: "Main Dish")
+        case .appetizers: String(localized: "Snacks")
+        case .soups: String(localized: "Soups")
+        case .salads: String(localized: "Salads")
+        case .sides: String(localized: "Side Dish")
+        case .desserts: String(localized: "Desserts")
+        case .bread: String(localized: "Bread")
+        case .drinks: String(localized: "Drinks")
+        case .sauces: String(localized: "Sauces")
         }
     }
 

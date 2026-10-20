@@ -20,11 +20,11 @@ enum SubstitutionReason: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .missing: return "Don't have it"
-        case .dislike: return "Don't like it"
-        case .vegan: return "Vegan"
-        case .dairyFree: return "Dairy-free"
-        case .glutenFree: return "Gluten-free"
+        case .missing: return String(localized: "Don't have it")
+        case .dislike: return String(localized: "Don't like it")
+        case .vegan: return String(localized: "Vegan")
+        case .dairyFree: return String(localized: "Dairy-free")
+        case .glutenFree: return String(localized: "Gluten-free")
         }
     }
 
@@ -82,15 +82,19 @@ final class SubstitutionService {
     }
 
     /// Loaded once from ingredient_substitutes.json
-    private lazy var entries: [Entry] = {
-        guard let url = Bundle.main.url(forResource: "ingredient_substitutes", withExtension: "json"),
+    private lazy var entries: [Entry] = Self.load("ingredient_substitutes")
+    /// Turkish names and substitutes, for Turkish ingredient lines (ingredient_substitutes_tr.json)
+    private lazy var turkishEntries: [Entry] = AppLanguage.isTurkish ? Self.load("ingredient_substitutes_tr") : []
+
+    private static func load(_ file: String) -> [Entry] {
+        guard let url = Bundle.main.url(forResource: file, withExtension: "json"),
               let data = try? Data(contentsOf: url),
               let entries = try? JSONDecoder().decode([Entry].self, from: data) else {
-            print("❌ ingredient_substitutes.json missing or invalid")
+            print("❌ \(file).json missing or invalid")
             return []
         }
         return entries
-    }()
+    }
 
     /// Substitutes from the built-in list, with the line's amount carried over. None when the cook
     /// dislikes the ingredient: the list has close stand-ins ("dried basil" for basil), not different
@@ -108,8 +112,14 @@ final class SubstitutionService {
             }
     }
 
-    /// The entry with the longest name in the ingredient's name, so "peanut butter" wins over "butter"
+    /// The entry with the longest name in the ingredient's name, so "peanut butter" wins over "butter".
+    /// In Turkish the Turkish list comes first; English lines (e.g. an imported US recipe) still
+    /// match the English one.
     private func entry(for name: String) -> Entry? {
+        bestEntry(for: name, in: turkishEntries) ?? bestEntry(for: name, in: entries)
+    }
+
+    private func bestEntry(for name: String, in entries: [Entry]) -> Entry? {
         var best: (entry: Entry, length: Int)?
         for entry in entries {
             if entry.excludes?.contains(where: { Self.contains($0, in: name) }) == true { continue }
@@ -120,10 +130,12 @@ final class SubstitutionService {
         return best?.entry
     }
 
-    /// Whole words only, plural allowed: "egg" is in "2 large eggs" but not in "eggplant"
+    /// Whole words only, plural allowed: "egg" is in "2 large eggs" but not in "eggplant";
+    /// Turkish "mantar" is in "mantarlar"
     private static func contains(_ word: String, in text: String) -> Bool {
-        let pattern = #"(?<!\p{L})"# + NSRegularExpression.escapedPattern(for: word) + #"(?:e?s)?(?!\p{L})"#
-        return text.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
+        let pattern = #"(?<!\p{L})"# + NSRegularExpression.escapedPattern(for: AppLanguage.lowercased(word))
+            + #"(?:e?s|ler|lar)?(?!\p{L})"#
+        return AppLanguage.lowercased(text).range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
     }
 
     /// "1 cup buttermilk" + "milk with lemon juice" → "1 cup milk with lemon juice";
@@ -134,8 +146,8 @@ final class SubstitutionService {
             return builtIn.name.prefix(1).uppercased() + builtIn.name.dropFirst()  // "Salt, to taste"
         }
         if let per = builtIn.per {
-            let unit = unit.lowercased()
-            guard unit.isEmpty || unit.hasPrefix("clove"),
+            let unit = AppLanguage.lowercased(unit)
+            guard unit.isEmpty || unit.hasPrefix("clove") || ["diş", "adet", "tane"].contains(unit),
                   let count = IngredientScaler.parseNumber(amount) else { return nil }
             return IngredientScaler.scale("\(per) \(builtIn.name)", by: count)
         }
@@ -153,6 +165,7 @@ final class SubstitutionService {
         let ingredients: [String]
         let ingredient: String
         let reason: String
+        let language: String
     }
 
     private struct SuggestResponse: Decodable {
@@ -191,7 +204,8 @@ final class SubstitutionService {
             title: recipeTitle,
             ingredients: ingredients.map(IngredientScaler.amountFirst),
             ingredient: ingredient,
-            reason: reason.rawValue
+            reason: reason.rawValue,
+            language: AppLanguage.code
         ))
 
         let (data, response) = try await URLSession.shared.data(for: request)
