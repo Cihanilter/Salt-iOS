@@ -10,6 +10,12 @@
             "state" : "new",
             "value" : "Salt"
           }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Salt"
+          }
         }
       }
     }
