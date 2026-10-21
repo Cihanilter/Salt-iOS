@@ -89,6 +89,16 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
+    /// Whether the user has Premium, checked with RevenueCat; nil when it can't be told
+    /// (subscriptions off, or RevenueCat unreachable), so nothing is sold to someone who may have it
+    func verifiedPremiumStatus() async -> Bool? {
+        guard RevenueCatConfig.isEnabled, Purchases.isConfigured else { return nil }
+        if await refreshPremium() { return true }
+        // refreshPremium falls back to false when RevenueCat couldn't be reached; only trust a real answer
+        guard (try? await Purchases.shared.customerInfo()) != nil else { return nil }
+        return isPremium
+    }
+
     /// Premium status checked with RevenueCat, for decisions made right after launch. When Salt
     /// is opened from the Share Extension, an import can start before RootView has linked
     /// RevenueCat to the signed-in user, while `isPremium` still has its launch value (false).
