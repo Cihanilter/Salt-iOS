@@ -2476,19 +2476,54 @@
       }
     },
     "No matching recipes" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Eşleşen tarif yok"
+          }
+        }
+      }
     },
     "No one new can join with it. Tap Invite People to get a new link later." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Artık bu bağlantıyla kimse yeni katılamaz. Daha sonra yeni bir bağlantı almak için Kişi Davet Et’e dokunun."
+          }
+        }
+      }
     },
     "No other substitutes found." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Başka alternatif bulunamadı."
+          }
+        }
+      }
     },
     "No photo" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Fotoğraf yok"
+          }
+        }
+      }
     },
     "No recipe found on this page. Make sure the link points to a recipe." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bu sayfada tarif bulunamadı. Bağlantının bir tarife yönlendirdiğinden emin olun."
+          }
+        }
+      }
     },
     "No recipes found" : {
       "localizations" : {
@@ -2542,10 +2577,24 @@
       }
     },
     "Not Now" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Şimdi Değil"
+          }
+        }
+      }
     },
     "Notes & Tips" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Notlar ve İpuçları"
+          }
+        }
+      }
     },
     "Nothing in %@ matches “%@”" : {
       "localizations" : {
@@ -2554,77 +2603,240 @@
             "state" : "new",
             "value" : "Nothing in %1$@ matches “%2$@”"
           }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%1$@ sekmesinde “%2$@” ile eşleşen tarif yok"
+          }
         }
       }
     },
     "Nutrition" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Besin Değerleri"
+          }
+        }
+      }
     },
     "OK" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tamam"
+          }
+        }
+      }
     },
     "Open My Recipes" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tariflerim’i Aç"
+          }
+        }
+      }
     },
     "or" : {
 
     },
     "Original Recipe" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Orijinal Tarif"
+          }
+        }
+      }
     },
     "Other ingredients" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Diğer malzemeler"
+          }
+        }
+      }
     },
     "Owner" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Sahibi"
+          }
+        }
+      }
     },
     "Password" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Şifre"
+          }
+        }
+      }
     },
     "Password must be at least 10 characters with numbers and special characters." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Şifre en az 10 karakter olmalı ve rakam ile özel karakter içermelidir."
+          }
+        }
+      }
     },
     "Password reset link has been sent to your email. Please check your inbox." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Lütfen gelen kutunuzu kontrol edin."
+          }
+        }
+      }
     },
     "Password Update" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Şifre Güncelleme"
+          }
+        }
+      }
     },
     "Passwords do not match." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Şifreler eşleşmiyor."
+          }
+        }
+      }
     },
     "Pasta" : {
-      "comment" : "Ingredient\nPopular search\nRecipe category"
+      "comment" : "Ingredient\nPopular search\nRecipe category",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Makarna"
+          }
+        }
+      }
     },
     "Paste the link, and we'll pull in the recipe for you to review and save." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bağlantıyı yapıştırın, tarifi sizin için getirelim; siz de gözden geçirip kaydedin."
+          }
+        }
+      }
     },
     "Per serving" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Porsiyon başına"
+          }
+        }
+      }
     },
     "Photo" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Fotoğraf"
+          }
+        }
+      }
     },
     "Pizza" : {
-      "comment" : "Popular search"
+      "comment" : "Popular search",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Pizza"
+          }
+        }
+      }
     },
     "Planned" : {
-      "comment" : "Starter collection name for new users"
+      "comment" : "Starter collection name for new users",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Planlananlar"
+          }
+        }
+      }
     },
     "Please agree to the Terms and Conditions and Privacy Policy." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Lütfen Kullanım Koşulları’nı ve Gizlilik Politikası’nı kabul edin."
+          }
+        }
+      }
     },
     "Please enter a recipe URL" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Lütfen bir tarif bağlantısı girin"
+          }
+        }
+      }
     },
     "Please enter a valid email address." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Lütfen geçerli bir e-posta adresi girin."
+          }
+        }
+      }
     },
     "Please enter a valid full name." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Lütfen geçerli bir ad soyad girin."
+          }
+        }
+      }
     },
     "Please enter your full name (at least 2 characters)." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Lütfen adınızı ve soyadınızı girin (en az 2 karakter)."
+          }
+        }
+      }
     },
     "Please enter your password." : {
       "localizations" : {
@@ -2677,142 +2889,466 @@
       }
     },
     "Popular" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Popüler"
+          }
+        }
+      }
     },
     "Popular Searches" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Popüler Aramalar"
+          }
+        }
+      }
     },
     "Potato" : {
-      "comment" : "Ingredient"
+      "comment" : "Ingredient",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Patates"
+          }
+        }
+      }
     },
     "Premium feature" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Premium özellik"
+          }
+        }
+      }
     },
     "Prep" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Hazırlık"
+          }
+        }
+      }
     },
     "Prep time" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Hazırlık süresi"
+          }
+        }
+      }
     },
     "Preview" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Önizleme"
+          }
+        }
+      }
     },
     "Preview & Save" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Önizle ve Kaydet"
+          }
+        }
+      }
     },
     "Privacy Policy" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Gizlilik Politikası"
+          }
+        }
+      }
     },
     "Profile" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Profil"
+          }
+        }
+      }
     },
     "Protein" : {
-      "comment" : "Nutrition label"
+      "comment" : "Nutrition label",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Protein"
+          }
+        }
+      }
     },
     "Quick & Easy" : {
-      "comment" : "Cooking interest"
+      "comment" : "Cooking interest",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Pratik ve Kolay"
+          }
+        }
+      }
     },
     "Recipe not found" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tarif bulunamadı"
+          }
+        }
+      }
     },
     "Recipe sharing isn't available right now" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tarif paylaşımı şu anda kullanılamıyor"
+          }
+        }
+      }
     },
     "Recipes" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tarifler"
+          }
+        }
+      }
     },
     "Recipes from any of these cuisines" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bu mutfaklardan herhangi birine ait tarifler"
+          }
+        }
+      }
     },
     "Recipes of any of these types" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bu türlerden herhangi birine ait tarifler"
+          }
+        }
+      }
     },
     "Recipes with all of these ingredients" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bu malzemelerin tümünü içeren tarifler"
+          }
+        }
+      }
     },
     "Remember your password?" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Şifrenizi hatırladınız mı?"
+          }
+        }
+      }
     },
     "Remove" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Çıkar"
+          }
+        }
+      }
     },
     "Remove %@" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Çıkar: %@"
+          }
+        }
+      }
     },
     "Remove %@?" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%@ çıkarılsın mı?"
+          }
+        }
+      }
     },
     "Remove from Collection" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Koleksiyondan Çıkar"
+          }
+        }
+      }
     },
     "Remove from saved" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kaydedilenlerden çıkar"
+          }
+        }
+      }
     },
     "Remove ingredient" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Malzemeyi çıkar"
+          }
+        }
+      }
     },
     "Remove photo %lld" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%lld. fotoğrafı çıkar"
+          }
+        }
+      }
     },
     "Remove step %lld" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%lld. adımı çıkar"
+          }
+        }
+      }
     },
     "Removed from %@" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%@ koleksiyonundan çıkarıldı"
+          }
+        }
+      }
     },
     "Rename" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Yeniden Adlandır"
+          }
+        }
+      }
     },
     "Rename Collection" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Koleksiyonu Yeniden Adlandır"
+          }
+        }
+      }
     },
     "required" : {
 
     },
     "Reset" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Sıfırla"
+          }
+        }
+      }
     },
     "Reset all filters" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tüm filtreleri sıfırla"
+          }
+        }
+      }
     },
     "Reset Invite Link" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Davet Bağlantısını Sıfırla"
+          }
+        }
+      }
     },
     "Reset Invite Link?" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Davet bağlantısı sıfırlansın mı?"
+          }
+        }
+      }
     },
     "Reset Password" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Şifre Sıfırlama"
+          }
+        }
+      }
     },
     "Reset to %lld servings" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%lld kişiliğe sıfırla"
+          }
+        }
+      }
     },
     "Rice" : {
-      "comment" : "Ingredient"
+      "comment" : "Ingredient",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Pirinç"
+          }
+        }
+      }
     },
     "Salad" : {
-      "comment" : "Popular search\nRecipe category"
+      "comment" : "Popular search\nRecipe category",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Salata"
+          }
+        }
+      }
     },
     "Salads" : {
-      "comment" : "Recipe category"
+      "comment" : "Recipe category",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Salatalar"
+          }
+        }
+      }
     },
     "Salmon" : {
-      "comment" : "Ingredient"
+      "comment" : "Ingredient",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Somon"
+          }
+        }
+      }
     },
     "Salt" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Salt"
+          }
+        }
+      }
     },
     "Salt Premium" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Salt Premium"
+          }
+        }
+      }
     },
     "Salt user" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Salt kullanıcısı"
+          }
+        }
+      }
     },
     "Sandwich" : {
-      "comment" : "Recipe category"
+      "comment" : "Recipe category",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Sandviç"
+          }
+        }
+      }
     },
     "Sauces" : {
-      "comment" : "Recipe category"
+      "comment" : "Recipe category",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Soslar"
+          }
+        }
+      }
     },
     "Save" : {
 
