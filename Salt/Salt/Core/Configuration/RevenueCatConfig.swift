@@ -19,4 +19,8 @@ enum RevenueCatConfig {
 
     /// Number of recipe imports a free user can save, counted from the `recipe_imports` log
     static let freeImportLimit = 3
+
+    /// Free users see the paywall on launch at most this often (in calendar days); new accounts
+    /// see it right after signing up
+    static let launchPaywallIntervalDays = 2
 }
