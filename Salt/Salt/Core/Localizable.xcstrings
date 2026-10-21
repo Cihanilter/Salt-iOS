@@ -2193,6 +2193,16 @@
         }
       }
     },
+    "Language" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Dil"
+          }
+        }
+      }
+    },
     "Latin American" : {
       "comment" : "Cuisine",
       "localizations" : {
@@ -2695,6 +2705,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Tariflerim’i Aç"
+          }
+        }
+      }
+    },
+    "Opens Salt in Settings, where you can choose the language" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Ayarlar’da Salt’ı açar; buradan dili seçebilirsiniz"
           }
         }
       }

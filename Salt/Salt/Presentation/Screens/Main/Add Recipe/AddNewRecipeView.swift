@@ -812,7 +812,7 @@ struct CreateRecipeView: View {
                         .submitLabel(.next)
                         .focused($focusedField, equals: .ingredientUnit(row.id))
                         .onSubmit { focusedField = .ingredientName(row.id) }
-                        .frame(width: 76)
+                        .frame(width: 96)  // fits "su bardağı" in Turkish
                         .accessibilityLabel("Unit")
 
                     // Multiline so Return (or pasting a list) can start the next ingredient

@@ -11,6 +11,14 @@ enum AppLanguage {
     /// True when iOS picked the Turkish localization for the app
     static let isTurkish: Bool = Bundle.main.preferredLocalizations.first?.hasPrefix("tr") == true
 
+    /// The app's language in that language, e.g. "Türkçe", "English"
+    static var displayName: String {
+        let code = Bundle.main.preferredLocalizations.first ?? "en"
+        let locale = Locale(identifier: code)
+        let name = locale.localizedString(forLanguageCode: code) ?? code
+        return name.prefix(1).uppercased(with: locale) + name.dropFirst()
+    }
+
     /// Sent to Salt-backend so AI answers come back in the app's language
     static var code: String { isTurkish ? "tr" : "en" }
 

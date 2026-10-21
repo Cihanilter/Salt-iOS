@@ -44,6 +44,9 @@ struct ProfileView: View {
                     // Favorite Cuisines
                     favoriteCuisinesSection
 
+                    // App language
+                    languageCard
+
                     // Sign Out Button
                     signOutButton
 
@@ -332,6 +335,51 @@ struct ProfileView: View {
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.1), radius: 1, y: 1)
         .shadow(color: Color.black.opacity(0.18), radius: 1.5, y: 1)
+    }
+
+    // MARK: - Language
+
+    /// The language Salt is shown in. iOS keeps this per app (Settings › Salt › Language) and
+    /// restarts Salt when it changes, which recipes and units need, so this opens that setting.
+    private var languageCard: some View {
+        Button(action: openLanguageSettings) {
+            HStack(spacing: 12) {
+                Image(systemName: "globe")
+                    .font(.system(size: 20))
+                    .foregroundColor(Color("Orange"))
+                    .frame(width: 40, height: 40)
+                    .background(Circle().fill(Color("Orange").opacity(0.12)))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Language")
+                        .font(.custom("OpenSans-SemiBold", size: 16))
+                        .foregroundColor(.primary)
+                    Text(AppLanguage.displayName)
+                        .font(.custom("OpenSans-Regular", size: 12))
+                        .foregroundColor(Color("GrayText"))
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color("GrayText"))
+                    .accessibilityHidden(true)
+            }
+            .padding(16)
+            .background(Color(.systemBackground))
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.1), radius: 1, y: 1)
+            .shadow(color: Color.black.opacity(0.18), radius: 1.5, y: 1)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opens Salt in Settings, where you can choose the language")
+    }
+
+    private func openLanguageSettings() {
+        Analytics.log(.languageSettingsOpened, ["language": AppLanguage.code])
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 
     private var premiumCardSubtitle: String {
