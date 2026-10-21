@@ -3351,55 +3351,176 @@
       }
     },
     "Save" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kaydet"
+          }
+        }
+      }
     },
     "Save Changes" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Değişiklikleri Kaydet"
+          }
+        }
+      }
     },
     "Save Copy" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kopyayı Kaydet"
+          }
+        }
+      }
     },
     "Save recipe" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tarifi kaydet"
+          }
+        }
+      }
     },
     "Save Recipe" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tarifi Kaydet"
+          }
+        }
+      }
     },
     "Save this recipe to see its nutrition in My Recipes." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Besin değerlerini Tariflerim’de görmek için bu tarifi kaydedin."
+          }
+        }
+      }
     },
     "Saved" : {
-      "comment" : "My Recipes tab: bookmarked recipes"
+      "comment" : "My Recipes tab: bookmarked recipes",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kaydedilenler"
+          }
+        }
+      }
     },
     "Saved to My Recipes" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tariflerim’e kaydedildi"
+          }
+        }
+      }
     },
     "Seafood" : {
-      "comment" : "Recipe category"
+      "comment" : "Recipe category",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Deniz Ürünleri"
+          }
+        }
+      }
     },
     "Search failed. Please try again." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Arama yapılamadı. Lütfen tekrar deneyin."
+          }
+        }
+      }
     },
     "Search for \"%@\"" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "“%@” için ara"
+          }
+        }
+      }
     },
     "Search in Imported Recipes..." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "İçe aktarılan tariflerde ara..."
+          }
+        }
+      }
     },
     "Search in My Recipes..." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tariflerim’de ara..."
+          }
+        }
+      }
     },
     "Search in Saved Recipes..." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kaydedilen tariflerde ara..."
+          }
+        }
+      }
     },
     "Search recipes" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tariflerde ara"
+          }
+        }
+      }
     },
     "Search recipes..." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tariflerde ara..."
+          }
+        }
+      }
     },
     "Search Results" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Arama Sonuçları"
+          }
+        }
+      }
     },
     "search.cookies" : {
       "comment" : "Popular search; a search term, so singular (e.g. Turkish Kurabiye)",
@@ -3426,91 +3547,297 @@
       }
     },
     "See all" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tümünü gör"
+          }
+        }
+      }
     },
     "See calories, carbs, protein and more with Premium." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Premium ile kalori, karbonhidrat, protein ve daha fazlasını görün."
+          }
+        }
+      }
     },
     "Send Reset Link" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Sıfırlama Bağlantısı Gönder"
+          }
+        }
+      }
     },
     "servings" : {
 
     },
     "Servings" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Porsiyon"
+          }
+        }
+      }
     },
     "Set New Password" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Yeni Şifre Belirleme"
+          }
+        }
+      }
     },
     "Share" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Paylaş"
+          }
+        }
+      }
     },
     "Share to..." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Paylaş..."
+          }
+        }
+      }
     },
     "Shared" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Paylaşılan"
+          }
+        }
+      }
     },
     "Short tagline shown under your name" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Adınızın altında görünen kısa bir tanıtım cümlesi"
+          }
+        }
+      }
     },
     "Show Results" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Sonuçları Göster"
+          }
+        }
+      }
     },
     "Shrimp" : {
-      "comment" : "Ingredient"
+      "comment" : "Ingredient",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Karides"
+          }
+        }
+      }
     },
     "Side Dish" : {
-      "comment" : "Recipe category"
+      "comment" : "Recipe category",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Yan Yemek"
+          }
+        }
+      }
     },
     "Sign In" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Giriş Yap"
+          }
+        }
+      }
     },
     "Sign in to continue your cooking journey" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Mutfak yolculuğunuza devam etmek için giriş yapın"
+          }
+        }
+      }
     },
     "Sign Out" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Çıkış Yap"
+          }
+        }
+      }
     },
     "Sign Up" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kaydol"
+          }
+        }
+      }
     },
     "Smoothies" : {
-      "comment" : "Recipe category"
+      "comment" : "Recipe category",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Smoothie"
+          }
+        }
+      }
     },
     "Snacks" : {
-      "comment" : "Recipe category"
+      "comment" : "Recipe category",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Atıştırmalıklar"
+          }
+        }
+      }
     },
     "Someone" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Biri"
+          }
+        }
+      }
     },
     "Something Went Wrong" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bir Sorun Oluştu"
+          }
+        }
+      }
     },
     "Soup" : {
-      "comment" : "Popular search"
+      "comment" : "Popular search",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Çorba"
+          }
+        }
+      }
     },
     "Soups" : {
-      "comment" : "Recipe category"
+      "comment" : "Recipe category",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Çorbalar"
+          }
+        }
+      }
     },
     "South American" : {
-      "comment" : "Cuisine"
+      "comment" : "Cuisine",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Güney Amerika"
+          }
+        }
+      }
     },
     "Southern" : {
-      "comment" : "Cuisine, food of the US South"
+      "comment" : "Cuisine, food of the US South",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Güney ABD"
+          }
+        }
+      }
     },
     "Spanish" : {
-      "comment" : "Cuisine"
+      "comment" : "Cuisine",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "İspanyol"
+          }
+        }
+      }
     },
     "Spinach" : {
-      "comment" : "Ingredient"
+      "comment" : "Ingredient",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Ispanak"
+          }
+        }
+      }
     },
     "Start Free Trial" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Ücretsiz Denemeyi Başlat"
+          }
+        }
+      }
     },
     "Step %lld" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Adım %lld"
+          }
+        }
+      }
     },
     "Step %lld of %lld: %@" : {
       "localizations" : {
@@ -3519,95 +3846,308 @@
             "state" : "new",
             "value" : "Step %1$lld of %2$lld: %3$@"
           }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Adım %1$lld / %2$lld: %3$@"
+          }
         }
       }
     },
     "Step %lld: Describe what to do" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Adım %lld: Ne yapılacağını yazın"
+          }
+        }
+      }
     },
     "Sugar" : {
-      "comment" : "Nutrition label"
+      "comment" : "Nutrition label",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Şeker"
+          }
+        }
+      }
     },
     "Swap %@" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Değiştir: %@"
+          }
+        }
+      }
     },
     "Swap an ingredient" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Malzeme değiştir"
+          }
+        }
+      }
     },
     "Take Photo" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Fotoğraf Çek"
+          }
+        }
+      }
     },
     "Tap “Share to...”" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "“Paylaş...” seçeneğine dokunun"
+          }
+        }
+      }
     },
     "Tap Salt" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Salt’a dokunun"
+          }
+        }
+      }
     },
     "Tap the bookmark on any recipe\nin Explore to save it here" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Buraya kaydetmek için Keşfet’teki\nherhangi bir tarifte yer imine dokunun"
+          }
+        }
+      }
     },
     "Tap the share button" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Paylaş düğmesine dokunun"
+          }
+        }
+      }
     },
     "Tap to upload photo" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Fotoğraf yüklemek için dokunun"
+          }
+        }
+      }
     },
     "Tell us about yourself and your cooking journey" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kendinizden ve yemek yolculuğunuzdan bahsedin"
+          }
+        }
+      }
     },
     "Tell us about yourself and your cooking journey..." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kendinizden ve yemek yolculuğunuzdan bahsedin..."
+          }
+        }
+      }
     },
     "Terms and Conditions" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kullanım Koşulları"
+          }
+        }
+      }
     },
     "Thai" : {
-      "comment" : "Cuisine"
+      "comment" : "Cuisine",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tayland"
+          }
+        }
+      }
     },
     "The recipes stay in My Recipes." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tarifler Tariflerim’de kalır."
+          }
+        }
+      }
     },
     "They won't see this collection anymore. Recipes they added stay in it." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bu kişi artık bu koleksiyonu göremeyecek. Eklediği tarifler koleksiyonda kalır."
+          }
+        }
+      }
     },
     "This collection already has %lld people." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bu koleksiyonda zaten %lld kişi var."
+          }
+        }
+      }
     },
     "This collection is full. Remove someone to invite another person." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bu koleksiyon dolu. Başka birini davet etmek için birini çıkarın."
+          }
+        }
+      }
     },
     "This email is already registered." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bu e-posta zaten kayıtlı."
+          }
+        }
+      }
     },
     "This invite link isn't valid anymore. Ask for a new one." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bu davet bağlantısı artık geçerli değil. Yeni bir bağlantı isteyin."
+          }
+        }
+      }
     },
     "This recipe is no longer available" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bu tarif artık mevcut değil"
+          }
+        }
+      }
     },
     "This recipe wasn't in the post's caption, so we put it together from what's said in the video. Some ingredients, amounts or steps may be missing. Please check it before saving; you can fix anything with Edit in the menu." : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bu tarif gönderinin açıklamasında yoktu, bu yüzden videoda anlatılanlardan derledik. Bazı malzemeler, miktarlar veya adımlar eksik olabilir. Lütfen kaydetmeden önce kontrol edin; menüdeki Düzenle ile her şeyi düzeltebilirsiniz."
+          }
+        }
+      }
     },
     "Tip" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "İpucu"
+          }
+        }
+      }
     },
     "Tip: Enter amount, unit, and ingredient name separately" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "İpucu: Miktarı, birimi ve malzeme adını ayrı ayrı girin"
+          }
+        }
+      }
     },
     "Title" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Başlık"
+          }
+        }
+      }
     },
     "To serve" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Servis için"
+          }
+        }
+      }
     },
     "Tofu" : {
-      "comment" : "Ingredient"
+      "comment" : "Ingredient",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tofu"
+          }
+        }
+      }
     },
     "Tomato" : {
-      "comment" : "Ingredient"
+      "comment" : "Ingredient",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Domates"
+          }
+        }
+      }
     },
     "Total Imported Recipes" : {
-
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Toplam İçe Aktarılan Tarifler"
+          }
+        }
+      }
     },
     "Total Time" : {
 
