@@ -157,7 +157,8 @@ struct RecipeDetailView: View {
     @State private var showSavedHeader = false
     @State private var hasBeenSaved = false  // Track if recipe was saved (persists after closing saved header)
     @State private var editSheet: EditSheet?
-    @State private var showCopySavedToast = false
+    @State private var toastMessage: String?  // Short confirmation at the bottom (copy saved, recipe saved)
+    @State private var toastTask: Task<Void, Never>?
     @State private var showingDeleteAlert = false
     @State private var isDeleting = false
     @State private var pendingPhotoImages: [UIImage] = []  // New photos added in edit mode (for display only)
@@ -277,7 +278,7 @@ struct RecipeDetailView: View {
                         onBookmarkTap: recipeId.map { id in
                             {
                                 Task {
-                                    await bookmarkManager.toggleBookmark(for: id)
+                                    await toggleBookmark(id)
                                 }
                             }
                         },
@@ -473,8 +474,8 @@ struct RecipeDetailView: View {
             }
         }
         .overlay(alignment: .bottom) {
-            if showCopySavedToast {
-                Text("Copy saved to My Recipes")
+            if let toastMessage {
+                Text(toastMessage)
                     .font(.custom("OpenSans-SemiBold", size: 14))
                     .foregroundColor(.white)
                     .padding(.horizontal, 16)
@@ -513,6 +514,34 @@ struct RecipeDetailView: View {
         }
     }
 
+    // MARK: - Toast
+
+    /// Shows a short message at the bottom; a new message replaces the current one
+    private func showToast(_ message: String) {
+        toastTask?.cancel()
+        withAnimation { toastMessage = message }
+        toastTask = Task {
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !Task.isCancelled else { return }
+            withAnimation { toastMessage = nil }
+        }
+    }
+
+    // MARK: - Bookmark
+
+    /// Saves (or unsaves) an Explore recipe from the menu and confirms it with a toast
+    private func toggleBookmark(_ id: UUID) async {
+        let wasBookmarked = bookmarkManager.isBookmarked(id)
+        let isNowBookmarked = await bookmarkManager.toggleBookmark(for: id)
+        if isNowBookmarked == wasBookmarked {
+            showToast(String(localized: "Couldn't update. Please try again."))
+        } else if isNowBookmarked {
+            showToast(String(localized: "Saved to My Recipes"))
+        } else {
+            showToast(String(localized: "Removed from Saved"))
+        }
+    }
+
     // MARK: - Save Edits
 
     /// Saves the editor's changes: to the user's own recipe, or as a new copy of an Explore/saved
@@ -539,11 +568,7 @@ struct RecipeDetailView: View {
         editSheet = nil
 
         if sheet == .customize {
-            withAnimation { showCopySavedToast = true }
-            Task {
-                try? await Task.sleep(for: .seconds(2.5))
-                withAnimation { showCopySavedToast = false }
-            }
+            showToast(String(localized: "Copy saved to My Recipes"))
         }
 
         // Changed ingredients/servings cleared the old nutrition; the estimate keeps running
@@ -790,7 +815,7 @@ struct ImageCarousel: View {
 
     private var hasMenuActions: Bool {
         (showMenuButton && onDelete != nil) || onEdit != nil || onCancel != nil || onCustomize != nil
-            || onShare != nil || onAddToCollection != nil
+            || onShare != nil || onAddToCollection != nil || onBookmarkTap != nil
     }
 
     var body: some View {
@@ -870,9 +895,18 @@ struct ImageCarousel: View {
                     Spacer()
 
                     // Menu button (user recipes: Edit / Delete; unsaved preview: Edit / Cancel;
-                    // Explore/saved recipes: Customize)
+                    // Explore/saved recipes: Save / Customize)
                     if hasMenuActions {
                         Menu {
+                            // Explore recipes: save to (or remove from) My Recipes > Saved
+                            if let onBookmarkTap {
+                                Button(action: onBookmarkTap) {
+                                    Label(
+                                        isBookmarked ? "Remove from Saved" : "Save Recipe",
+                                        systemImage: isBookmarked ? "bookmark.slash" : "bookmark"
+                                    )
+                                }
+                            }
                             if let onShare {
                                 Button(action: onShare) {
                                     Label("Share", systemImage: "square.and.arrow.up")
