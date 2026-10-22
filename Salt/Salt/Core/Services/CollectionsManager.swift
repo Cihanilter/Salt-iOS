@@ -17,7 +17,19 @@ final class CollectionsManager: ObservableObject {
     @Published private(set) var hasLoaded = false
 
     /// Empty example collection every new user starts with
-    static let starterNames = ["Planned"]
+    static let starterNames = ["Holiday Favorites"]
+
+    /// Starter names, including ones earlier versions created ("Planned"), so they're listed last
+    private static let listedLastNames: Set<String> = Set(starterNames + ["Planned"])
+
+    /// The user's own collections first (in creation order), then their starter collection,
+    /// so the ones they made appear at the top
+    private static func ordered(_ collections: [RecipeCollection]) -> [RecipeCollection] {
+        let isStarter: (RecipeCollection) -> Bool = {
+            $0.isOwnedByCurrentUser && listedLastNames.contains($0.name)
+        }
+        return collections.filter { !isStarter($0) } + collections.filter(isStarter)
+    }
 
     private let service = CollectionService.shared
 
@@ -50,7 +62,7 @@ final class CollectionsManager: ObservableObject {
                 }
                 markStartersSeeded(for: userId)
             }
-            collections = loaded
+            collections = Self.ordered(loaded)
             hasLoaded = true
         } catch {
             print("⚠️ Failed to load collections: \(error)")
@@ -90,7 +102,7 @@ final class CollectionsManager: ObservableObject {
     @discardableResult
     func createCollection(named name: String) async throws -> RecipeCollection {
         let collection = try await service.createCollection(named: Self.cleanedName(name))
-        collections.append(collection)
+        collections = Self.ordered(collections + [collection])
         Analytics.log(.collectionCreated)
         return collection
     }
@@ -100,6 +112,8 @@ final class CollectionsManager: ObservableObject {
         try await service.renameCollection(id, to: name)
         if let index = collections.firstIndex(where: { $0.id == id }) {
             collections[index].name = name
+            // A starter renamed to the user's own name moves up with their collections
+            collections = Self.ordered(collections)
         }
     }
 
