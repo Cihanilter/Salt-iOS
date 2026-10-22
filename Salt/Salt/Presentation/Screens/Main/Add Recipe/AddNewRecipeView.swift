@@ -161,7 +161,7 @@ struct ImportRecipeView: View {
                 )
 
                 // Description
-                Text("Paste the link, and we'll pull in the recipe for you to review and save.")
+                Text("Paste a link from Instagram, YouTube or your favorite food blog. Salt will instantly transform it into a clean, ready-to-cook recipe.")
                     .font(.custom("OpenSans-Regular", size: 14))
                     .foregroundColor(Color("DarkSilver"))
 
