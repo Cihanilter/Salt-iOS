@@ -182,6 +182,8 @@ struct CollectionCover: View {
                 }
             }
             .clipped()
+            // Clipping doesn't limit taps; keep the hidden overflow from taking nearby taps
+            .contentShape(Rectangle())
     }
 }
 

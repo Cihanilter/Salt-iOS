@@ -416,6 +416,8 @@ struct MyRecipeCard: View {
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 25))
+            // Clipping doesn't limit taps; keep the hidden overflow from taking the next card's taps
+            .contentShape(RoundedRectangle(cornerRadius: 25))
     }
 
     private var photoPlaceholderIcon: some View {

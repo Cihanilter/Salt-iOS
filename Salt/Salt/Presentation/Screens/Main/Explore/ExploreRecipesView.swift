@@ -738,6 +738,8 @@ struct GridRecipeCard: View {
                     }
                     .frame(minWidth: 0, maxWidth: .infinity, minHeight: 140, maxHeight: 140)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
+                    // Keep taps inside the visible image (see RecipeCard)
+                    .contentShape(RoundedRectangle(cornerRadius: 10))
                     .overlay(alignment: .top) {
                         LinearGradient(
                             colors: [Color("Nero").opacity(0.5), Color("DimGray").opacity(0)],
@@ -949,6 +951,9 @@ struct RecipeCard: View {
                     }
                     .frame(width: 134, height: 200)
                     .clipShape(RoundedRectangle(cornerRadius: 25))
+                    // Clipping only hides the overflow of a filled image; without this its hidden
+                    // part still takes taps meant for the card (and bookmark) next to it
+                    .contentShape(RoundedRectangle(cornerRadius: 25))
                     .overlay(alignment: .top) {
                         LinearGradient(
                             colors: [Color("Nero").opacity(0.5), Color("DimGray").opacity(0)],
