@@ -99,20 +99,41 @@ final class AuthManager: ObservableObject {
     }
 
     // MARK: - Sign In with Google
-    func signInWithGoogle() async throws {
+    /// Returns true if this sign-in created the account (a sign-up)
+    @discardableResult
+    func signInWithGoogle() async throws -> Bool {
         let user = try await authService.signInWithGoogle()
         self.currentUser = user
         self.isAuthenticated = true
+        return isNewAccount
     }
 
     // MARK: - Sign In with Apple
-    func signInWithApple(credential: Any) async throws {
+    /// Returns true if this sign-in created the account (a sign-up)
+    @discardableResult
+    func signInWithApple(credential: Any) async throws -> Bool {
         guard let appleCredential = credential as? ASAuthorizationAppleIDCredential else {
             throw AuthError.unknown("Invalid Apple credential")
         }
         let user = try await authService.signInWithApple(credential: appleCredential)
         self.currentUser = user
         self.isAuthenticated = true
+        return isNewAccount
+    }
+
+    /// Whether a session is saved on the device. Unlike `isAuthenticated`, it's already
+    /// known at launch, before the session has been checked.
+    var hasStoredSession: Bool {
+        client.auth.currentSession != nil
+    }
+
+    /// Whether the signed-in Supabase account was created by the sign-in that just happened.
+    /// Apple and Google create the account on first sign-in, so the sign-up/sign-in button
+    /// doesn't tell them apart; on the first sign-in `last_sign_in_at` equals `created_at`.
+    private var isNewAccount: Bool {
+        guard let user = client.auth.currentUser else { return false }
+        let lastSignInAt = user.lastSignInAt ?? Date()
+        return abs(lastSignInAt.timeIntervalSince(user.createdAt)) < 60
     }
 
     // MARK: - Reset Password
@@ -128,6 +149,7 @@ final class AuthManager: ObservableObject {
     // MARK: - Sign Out
     func signOut() async throws {
         try await authService.signOut()
+        Analytics.reset()
         self.currentUser = nil
         self.isAuthenticated = false
     }
@@ -135,6 +157,7 @@ final class AuthManager: ObservableObject {
     // MARK: - Delete Account
     func deleteAccount() async throws {
         try await authService.deleteAccount()
+        Analytics.reset()
         self.currentUser = nil
         self.isAuthenticated = false
     }

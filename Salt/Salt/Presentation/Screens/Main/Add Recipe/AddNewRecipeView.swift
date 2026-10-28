@@ -123,6 +123,8 @@ struct ImportRecipeView: View {
     @State private var showingImportLimitAlert = false
     @FocusState private var isLinkFieldFocused: Bool
     @ObservedObject private var shareImportRouter = ShareImportRouter.shared
+    /// Last link received from the Share Extension, so analytics can tell shared links from pasted ones
+    @State private var sharedLink: String?
 
     // Callback to switch to My Recipes tab
     var switchToMyRecipes: (() -> Void)?
@@ -286,15 +288,17 @@ struct ImportRecipeView: View {
         // put its text back after the link is cleared on save
         isLinkFieldFocused = false
 
+        let entry = recipeLink == sharedLink ? "share_extension" : "pasted"
+
         // Free users who've used all their imports are told so, then offered the paywall.
         // The link stays in the field so the import can continue after upgrading.
         guard await SubscriptionManager.shared.canImportRecipe() else {
-            Analytics.log(.importLimitReached)
+            Analytics.log(.importLimitReached, ["entry": entry])
             showingImportLimitAlert = true
             return
         }
 
-        await viewModel.importRecipe(from: recipeLink)
+        await viewModel.importRecipe(from: recipeLink, entry: entry)
         if viewModel.importedRecipe != nil {
             navigateToPreview = true
         }
@@ -320,6 +324,7 @@ struct ImportRecipeView: View {
         viewModel.clearImport()
         PendingSaveDataStorage.shared.clear()
         recipeLink = sharedUrl
+        sharedLink = sharedUrl
 
         Task { await startImport() }
     }

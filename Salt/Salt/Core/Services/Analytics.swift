@@ -19,6 +19,7 @@ enum Analytics {
         case authFailed = "auth_failed"
 
         // Add Recipe
+        case shareLinkReceived = "share_link_received"
         case importStarted = "import_started"
         case importFailed = "import_failed"
         case recipeImported = "recipe_imported"
@@ -61,8 +62,18 @@ enum Analytics {
         case purchasesRestored = "purchases_restored"
     }
 
+    /// When the app process started, set in `configure()`
+    private static var launchedAt = Date()
+
+    /// True for a few seconds after the app process starts, so events can tell
+    /// a cold launch (e.g. opened from the Share Extension) from an app already running
+    static var isColdLaunch: Bool {
+        Date().timeIntervalSince(launchedAt) < 10
+    }
+
     /// Call once at launch
     static func configure() {
+        launchedAt = Date()
         guard AnalyticsConfig.isConfigured else { return }
 
         let config = PostHogConfig(projectToken: AnalyticsConfig.postHogAPIKey, host: AnalyticsConfig.postHogHost)
@@ -80,14 +91,19 @@ enum Analytics {
         PostHogSDK.shared.setup(config)
     }
 
-    /// Ties events to the signed-in Supabase user, or starts a new anonymous user on sign out
+    /// Ties events to the signed-in Supabase user. Anonymous events from before sign-in
+    /// (like Application Installed) are merged into that user.
+    /// A nil id does nothing: it's also nil at launch before the session loads, and resetting
+    /// then would orphan the install event. Sign out calls `reset()` instead.
     static func setUser(id userId: String?) {
+        guard AnalyticsConfig.isConfigured, let userId else { return }
+        PostHogSDK.shared.identify(userId)
+    }
+
+    /// Starts a new anonymous user. Call only on an explicit sign out or account deletion.
+    static func reset() {
         guard AnalyticsConfig.isConfigured else { return }
-        if let userId {
-            PostHogSDK.shared.identify(userId)
-        } else {
-            PostHogSDK.shared.reset()
-        }
+        PostHogSDK.shared.reset()
     }
 
     /// Keeps the Premium status on the user's profile, for comparing free and Premium users
