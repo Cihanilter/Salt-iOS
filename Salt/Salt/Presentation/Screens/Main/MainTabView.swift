@@ -65,7 +65,7 @@ struct MainTabView: View {
         TabView(selection: tabSelection) {
             // Explore Tab
             NavigationStack {
-                ExploreRecipesView(scrollToTopTrigger: exploreScrollToTop)
+                ExploreRecipesView(scrollToTopTrigger: exploreScrollToTop, switchToAddRecipe: { selectedTab = 1 })
                     .navigationBarHidden(true)
             }
             .tabItem {

@@ -8,6 +8,7 @@ import SwiftUI
 import Combine
 
 enum AuthRoute: Hashable {
+    case onboarding
     case login
     case signUp
     case forgotPassword
@@ -26,5 +27,11 @@ final class AuthRouter: ObservableObject {
 
     func navigateToRoot() {
         path.removeLast(path.count)
+    }
+
+    /// Shows `route` directly above the Welcome screen, so going back always returns there
+    /// (switching between Log in and Sign up doesn't stack screens)
+    func replace(with route: AuthRoute) {
+        path = NavigationPath([route])
     }
 }
