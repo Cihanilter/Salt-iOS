@@ -53,7 +53,7 @@ struct WelcomeView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 16)
         }
-        .background(Color("Alabaster").ignoresSafeArea())
+        .background(Color.white.ignoresSafeArea())
     }
 }
 
@@ -206,7 +206,7 @@ struct OnboardingFlowView: View {
 
             footer
         }
-        .background(Color("Alabaster").ignoresSafeArea())
+        .background(Color.white.ignoresSafeArea())
         .sensoryFeedback(.selection, trigger: goals)
         .sensoryFeedback(.selection, trigger: sources)
         .sensoryFeedback(.selection, trigger: referral)

@@ -591,7 +591,7 @@ private struct TutorialImportingView: View {
                 .font(.custom("Playfair9pt-Regular", size: 22))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color("PeachCream").ignoresSafeArea())
+        .background(Color.white.ignoresSafeArea())
     }
 }
 
@@ -642,7 +642,7 @@ private struct TutorialImportedView: View {
             .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color("PeachCream").opacity(0.5).ignoresSafeArea())
+        .background(Color.white.ignoresSafeArea())
     }
 
     private var recipeCard: some View {
