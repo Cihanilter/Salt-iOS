@@ -21,11 +21,13 @@ class RecipeImportViewModel: ObservableObject {
     // MARK: - Private Properties
 
     private let importService = RecipeImportService.shared
+    /// How the current import started ("pasted" or "share_extension"), sent with its analytics events
+    private var importEntry = "pasted"
 
     // MARK: - Public Methods
 
-    /// Import recipe from URL string
-    func importRecipe(from urlString: String) async {
+    /// Import recipe from URL string. `entry` says how the link got here, for analytics.
+    func importRecipe(from urlString: String, entry: String = "pasted") async {
         let trimmedUrl = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedUrl.isEmpty else {
@@ -45,8 +47,9 @@ class RecipeImportViewModel: ObservableObject {
         // Reset so the view sees this import's save as a change and clears the link again
         savedSuccessfully = false
 
+        importEntry = entry
         let source = Analytics.importSource(for: finalUrl)
-        Analytics.log(.importStarted, ["source": source])
+        Analytics.log(.importStarted, ["source": source, "entry": entry])
         let startedAt = Date()
 
         do {
@@ -65,6 +68,7 @@ class RecipeImportViewModel: ObservableObject {
         if let errorMessage {
             Analytics.log(.importFailed, [
                 "source": source,
+                "entry": entry,
                 "error": errorMessage,
                 "duration_seconds": Int(Date().timeIntervalSince(startedAt))
             ])
@@ -80,7 +84,10 @@ class RecipeImportViewModel: ObservableObject {
         do {
             _ = try await RecipeService.shared.saveImportedRecipe(recipe)
             print("✅ Saved recipe: \(recipe.title)")
-            Analytics.log(.recipeImported, ["source": Analytics.importSource(for: recipe.sourceUrl)])
+            Analytics.log(.recipeImported, [
+                "source": Analytics.importSource(for: recipe.sourceUrl),
+                "entry": importEntry
+            ])
             savedSuccessfully = true
             // Note: Don't clear import here - let the preview screen handle it
             return true
@@ -125,6 +132,7 @@ class RecipeImportViewModel: ObservableObject {
             print("✅ Saved edited recipe: \(recipeDetail.title)")
             Analytics.log(.recipeImported, [
                 "source": Analytics.importSource(for: importedRecipe?.sourceUrl),
+                "entry": importEntry,
                 "photos_added": validPhotos.count
             ])
             savedSuccessfully = true

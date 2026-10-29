@@ -29,6 +29,13 @@ final class ShareImportRouter: ObservableObject {
             return true
         }
 
+        // Start of the share funnel: signed-out users hit sign-in before the import runs
+        Analytics.log(.shareLinkReceived, [
+            "source": Analytics.importSource(for: recipeUrl),
+            "cold_launch": Analytics.isColdLaunch,
+            "signed_in": AuthManager.shared.hasStoredSession
+        ])
+
         pendingUrl = recipeUrl
         return true
     }
