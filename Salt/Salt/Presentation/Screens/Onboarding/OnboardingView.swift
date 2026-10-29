@@ -236,7 +236,7 @@ struct OnboardingFlowView: View {
             // The questionnaire continues after the tutorial, however it ended
             goForward()
         }) {
-            ShareTutorialView(context: .onboarding) { outcome in
+            ShareTutorialView(context: .onboarding, sources: tutorialSources) { outcome in
                 tutorialOutcome = outcome
                 showingTutorial = false
             }
@@ -368,6 +368,18 @@ struct OnboardingFlowView: View {
             ImportSourcesIllustration()
                 .padding(.top, 32)
         }
+    }
+
+    /// Social media walkthrough first (unless only websites were picked), then websites if picked
+    private var tutorialSources: [ShareTutorialView.Source] {
+        var tutorials: [ShareTutorialView.Source] = []
+        if sources.isEmpty || sources.contains(where: { $0 != .websites }) {
+            tutorials.append(.social)
+        }
+        if sources.contains(.websites) {
+            tutorials.append(.website)
+        }
+        return tutorials
     }
 
     /// Names the apps the user picked, plus websites

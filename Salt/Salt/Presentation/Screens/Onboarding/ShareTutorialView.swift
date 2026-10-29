@@ -2,8 +2,9 @@
 //  ShareTutorialView.swift
 //  Salt
 //
-//  Interactive walkthrough of importing a recipe from social media: the user taps
-//  Share > Share to... > Salt on a mock post and sees the recipe land in Salt.
+//  Interactive walkthrough of importing a recipe: the user taps Share > Share to... >
+//  More > Salt on a mock social post (or ••• > Share > More > Salt on a recipe website
+//  in Safari) and sees the recipe land in Salt.
 //  Used at the end of onboarding and from the Explore banner.
 //
 
@@ -25,10 +26,21 @@ struct ShareTutorialView: View {
         case skipped
     }
 
+    /// What the walkthrough imports from
+    enum Source: String {
+        /// A recipe post in a social app (Instagram, TikTok...)
+        case social
+        /// A recipe website in Safari
+        case website
+    }
+
     let context: Context
+    /// Played in order; the next one starts after the first is imported
+    let sources: [Source]
     let onFinish: (Outcome) -> Void
 
     @State private var step: Step
+    @State private var sourceIndex = 0
     /// Bumped when the user taps outside the highlighted target, to bounce the hint
     @State private var missedTaps = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -37,14 +49,25 @@ struct ShareTutorialView: View {
     private let recipe = TutorialSampleRecipe.current
 
     /// `step` is only for previews; the tutorial always starts on the post
-    init(context: Context, startingAt step: Step = .post, onFinish: @escaping (Outcome) -> Void) {
+    init(context: Context, sources: [Source] = [.social], startingAt step: Step = .post, onFinish: @escaping (Outcome) -> Void) {
         self.context = context
+        self.sources = sources.isEmpty ? [.social] : sources
         self.onFinish = onFinish
         _step = State(initialValue: step)
     }
 
+    private var source: Source { sources[sourceIndex] }
+    private var hasNextSource: Bool { sourceIndex < sources.count - 1 }
+
+    private var primaryTitle: String {
+        if hasNextSource { return "Next: recipe websites" }
+        return context == .explore ? "Try it on Instagram" : "Continue"
+    }
+
     enum Step: Int {
+        /// The social post, or the recipe website
         case post
+        /// The social app's share sheet, or Safari's ••• menu
         case appShareSheet
         case systemShareSheet
         case appsList
@@ -68,13 +91,13 @@ struct ShareTutorialView: View {
         ZStack {
             switch step {
             case .post, .appShareSheet, .systemShareSheet, .appsList:
-                socialAppScreen
+                appScreen
                     .transition(.opacity)
             case .importing:
                 TutorialImportingView()
                     .transition(.opacity)
             case .imported:
-                TutorialImportedView(recipe: recipe, context: context, onPrimary: finishPrimary, onPasteLink: {
+                TutorialImportedView(recipe: recipe, context: context, primaryTitle: primaryTitle, showsPasteLink: context == .explore && !hasNextSource, onPrimary: finishPrimary, onPasteLink: {
                     finish(.pasteLink)
                 })
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -95,7 +118,7 @@ struct ShareTutorialView: View {
         .sensoryFeedback(.impact(weight: .light), trigger: step)
         .sensoryFeedback(.warning, trigger: missedTaps)
         .onAppear {
-            Analytics.log(.importTutorialStarted, ["context": context.rawValue])
+            logStarted()
         }
         .task(id: step) {
             // Shows the import running for a moment, like the real share extension.
@@ -104,26 +127,40 @@ struct ShareTutorialView: View {
             try? await Task.sleep(for: .seconds(1.6))
             guard !Task.isCancelled else { return }
             advance(to: .imported)
-            Analytics.log(.importTutorialCompleted, ["context": context.rawValue])
+            Analytics.log(.importTutorialCompleted, ["context": context.rawValue, "source": source.rawValue])
         }
     }
 
-    // MARK: - Mock Social App
+    // MARK: - Mock App
 
-    /// A recipe post in a social app, with the app's and the iOS share sheets on top
-    private var socialAppScreen: some View {
+    /// A recipe post in a social app (or a recipe website in Safari), with the app's
+    /// and the iOS share sheets on top
+    private var appScreen: some View {
         ZStack(alignment: .bottom) {
-            TutorialPostView(recipe: recipe, isDimmed: step != .post, missedTaps: missedTaps, onShare: { advance(to: .appShareSheet) })
-                .contentShape(Rectangle())
-                .onTapGesture { missedTap() }
+            Group {
+                switch source {
+                case .social:
+                    TutorialPostView(recipe: recipe, isDimmed: step != .post, missedTaps: missedTaps, onShare: { advance(to: .appShareSheet) })
+                case .website:
+                    TutorialWebsiteView(recipe: recipe, isDimmed: step != .post, missedTaps: missedTaps, onMenu: { advance(to: .appShareSheet) })
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { missedTap() }
 
             if step == .appShareSheet {
-                TutorialAppShareSheet(missedTaps: missedTaps, onShareTo: { advance(to: .systemShareSheet) })
-                    .transition(.move(edge: .bottom))
+                switch source {
+                case .social:
+                    TutorialAppShareSheet(missedTaps: missedTaps, onShareTo: { advance(to: .systemShareSheet) })
+                        .transition(.move(edge: .bottom))
+                case .website:
+                    TutorialSafariMenu(missedTaps: missedTaps, onShare: { advance(to: .systemShareSheet) })
+                        .transition(.scale(scale: 0.6, anchor: .bottomTrailing).combined(with: .opacity))
+                }
             }
 
             if step == .systemShareSheet {
-                TutorialSystemShareSheet(recipe: recipe, missedTaps: missedTaps, onMore: { advance(to: .appsList) })
+                TutorialSystemShareSheet(recipe: recipe, source: source, missedTaps: missedTaps, onMore: { advance(to: .appsList) })
                     .transition(.move(edge: .bottom))
             }
 
@@ -146,7 +183,18 @@ struct ShareTutorialView: View {
         missedTaps += 1
     }
 
+    private func logStarted() {
+        Analytics.log(.importTutorialStarted, ["context": context.rawValue, "source": source.rawValue])
+    }
+
     private func finishPrimary() {
+        if hasNextSource {
+            // On to the next walkthrough, e.g. websites after social media
+            sourceIndex += 1
+            logStarted()
+            advance(to: .post)
+            return
+        }
         if context == .explore {
             // The real thing: open Instagram to share a recipe; without Instagram, paste a link
             openURL(URL(string: "instagram://app")!) { opened in
@@ -159,7 +207,7 @@ struct ShareTutorialView: View {
 
     private func finish(_ outcome: Outcome) {
         if outcome == .skipped {
-            Analytics.log(.importTutorialSkipped, ["context": context.rawValue, "step": step.analyticsName])
+            Analytics.log(.importTutorialSkipped, ["context": context.rawValue, "source": source.rawValue, "step": step.analyticsName])
         }
         onFinish(outcome)
     }
@@ -476,6 +524,7 @@ private struct TutorialAppShareSheet: View {
 /// tutorial goes through More, like a first real share would.
 private struct TutorialSystemShareSheet: View {
     let recipe: TutorialSampleRecipe
+    let source: ShareTutorialView.Source
     let missedTaps: Int
     let onMore: () -> Void
 
@@ -487,10 +536,11 @@ private struct TutorialSystemShareSheet: View {
                     .frame(width: 44, height: 44)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Post from dinnerin10")
+                    Text(source == .website ? recipe.title : "Post from dinnerin10")
                         .font(.custom("OpenSans-SemiBold", size: 14))
                         .foregroundColor(.black)
-                    Text("instagram.com")
+                        .lineLimit(1)
+                    Text(source == .website ? TutorialWebsiteView.domain : "instagram.com")
                         .font(.custom("OpenSans-Regular", size: 12))
                         .foregroundColor(Color(.systemGray))
                 }
@@ -643,6 +693,185 @@ private struct TutorialAppsListSheet: View {
     }
 }
 
+// MARK: - Website: Recipe Page in Safari
+
+/// A recipe blog post in Safari, with the iOS 26 bottom bar (Share is under •••)
+private struct TutorialWebsiteView: View {
+    static let domain = "dinnerin10.com"
+
+    let recipe: TutorialSampleRecipe
+    let isDimmed: Bool
+    let missedTaps: Int
+    let onMenu: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // No icons on the right: the Skip button sits there
+            Text("Dinner in 10")
+                .font(.custom("Playfair9pt-SemiBold", size: 20))
+                .foregroundColor(.black)
+                .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+
+            Divider()
+
+            TutorialRecipePhoto(url: recipe.imageUrl)
+                .frame(height: 230)
+                .frame(maxWidth: .infinity)
+                .clipped()
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("DINNER · QUICK MEALS")
+                    .font(.custom("OpenSans-SemiBold", size: 11))
+                    .tracking(1)
+                    .foregroundColor(Color("Orange"))
+                Text(recipe.title)
+                    .font(.custom("Playfair9pt-SemiBold", size: 26))
+                    .foregroundColor(.black)
+                HStack(spacing: 2) {
+                    ForEach(0..<5, id: \.self) { _ in
+                        Image(systemName: "star.fill")
+                    }
+                    Text("4.8 (126 reviews)")
+                        .font(.custom("OpenSans-Regular", size: 12))
+                        .foregroundColor(Color("GraniteGray"))
+                        .padding(.leading, 4)
+                }
+                .font(.system(size: 11))
+                .foregroundColor(Color(red: 1.0, green: 0.76, blue: 0.03))
+
+                Label("Jump to Recipe", systemImage: "arrow.down")
+                    .font(.custom("OpenSans-SemiBold", size: 13))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Color.black))
+
+                // Blog text
+                VStack(alignment: .leading, spacing: 9) {
+                    ForEach([1.0, 0.95, 1.0, 0.8, 1.0, 0.6], id: \.self) { width in
+                        Capsule()
+                            .fill(Color(.systemGray5))
+                            .frame(height: 8)
+                            .containerRelativeFrame(.horizontal) { length, _ in (length - 40) * width }
+                    }
+                }
+                .padding(.top, 4)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+
+            Spacer(minLength: 0)
+
+            toolbar
+        }
+        .background(Color.white.ignoresSafeArea())
+        .overlay(Color.black.opacity(isDimmed ? 0.45 : 0).ignoresSafeArea())
+    }
+
+    private var toolbar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "chevron.left")
+                .font(.system(size: 17, weight: .semibold))
+                .frame(width: 44, height: 44)
+                .background(Circle().fill(Color.white))
+                .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+
+            HStack(spacing: 6) {
+                Image(systemName: "text.page")
+                    .font(.system(size: 13))
+                Text(Self.domain)
+                    .font(.custom("OpenSans-Regular", size: 15))
+                Spacer(minLength: 0)
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 13))
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 44)
+            .background(Capsule().fill(Color.white))
+            .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+
+            Button(action: onMenu) {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 17, weight: .semibold))
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(Color.white))
+                    .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+            }
+            .buttonStyle(.plain)
+            .disabled(isDimmed)
+            .tutorialPulse()
+            .opacity(isDimmed ? 0 : 1)
+            .accessibilityLabel("More")
+            .accessibilityHint("Step 1 of 4")
+            // Hint above the button, ending at the screen edge
+            .overlay(alignment: .bottomTrailing) {
+                if !isDimmed {
+                    TutorialHint(text: "TAP •••", missedTaps: missedTaps)
+                        .fixedSize()
+                        .padding(.bottom, 64)
+                        .allowsHitTesting(false)
+                }
+            }
+        }
+        .foregroundColor(.black)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
+    }
+}
+
+/// Safari's ••• menu, opening up from the bottom bar
+private struct TutorialSafariMenu: View {
+    let missedTaps: Int
+    let onShare: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Button(action: onShare) {
+                menuRow("Share", systemImage: "square.and.arrow.up")
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .tutorialPulse(cornerRadius: 12)
+            .accessibilityLabel("Share")
+            .accessibilityHint("Step 2 of 4")
+            Divider()
+            menuRow("Add to Bookmarks", systemImage: "book")
+            Divider()
+            menuRow("Add to Favorites", systemImage: "star")
+            Divider()
+            menuRow("Find on Page", systemImage: "doc.text.magnifyingglass")
+            Divider()
+            menuRow("Add to Home Screen", systemImage: "plus.square")
+        }
+        .frame(width: 260)
+        .background(RoundedRectangle(cornerRadius: 18).fill(Color.white))
+        .shadow(color: .black.opacity(0.2), radius: 20, y: 6)
+        .overlay(alignment: .top) {
+            TutorialHint(text: "TAP SHARE", missedTaps: missedTaps)
+                .fixedSize()
+                .offset(y: -56)
+                .allowsHitTesting(false)
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .padding(.trailing, 16)
+        .padding(.bottom, 64)
+    }
+
+    private func menuRow(_ title: String, systemImage: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.custom("OpenSans-Regular", size: 16))
+            Spacer()
+            Image(systemName: systemImage)
+                .font(.system(size: 16))
+        }
+        .foregroundColor(.black)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+}
+
 // MARK: - Sheet Building Blocks
 
 private struct TutorialAppIcon: View {
@@ -714,6 +943,8 @@ private struct TutorialImportingView: View {
 private struct TutorialImportedView: View {
     let recipe: TutorialSampleRecipe
     let context: ShareTutorialView.Context
+    let primaryTitle: String
+    let showsPasteLink: Bool
     let onPrimary: () -> Void
     let onPasteLink: () -> Void
 
@@ -739,14 +970,14 @@ private struct TutorialImportedView: View {
 
             VStack(spacing: 12) {
                 Button(action: onPrimary) {
-                    Text(context == .explore ? "Try it on Instagram" : "Continue")
+                    Text(primaryTitle)
                         .font(.custom("OpenSans-SemiBold", size: 16))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
                         .background(RoundedRectangle(cornerRadius: 16).fill(Color("Orange")))
                 }
-                if context == .explore {
+                if showsPasteLink {
                     Button("Paste a link instead", action: onPasteLink)
                         .font(.custom("OpenSans-Regular", size: 15))
                         .foregroundColor(Color("OrangeRed"))
@@ -827,6 +1058,14 @@ private struct TutorialImportedView: View {
 
 #Preview("Apps List") {
     ShareTutorialView(context: .onboarding, startingAt: .appsList) { _ in }
+}
+
+#Preview("Website") {
+    ShareTutorialView(context: .onboarding, sources: [.website]) { _ in }
+}
+
+#Preview("Safari Menu") {
+    ShareTutorialView(context: .onboarding, sources: [.website], startingAt: .appShareSheet) { _ in }
 }
 
 #Preview("Imported (Explore)") {
