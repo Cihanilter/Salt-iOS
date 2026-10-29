@@ -11,8 +11,6 @@ import SwiftUI
 
 /// Onboarding values kept on the device until sign-up
 enum OnboardingStorage {
-    /// Set once the questions have been answered, so Get started goes straight to Create account
-    static let completedKey = "hasCompletedOnboarding"
     /// Name from "What should we call you?", pre-filled on the email sign-up form
     static let nameKey = "onboardingName"
 }
@@ -43,7 +41,6 @@ struct OnboardingReview {
 
 struct WelcomeView: View {
     @ObservedObject var router: AuthRouter
-    @AppStorage(OnboardingStorage.completedKey) private var hasCompletedOnboarding = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -59,7 +56,7 @@ struct WelcomeView: View {
 
             VStack(spacing: 14) {
                 OnboardingPrimaryButton(title: "Get started") {
-                    router.navigate(to: hasCompletedOnboarding ? .createAccount : .onboarding)
+                    router.navigate(to: .onboarding)
                 }
 
                 HStack(spacing: 4) {
@@ -143,7 +140,7 @@ private enum OnboardingPage: Int, CaseIterable {
     }
 }
 
-/// Where the user gets recipes, on "Where do you get your recipes from?"
+/// Where the user keeps recipes, on "Where do you usually store your recipes?"
 private enum RecipeSource: String, CaseIterable, Identifiable {
     case instagram
     case tiktok
@@ -177,7 +174,9 @@ private enum RecipeSource: String, CaseIterable, Identifiable {
 
 struct OnboardingFlowView: View {
     @ObservedObject var router: AuthRouter
-    @AppStorage(OnboardingStorage.completedKey) private var hasCompletedOnboarding = false
+    /// Set when Create account opens on top, so coming back lands on the page before Setting up
+    @State private var didOpenCreateAccount = false
+    @State private var hasLoggedStart = false
 
     @State private var page: OnboardingPage
     @State private var name = ""
@@ -223,7 +222,15 @@ struct OnboardingFlowView: View {
         .background(Color.white.ignoresSafeArea())
         .sensoryFeedback(.selection, trigger: sources)
         .onAppear {
-            Analytics.log(.onboardingStarted)
+            if !hasLoggedStart {
+                hasLoggedStart = true
+                Analytics.log(.onboardingStarted)
+            }
+            // Back from Create account: Setting up only runs forwards, so show the page before it
+            if didOpenCreateAccount {
+                didOpenCreateAccount = false
+                page = .showHow
+            }
         }
         .fullScreenCover(isPresented: $showingTutorial, onDismiss: {
             // The questionnaire continues after the tutorial, however it ended
@@ -301,7 +308,7 @@ struct OnboardingFlowView: View {
     private var introPage: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 6) {
-                Text("We're helping cooks")
+                Text("We've helped thousands of cooks")
                     .font(.custom("Playfair9pt-SemiBold", size: 26))
                 Text("be more organized")
                     .font(.custom("Playfair9pt-SemiBold", size: 26))
@@ -339,7 +346,7 @@ struct OnboardingFlowView: View {
 
     private var sourcesPage: some View {
         ScrollView(showsIndicators: false) {
-            OnboardingTitle(title: "Where do you get your recipes from?", subtitle: "Select all that apply")
+            OnboardingTitle(title: "Where do you usually store your recipes?", subtitle: "Select all that apply")
                 .padding(.bottom, 24)
 
             VStack(spacing: 10) {
@@ -390,7 +397,8 @@ struct OnboardingFlowView: View {
         }
         .task {
             try? await Task.sleep(for: .seconds(2.5))
-            guard !Task.isCancelled else { return }
+            // Not again when coming back from Create account
+            guard !Task.isCancelled, !didOpenCreateAccount else { return }
             goForward()
         }
     }
@@ -456,8 +464,9 @@ struct OnboardingFlowView: View {
             userProperties: ["onboarding_recipe_sources": sources.map(\.rawValue).sorted()]
         )
         UserDefaults.standard.set(name.trimmed, forKey: OnboardingStorage.nameKey)
-        hasCompletedOnboarding = true
-        router.replace(with: .createAccount)
+        // Pushed on top, so Create account's back button returns here
+        didOpenCreateAccount = true
+        router.navigate(to: .createAccount)
     }
 }
 
@@ -475,7 +484,7 @@ struct OnboardingAccountView: View {
                 OnboardingLogo()
                 HStack(spacing: 14) {
                     Button {
-                        router.navigateToRoot()
+                        router.navigateBack()
                     } label: {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 18, weight: .semibold))
