@@ -327,16 +327,11 @@ struct OnboardingFlowView: View {
             }
             .multilineTextAlignment(.center)
             .padding(.horizontal, 24)
-            .padding(.top, 12)
+            .padding(.top, 28)
 
-            VStack(spacing: 14) {
-                ForEach(OnboardingReview.featured) { review in
-                    ReviewCard(review: review)
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 24)
-            .padding(.bottom, 16)
+            ReviewSlider(reviews: OnboardingReview.featured)
+                .padding(.top, 24)
+                .padding(.bottom, 16)
         }
     }
 
@@ -650,6 +645,50 @@ private struct OnboardingTitle: View {
     }
 }
 
+/// Reviews one at a time: swipe between them, or they move on every few seconds
+private struct ReviewSlider: View {
+    let reviews: [OnboardingReview]
+
+    @State private var index = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        VStack(spacing: 14) {
+            TabView(selection: $index) {
+                ForEach(Array(reviews.enumerated()), id: \.element.id) { offset, review in
+                    ReviewCard(review: review)
+                        .padding(.horizontal, 20)
+                        // Room for the card's shadow
+                        .padding(.vertical, 10)
+                        .tag(offset)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: 228)
+
+            // Page dots in the app's colors (the system ones are white)
+            HStack(spacing: 8) {
+                ForEach(reviews.indices, id: \.self) { dot in
+                    Capsule()
+                        .fill(dot == index ? Color("Orange") : Color("GrayButtonBorderColor"))
+                        .frame(width: dot == index ? 18 : 8, height: 8)
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: index)
+            .accessibilityHidden(true)
+        }
+        // Restarts after every change, so a swipe gets the full time before it moves on
+        .task(id: index) {
+            guard !reduceMotion, reviews.count > 1 else { return }
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeInOut(duration: 0.4)) {
+                index = (index + 1) % reviews.count
+            }
+        }
+    }
+}
+
 /// Five stars, the quote and the reviewer, like an App Store review
 private struct ReviewCard: View {
     let review: OnboardingReview
@@ -688,6 +727,8 @@ private struct ReviewCard: View {
                     .font(.custom("OpenSans-SemiBold", size: 14))
             }
         }
+        // Same height for every card in the slider, content at the top
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(20)
         .background(RoundedRectangle(cornerRadius: 20).fill(Color.white))
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color("GrayButtonBorderColor"), lineWidth: 1))
