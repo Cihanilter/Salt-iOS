@@ -30,6 +30,15 @@ enum LaunchPaywall {
 
         // Accounts made in the last day are new; everyone else has used Salt before
         let isNew = lastShown == nil && Date().timeIntervalSince(user.createdAt) < 24 * 60 * 60
+
+        // A new account that just saw the paywall in onboarding isn't shown it again right away;
+        // the every-other-day interval starts from then
+        if isNew, let onboardingShown = UserDefaults.standard.object(forKey: OnboardingStorage.paywallShownKey) as? Date,
+           Date().timeIntervalSince(onboardingShown) < 24 * 60 * 60 {
+            UserDefaults.standard.set(onboardingShown, forKey: key(for: user.id))
+            return nil
+        }
+
         return isNew ? .newAccount : .returning
     }
 
