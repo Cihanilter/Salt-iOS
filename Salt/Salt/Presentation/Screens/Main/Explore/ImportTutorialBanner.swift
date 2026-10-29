@@ -15,7 +15,10 @@ struct ImportTutorialBanner: View {
     /// Opens the Add Recipe tab on Create
     let openCreateRecipe: () -> Void
 
-    @AppStorage("importBannerDismissed") private var isDismissed = false
+    /// Saved on the device, so it's cleared on sign out (see `resetDismissal()`)
+    private static let dismissedKey = "importBannerDismissed"
+
+    @AppStorage(dismissedKey) private var isDismissed = false
     /// Hidden until we know the user has no imports, so it doesn't flash for existing users
     @State private var hasImported = true
     @State private var showingOptions = false
@@ -71,6 +74,11 @@ struct ImportTutorialBanner: View {
                 tutorialSource = nil
             }
         }
+    }
+
+    /// Shows the banner again for the next account signed in on this device
+    static func resetDismissal() {
+        UserDefaults.standard.removeObject(forKey: dismissedKey)
     }
 
     /// The tutorial can only open once the sheet is fully closed
