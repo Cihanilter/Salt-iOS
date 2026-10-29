@@ -115,10 +115,7 @@ struct SaveToCollectionPrompt: View {
 
     private var pickStep: some View {
         VStack(alignment: .leading, spacing: 16) {
-            header(
-                title: "Add to a collection?",
-                subtitle: "Group recipes like weeknight dinners or desserts, so they're easy to find."
-            )
+            header(title: "Add to a collection?")
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 8) {
@@ -288,14 +285,16 @@ struct SaveToCollectionPrompt: View {
 
     // MARK: - Building Blocks
 
-    private func header(title: String, subtitle: String) -> some View {
+    private func header(title: String, subtitle: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.custom("Playfair9pt-SemiBold", size: 24))
-            Text(subtitle)
-                .font(.custom("OpenSans-Regular", size: 14))
-                .foregroundColor(Color("GraniteGray"))
-                .fixedSize(horizontal: false, vertical: true)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.custom("OpenSans-Regular", size: 14))
+                    .foregroundColor(Color("GraniteGray"))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

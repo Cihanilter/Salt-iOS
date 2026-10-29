@@ -677,7 +677,11 @@ struct RecipeDetailView: View {
                                 showSavedHeader = true
                             }
                             if let id = savedRecipeId?(), SaveToCollectionPrompt.shouldShow {
-                                collectionPromptRef = .own(id)
+                                // Lets "Saved to My Recipes" show for a moment first
+                                Task {
+                                    try? await Task.sleep(for: .seconds(1.5))
+                                    collectionPromptRef = .own(id)
+                                }
                             }
                         }
                     }
