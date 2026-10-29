@@ -151,6 +151,7 @@ final class AuthManager: ObservableObject {
         try await authService.signOut()
         Analytics.reset()
         ImportTutorialBanner.resetDismissal()
+        SaveToCollectionPrompt.resetOptOut()
         self.currentUser = nil
         self.isAuthenticated = false
     }
@@ -160,6 +161,7 @@ final class AuthManager: ObservableObject {
         try await authService.deleteAccount()
         Analytics.reset()
         ImportTutorialBanner.resetDismissal()
+        SaveToCollectionPrompt.resetOptOut()
         self.currentUser = nil
         self.isAuthenticated = false
     }

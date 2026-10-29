@@ -676,7 +676,7 @@ struct RecipeDetailView: View {
                                 hasBeenSaved = true
                                 showSavedHeader = true
                             }
-                            if let id = savedRecipeId?() {
+                            if let id = savedRecipeId?(), SaveToCollectionPrompt.shouldShow {
                                 collectionPromptRef = .own(id)
                             }
                         }

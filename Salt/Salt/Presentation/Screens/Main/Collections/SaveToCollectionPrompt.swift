@@ -37,8 +37,22 @@ struct SaveToCollectionPrompt: View {
         }
     }
 
-    /// Ideas for a first collection, tapped to fill in the name
-    private static let nameSuggestions = ["Weeknight dinners", "Family favorites", "Date night", "Desserts"]
+    /// Idea for a first collection, tapped to fill in the name
+    private static let nameSuggestion = "Holiday favorites"
+
+    /// Set when the user taps Not now; the prompt isn't shown again on this device
+    /// (cleared on sign out, see `resetOptOut()`)
+    private static let optedOutKey = "collectionPromptOptedOut"
+
+    /// Whether to offer the prompt after a save
+    static var shouldShow: Bool {
+        !UserDefaults.standard.bool(forKey: optedOutKey)
+    }
+
+    /// Asks again for the next account signed in on this device
+    static func resetOptOut() {
+        UserDefaults.standard.removeObject(forKey: optedOutKey)
+    }
 
     @ObservedObject private var manager = CollectionsManager.shared
     @StateObject private var invite = CollectionInviteState()
@@ -135,7 +149,11 @@ struct SaveToCollectionPrompt: View {
                 }
             }
 
-            secondaryButton("Not now") { skip() }
+            secondaryButton("Not now") {
+                // Once is enough: don't ask after later saves
+                UserDefaults.standard.set(true, forKey: Self.optedOutKey)
+                skip()
+            }
         }
         .overlay(alignment: .bottom) {
             if let addedTo {
@@ -209,19 +227,12 @@ struct SaveToCollectionPrompt: View {
                     .monospacedDigit()
             }
 
-            // Ideas, in a scrolling row
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(Self.nameSuggestions, id: \.self) { suggestion in
-                        Button(suggestion) { name = suggestion }
-                            .font(.custom("OpenSans-Regular", size: 14))
-                            .foregroundColor(.black)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(Capsule().fill(Color("PeachCream")))
-                    }
-                }
-            }
+            Button(Self.nameSuggestion) { name = Self.nameSuggestion }
+                .font(.custom("OpenSans-Regular", size: 14))
+                .foregroundColor(.black)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(Capsule().fill(Color("PeachCream")))
 
             Spacer(minLength: 0)
 
