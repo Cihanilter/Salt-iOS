@@ -260,6 +260,7 @@ struct ImportRecipeView: View {
                         }
                         return await viewModel.saveRecipe(from: recipeDetail, photos: savedData.photos)
                     },
+                    savedRecipeId: { viewModel.savedRecipeId },
                     onAddMoreRecipes: {
                         // Clear and go back
                         recipeLink = ""
@@ -747,6 +748,7 @@ struct CreateRecipeView: View {
                     }
                     return await viewModel.saveRecipe(from: recipeDetail, photos: savedData.photos)
                 },
+                savedRecipeId: { viewModel.savedRecipeId },
                 onAddMoreRecipes: {
                     // Pop to root - reset state and dismiss
                     viewModel.reset()

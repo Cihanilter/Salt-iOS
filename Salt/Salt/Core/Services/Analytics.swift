@@ -59,6 +59,9 @@ enum Analytics {
         case collectionLeft = "collection_left"
         case collectionMemberRemoved = "collection_member_removed"
         case recipeCopiedFromCollection = "recipe_copied_from_collection"
+        /// "Add to a collection?" after saving a recipe; `step` is pick, name or invite
+        case collectionPromptShown = "collection_prompt_shown"
+        case collectionPromptSkipped = "collection_prompt_skipped"
 
         // Sharing
         case recipeShared = "recipe_shared"

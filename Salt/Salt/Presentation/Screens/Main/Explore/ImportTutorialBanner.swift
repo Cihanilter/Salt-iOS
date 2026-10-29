@@ -69,7 +69,7 @@ struct ImportTutorialBanner: View {
                 pendingOption = option
                 showingOptions = false
             }
-            .presentationDetents([.height(460)])
+            .presentationDetents([.height(420)])
             .presentationDragIndicator(.visible)
         }
         .fullScreenCover(item: $tutorialSource, onDismiss: {
@@ -255,7 +255,28 @@ private struct ImportLogosArt: View {
 private struct ImportOptionsSheet: View {
     let onSelect: (ImportBannerOption) -> Void
 
+    /// Social media opens its own page with one tile per app
+    @State var showingApps = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            if showingApps {
+                appsPage
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            } else {
+                mainPage
+                    .transition(.move(edge: .leading).combined(with: .opacity))
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 28)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.ignoresSafeArea())
+    }
+
+    private var mainPage: some View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Add your first recipe")
@@ -264,10 +285,61 @@ private struct ImportOptionsSheet: View {
                     .font(.custom("OpenSans-Regular", size: 14))
                     .foregroundColor(Color("GraniteGray"))
             }
-            .padding(.top, 28)
 
-            // One tile per social app
-            HStack(spacing: 10) {
+            VStack(spacing: 10) {
+                Button {
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) { showingApps = true }
+                } label: {
+                    optionRow(title: "From social media", subtitle: "Instagram, TikTok, Facebook, YouTube Shorts") {
+                        socialIcon
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    onSelect(.website)
+                } label: {
+                    optionRow(title: "From a website", subtitle: "Any recipe blog or website") {
+                        symbolIcon("globe")
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    onSelect(.createManually)
+                } label: {
+                    optionRow(title: "Create manually", subtitle: "Type in your own recipe") {
+                        symbolIcon("square.and.pencil")
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var appsPage: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 8) {
+                Button {
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) { showingApps = false }
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.black)
+                        .frame(width: 32, height: 32)
+                }
+                .accessibilityLabel("Back")
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("From social media")
+                        .font(.custom("Playfair9pt-SemiBold", size: 24))
+                    Text("Which app is the recipe on?")
+                        .font(.custom("OpenSans-Regular", size: 14))
+                        .foregroundColor(Color("GraniteGray"))
+                }
+            }
+
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                 ForEach(ImportBannerOption.socialApps) { option in
                     Button {
                         onSelect(option)
@@ -277,57 +349,56 @@ private struct ImportOptionsSheet: View {
                     .buttonStyle(.plain)
                 }
             }
-
-            VStack(spacing: 10) {
-                Button {
-                    onSelect(.website)
-                } label: {
-                    optionRow(title: "From a website", subtitle: "Any recipe blog or website", systemImage: "globe")
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    onSelect(.createManually)
-                } label: {
-                    optionRow(title: "Create manually", subtitle: "Type in your own recipe", systemImage: "square.and.pencil")
-                }
-                .buttonStyle(.plain)
-            }
-
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.ignoresSafeArea())
+    }
+
+    /// Two overlapping logos
+    private var socialIcon: some View {
+        ZStack {
+            Image("instagramLogo")
+                .resizable()
+                .frame(width: 20, height: 20)
+                .offset(x: -6, y: -5)
+            Image("tiktokLogo")
+                .resizable()
+                .frame(width: 20, height: 20)
+                .padding(2)
+                .background(Circle().fill(Color("PeachCream")))
+                .offset(x: 7, y: 6)
+        }
+    }
+
+    private func symbolIcon(_ systemName: String) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 22))
+            .foregroundColor(Color("Orange"))
     }
 
     private func appTile(_ option: ImportBannerOption) -> some View {
         let source = option.tutorialSource
-        return VStack(spacing: 8) {
+        return HStack(spacing: 10) {
             if let logo = source?.logo {
                 Image(logo)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 30, height: 30)
+                    .frame(width: 28, height: 28)
             }
             Text(source?.name ?? "")
-                .font(.custom("OpenSans-SemiBold", size: 12))
+                .font(.custom("OpenSans-SemiBold", size: 15))
                 .foregroundColor(.black)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .minimumScaleFactor(0.85)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 92)
+        .padding(.horizontal, 14)
+        .frame(height: 64)
         .background(RoundedRectangle(cornerRadius: 16).stroke(Color("GrayButtonBorderColor"), lineWidth: 1))
         .contentShape(Rectangle())
     }
 
-    private func optionRow(title: String, subtitle: String, systemImage: String) -> some View {
+    private func optionRow<Icon: View>(title: String, subtitle: String, @ViewBuilder icon: () -> Icon) -> some View {
         HStack(spacing: 14) {
-            Image(systemName: systemImage)
-                .font(.system(size: 22))
-                .foregroundColor(Color("Orange"))
+            icon()
                 .frame(width: 48, height: 48)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color("PeachCream")))
 
@@ -338,6 +409,8 @@ private struct ImportOptionsSheet: View {
                 Text(subtitle)
                     .font(.custom("OpenSans-Regular", size: 13))
                     .foregroundColor(Color("GraniteGray"))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
             }
 
             Spacer(minLength: 0)
@@ -359,4 +432,8 @@ private struct ImportOptionsSheet: View {
 
 #Preview("Options") {
     ImportOptionsSheet { _ in }
+}
+
+#Preview("Social Apps") {
+    ImportOptionsSheet(onSelect: { _ in }, showingApps: true)
 }
