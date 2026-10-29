@@ -25,15 +25,15 @@ struct OnboardingReview {
     /// Image in the asset catalog; initials are shown without one
     let avatarImage: String?
 
-    #warning("Replace the placeholder with a real user review before release")
     static let featured = OnboardingReview(
-        quote: "Placeholder: paste a real review here, e.g. from an App Store rating or a user who agreed to be quoted.",
-        name: "Reviewer Name",
+        quote: "I used to have recipes scattered across my social media, screenshots and notes. Salt has been a lifesaver for getting everything into one place.",
+        name: "steph291",
         avatarImage: nil
     )
 
+    /// "JD" for "Jane Doe", "S" for a username like "steph291"
     var initials: String {
-        name.split(separator: " ").prefix(2).compactMap(\.first).map(String.init).joined()
+        name.split(separator: " ").prefix(2).compactMap(\.first).map(String.init).joined().uppercased()
     }
 }
 
