@@ -17,19 +17,28 @@ enum OnboardingStorage {
 
 // MARK: - Review
 
-/// The user review on the first onboarding screen.
-/// Use a real review (an App Store rating, or a user who agreed to be quoted), never a made-up one.
-struct OnboardingReview {
+/// User reviews on the first onboarding screen.
+/// Use real reviews (an App Store rating, or a user who agreed to be quoted), never made-up ones.
+struct OnboardingReview: Identifiable {
     let quote: String
     let name: String
     /// Image in the asset catalog; initials are shown without one
     let avatarImage: String?
 
-    static let featured = OnboardingReview(
-        quote: "I used to have recipes scattered across my social media, screenshots and notes. Salt has been a lifesaver for getting everything into one place.",
-        name: "steph291",
-        avatarImage: nil
-    )
+    var id: String { name }
+
+    static let featured = [
+        OnboardingReview(
+            quote: "I used to have recipes scattered across my social media, screenshots and notes. Salt has been a lifesaver for getting everything into one place.",
+            name: "steph291",
+            avatarImage: nil
+        ),
+        OnboardingReview(
+            quote: "Love how easy cooking has become with this app. All of my recipes on Instagram and TikTok are now in Salt.",
+            name: "john88j",
+            avatarImage: nil
+        )
+    ]
 
     /// "JD" for "Jane Doe", "S" for a username like "steph291"
     var initials: String {
@@ -318,11 +327,16 @@ struct OnboardingFlowView: View {
             }
             .multilineTextAlignment(.center)
             .padding(.horizontal, 24)
-            .padding(.top, 28)
+            .padding(.top, 12)
 
-            ReviewCard(review: .featured)
-                .padding(.horizontal, 20)
-                .padding(.top, 32)
+            VStack(spacing: 14) {
+                ForEach(OnboardingReview.featured) { review in
+                    ReviewCard(review: review)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 24)
+            .padding(.bottom, 16)
         }
     }
 
@@ -641,20 +655,25 @@ private struct ReviewCard: View {
     let review: OnboardingReview
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Image(systemName: "quote.opening")
-                .font(.system(size: 34, weight: .bold))
-                .foregroundColor(Color("Orange"))
-
-            HStack(spacing: 3) {
-                ForEach(0..<5, id: \.self) { _ in
-                    Image(systemName: "star.fill")
-                        .foregroundColor(Color(red: 1.0, green: 0.76, blue: 0.03))
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                HStack(spacing: 3) {
+                    ForEach(0..<5, id: \.self) { _ in
+                        Image(systemName: "star.fill")
+                            .foregroundColor(Color(red: 1.0, green: 0.76, blue: 0.03))
+                    }
                 }
+                .font(.system(size: 16))
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("5 stars")
+
+                Spacer()
+
+                Image(systemName: "quote.opening")
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundColor(Color("Orange"))
+                    .accessibilityHidden(true)
             }
-            .font(.system(size: 18))
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("5 stars")
 
             Text("\u{201C}\(review.quote)\u{201D}")
                 .font(.custom("OpenSans-Regular", size: 15))
