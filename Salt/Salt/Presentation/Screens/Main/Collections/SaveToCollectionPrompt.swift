@@ -37,9 +37,6 @@ struct SaveToCollectionPrompt: View {
         }
     }
 
-    /// Idea for a first collection, tapped to fill in the name
-    private static let nameSuggestion = "Holiday favorites"
-
     /// Set when the user taps Not now; the prompt isn't shown again on this device
     /// (cleared on sign out, see `resetOptOut()`)
     private static let optedOutKey = "collectionPromptOptedOut"
@@ -226,13 +223,6 @@ struct SaveToCollectionPrompt: View {
                     .foregroundColor(Color("GraniteGray"))
                     .monospacedDigit()
             }
-
-            Button(Self.nameSuggestion) { name = Self.nameSuggestion }
-                .font(.custom("OpenSans-Regular", size: 14))
-                .foregroundColor(.black)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(Capsule().fill(Color("PeachCream")))
 
             Spacer(minLength: 0)
 
