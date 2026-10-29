@@ -17,6 +17,9 @@ struct AuthCoordinatorView: View {
                     case .onboarding:
                         OnboardingFlowView(router: router)
                             .navigationBarHidden(true)
+                    case .createAccount:
+                        OnboardingAccountView(router: router)
+                            .navigationBarHidden(true)
                     case .login:
                         LoginView(viewModel: LoginViewModel(), router: router)
                             .navigationBarHidden(true)
@@ -33,10 +36,11 @@ struct AuthCoordinatorView: View {
         }
     }
 
-    /// Back to the Welcome screen (Login and Sign up have no back button of their own)
+    /// Back one screen: to Welcome, or to Create account from the email form
+    /// (Login and Sign up have no back button of their own)
     private var backButton: some View {
         Button {
-            router.navigateToRoot()
+            router.navigateBack()
         } label: {
             Image(systemName: "chevron.left")
                 .font(.system(size: 18, weight: .semibold))

@@ -47,6 +47,7 @@ struct ShareTutorialView: View {
         case post
         case appShareSheet
         case systemShareSheet
+        case appsList
         case importing
         case imported
 
@@ -56,6 +57,7 @@ struct ShareTutorialView: View {
             case .post: "post"
             case .appShareSheet: "app_share_sheet"
             case .systemShareSheet: "system_share_sheet"
+            case .appsList: "apps_list"
             case .importing: "importing"
             case .imported: "imported"
             }
@@ -65,7 +67,7 @@ struct ShareTutorialView: View {
     var body: some View {
         ZStack {
             switch step {
-            case .post, .appShareSheet, .systemShareSheet:
+            case .post, .appShareSheet, .systemShareSheet, .appsList:
                 socialAppScreen
                     .transition(.opacity)
             case .importing:
@@ -121,7 +123,12 @@ struct ShareTutorialView: View {
             }
 
             if step == .systemShareSheet {
-                TutorialSystemShareSheet(recipe: recipe, missedTaps: missedTaps, onSalt: { advance(to: .importing) })
+                TutorialSystemShareSheet(recipe: recipe, missedTaps: missedTaps, onMore: { advance(to: .appsList) })
+                    .transition(.move(edge: .bottom))
+            }
+
+            if step == .appsList {
+                TutorialAppsListSheet(missedTaps: missedTaps, onSalt: { advance(to: .importing) })
                     .transition(.move(edge: .bottom))
             }
         }
@@ -350,7 +357,7 @@ private struct TutorialPostView: View {
                 }
             }
             .accessibilityLabel("Share")
-            .accessibilityHint("Step 1 of 3")
+            .accessibilityHint("Step 1 of 4")
             postAction("ellipsis", label: "")
         }
         .padding(.trailing, 16)
@@ -429,7 +436,7 @@ private struct TutorialAppShareSheet: View {
                 .buttonStyle(.plain)
                 .tutorialPulse()
                 .accessibilityLabel("Share to")
-                .accessibilityHint("Step 2 of 3")
+                .accessibilityHint("Step 2 of 4")
                 sheetAction("message.fill", label: "Messages", tint: .green)
             }
             .padding(.horizontal, 12)
@@ -465,10 +472,12 @@ private struct TutorialAppShareSheet: View {
 
 // MARK: - Step 3: iOS Share Sheet
 
+/// The iOS share sheet. Salt usually isn't in the app row until it's been used, so the
+/// tutorial goes through More, like a first real share would.
 private struct TutorialSystemShareSheet: View {
     let recipe: TutorialSampleRecipe
     let missedTaps: Int
-    let onSalt: () -> Void
+    let onMore: () -> Void
 
     var body: some View {
         VStack(spacing: 18) {
@@ -497,60 +506,24 @@ private struct TutorialSystemShareSheet: View {
 
             // Apps
             HStack(alignment: .top, spacing: 0) {
-                appIcon(label: "AirDrop") {
-                    Image(systemName: "dot.radiowaves.left.and.right")
-                        .font(.system(size: 24))
-                        .foregroundColor(.white)
-                        .frame(width: 58, height: 58)
-                        .background(Color.blue)
-                }
-                appIcon(label: "Messages") {
-                    Image(systemName: "message.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.white)
-                        .frame(width: 58, height: 58)
-                        .background(Color.green)
-                }
-                Button(action: onSalt) {
-                    appIcon(label: "Salt") {
-                        Image("saltAppIcon")
-                            .resizable()
-                            .frame(width: 58, height: 58)
-                    }
+                TutorialAppIcon(label: "AirDrop", systemImage: "dot.radiowaves.left.and.right", color: .blue)
+                TutorialAppIcon(label: "Messages", systemImage: "message.fill", color: .green)
+                TutorialAppIcon(label: "Mail", systemImage: "envelope.fill", color: .blue)
+                TutorialAppIcon(label: "Notes", systemImage: "note.text", color: .yellow)
+                Button(action: onMore) {
+                    TutorialAppIcon(label: "More", systemImage: "ellipsis", color: Color(.systemGray4), iconColor: .black)
                 }
                 .buttonStyle(.plain)
                 .tutorialPulse(cornerRadius: 16)
-                .accessibilityLabel("Salt")
-                .accessibilityHint("Step 3 of 3")
-                appIcon(label: "Mail") {
-                    Image(systemName: "envelope.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.white)
-                        .frame(width: 58, height: 58)
-                        .background(Color.blue)
-                }
+                .accessibilityLabel("More")
+                .accessibilityHint("Step 3 of 4")
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 8)
 
             // Actions list
-            VStack(spacing: 0) {
-                ForEach(["Copy", "Add to Reading List", "Save to Files"], id: \.self) { action in
-                    HStack {
-                        Text(action)
-                            .font(.custom("OpenSans-Regular", size: 15))
-                            .foregroundColor(.black)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 13)
-                    if action != "Save to Files" {
-                        Divider().padding(.leading, 16)
-                    }
-                }
-            }
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color.white))
-            .padding(.horizontal, 16)
-            .padding(.bottom, 12)
+            TutorialListGroup(rows: ["Copy", "Add to Reading List", "Save to Files"])
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
         }
         .background(
             UnevenRoundedRectangle(topLeadingRadius: 20, topTrailingRadius: 20)
@@ -558,15 +531,133 @@ private struct TutorialSystemShareSheet: View {
                 .ignoresSafeArea(edges: .bottom)
         )
         .overlay(alignment: .top) {
-            TutorialHint(text: "TAP SALT", missedTaps: missedTaps)
+            TutorialHint(text: "TAP MORE", missedTaps: missedTaps)
                 .offset(y: -56)
                 .allowsHitTesting(false)
         }
     }
+}
 
-    private func appIcon<Icon: View>(label: String, @ViewBuilder icon: () -> Icon) -> some View {
+// MARK: - Step 4: iOS Apps List
+
+/// The list iOS shows after More, with Salt under Suggestions
+private struct TutorialAppsListSheet: View {
+    let missedTaps: Int
+    let onSalt: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ZStack {
+                Text("Apps")
+                    .font(.custom("OpenSans-SemiBold", size: 17))
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 30))
+                        .foregroundColor(.blue)
+                    Spacer()
+                    Text("Edit")
+                        .font(.custom("OpenSans-Regular", size: 15))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Capsule().fill(Color.white))
+                }
+            }
+            .foregroundColor(.black)
+            .padding(.top, 16)
+            .padding(.bottom, 6)
+
+            sectionTitle("Favorites")
+            VStack(spacing: 0) {
+                appRow("AirDrop", systemImage: "dot.radiowaves.left.and.right", color: .blue)
+                Divider().padding(.leading, 56)
+                appRow("Messages", systemImage: "message.fill", color: .green)
+                Divider().padding(.leading, 56)
+                appRow("Mail", systemImage: "envelope.fill", color: .blue)
+            }
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color.white))
+
+            sectionTitle("Suggestions")
+                .padding(.top, 8)
+            VStack(spacing: 0) {
+                Button(action: onSalt) {
+                    HStack(spacing: 14) {
+                        Image("saltAppIcon")
+                            .resizable()
+                            .frame(width: 30, height: 30)
+                            .clipShape(RoundedRectangle(cornerRadius: 7))
+                        Text("Salt")
+                            .font(.custom("OpenSans-SemiBold", size: 16))
+                            .foregroundColor(.black)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .tutorialPulse(cornerRadius: 12)
+                .accessibilityLabel("Salt")
+                .accessibilityHint("Step 4 of 4")
+                Divider().padding(.leading, 56)
+                appRow("Reminders", systemImage: "checklist", color: .orange)
+                Divider().padding(.leading, 56)
+                appRow("Instagram", systemImage: "camera", color: Color(red: 0.84, green: 0.16, blue: 0.46))
+            }
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color.white))
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 12)
+        .background(
+            UnevenRoundedRectangle(topLeadingRadius: 20, topTrailingRadius: 20)
+                .fill(Color(.systemGray6))
+                .ignoresSafeArea(edges: .bottom)
+        )
+        .overlay(alignment: .bottom) {
+            TutorialHint(text: "TAP SALT", missedTaps: missedTaps)
+                .padding(.bottom, 168)
+                .allowsHitTesting(false)
+        }
+    }
+
+    private func sectionTitle(_ title: String) -> some View {
+        Text(title)
+            .font(.custom("OpenSans-Regular", size: 14))
+            .foregroundColor(Color(.systemGray))
+            .padding(.leading, 4)
+    }
+
+    private func appRow(_ name: String, systemImage: String, color: Color) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: systemImage)
+                .font(.system(size: 14))
+                .foregroundColor(.white)
+                .frame(width: 30, height: 30)
+                .background(RoundedRectangle(cornerRadius: 7).fill(color))
+            Text(name)
+                .font(.custom("OpenSans-Regular", size: 16))
+                .foregroundColor(.black)
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+    }
+}
+
+// MARK: - Sheet Building Blocks
+
+private struct TutorialAppIcon: View {
+    let label: String
+    let systemImage: String
+    let color: Color
+    var iconColor: Color = .white
+
+    var body: some View {
         VStack(spacing: 6) {
-            icon()
+            Image(systemName: systemImage)
+                .font(.system(size: 24))
+                .foregroundColor(iconColor)
+                .frame(width: 58, height: 58)
+                .background(color)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             Text(label)
                 .font(.custom("OpenSans-Regular", size: 11))
@@ -576,7 +667,30 @@ private struct TutorialSystemShareSheet: View {
     }
 }
 
-// MARK: - Step 4: Importing
+private struct TutorialListGroup: View {
+    let rows: [String]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(rows, id: \.self) { row in
+                HStack {
+                    Text(row)
+                        .font(.custom("OpenSans-Regular", size: 15))
+                        .foregroundColor(.black)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 13)
+                if row != rows.last {
+                    Divider().padding(.leading, 16)
+                }
+            }
+        }
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.white))
+    }
+}
+
+// MARK: - Step 5: Importing
 
 private struct TutorialImportingView: View {
     var body: some View {
@@ -595,7 +709,7 @@ private struct TutorialImportingView: View {
     }
 }
 
-// MARK: - Step 5: Imported
+// MARK: - Step 6: Imported
 
 private struct TutorialImportedView: View {
     let recipe: TutorialSampleRecipe
@@ -625,7 +739,7 @@ private struct TutorialImportedView: View {
 
             VStack(spacing: 12) {
                 Button(action: onPrimary) {
-                    Text(context == .explore ? "Try it on Instagram" : "Create my account")
+                    Text(context == .explore ? "Try it on Instagram" : "Continue")
                         .font(.custom("OpenSans-SemiBold", size: 16))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -709,6 +823,10 @@ private struct TutorialImportedView: View {
 
 #Preview("iOS Share Sheet") {
     ShareTutorialView(context: .onboarding, startingAt: .systemShareSheet) { _ in }
+}
+
+#Preview("Apps List") {
+    ShareTutorialView(context: .onboarding, startingAt: .appsList) { _ in }
 }
 
 #Preview("Imported (Explore)") {

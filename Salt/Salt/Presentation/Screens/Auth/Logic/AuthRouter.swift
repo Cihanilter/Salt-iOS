@@ -9,6 +9,7 @@ import Combine
 
 enum AuthRoute: Hashable {
     case onboarding
+    case createAccount
     case login
     case signUp
     case forgotPassword

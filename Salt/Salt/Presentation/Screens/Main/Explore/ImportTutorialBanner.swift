@@ -74,7 +74,7 @@ struct ImportTutorialBannerCard: View {
                     Text("Import your first recipe")
                         .font(.custom("Playfair9pt-SemiBold", size: 19))
                         .foregroundColor(.black)
-                    Text("Save any recipe from Instagram or TikTok in 3 taps.")
+                    Text("Save any recipe from Instagram or TikTok in a few taps.")
                         .font(.custom("OpenSans-Regular", size: 13))
                         .foregroundColor(Color("GraniteGray"))
                         .fixedSize(horizontal: false, vertical: true)
