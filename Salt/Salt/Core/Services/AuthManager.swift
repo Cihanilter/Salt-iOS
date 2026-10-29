@@ -150,6 +150,8 @@ final class AuthManager: ObservableObject {
     func signOut() async throws {
         try await authService.signOut()
         Analytics.reset()
+        ImportTutorialBanner.resetDismissal()
+        SaveToCollectionPrompt.resetOptOut()
         self.currentUser = nil
         self.isAuthenticated = false
     }
@@ -158,6 +160,8 @@ final class AuthManager: ObservableObject {
     func deleteAccount() async throws {
         try await authService.deleteAccount()
         Analytics.reset()
+        ImportTutorialBanner.resetDismissal()
+        SaveToCollectionPrompt.resetOptOut()
         self.currentUser = nil
         self.isAuthenticated = false
     }

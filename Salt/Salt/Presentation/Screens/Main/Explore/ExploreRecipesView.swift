@@ -31,6 +31,10 @@ struct ExploreRecipesView: View {
 
     // Trigger to scroll to top and reset (from tab bar tap)
     var scrollToTopTrigger: UUID = UUID()
+    /// Opens the Add Recipe tab (from the import tutorial banner)
+    var switchToAddRecipe: () -> Void = {}
+    /// Opens the Add Recipe tab on Create (from the import tutorial banner)
+    var openCreateRecipe: () -> Void = {}
     @State private var contentID = UUID()
 
     // Popular searches (fixed list)
@@ -61,6 +65,13 @@ struct ExploreRecipesView: View {
             VStack(spacing: 0) {
                 // Header (fixed) - with explicit background to maintain safe area
                 VStack(spacing: 0) {
+                    // First thing new users see: importing is what Salt is for.
+                    // Empty once they've imported or dismissed it.
+                    if searchState == .idle {
+                        ImportTutorialBanner(switchToAddRecipe: switchToAddRecipe, openCreateRecipe: openCreateRecipe)
+                            .padding(.horizontal, 18)
+                    }
+
                     HStack {
                         Text("Explore Recipes")
                             .font(.custom("Playfair9pt-Medium", size: 28))

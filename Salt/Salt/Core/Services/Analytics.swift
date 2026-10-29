@@ -18,6 +18,19 @@ enum Analytics {
         case signedIn = "signed_in"
         case authFailed = "auth_failed"
 
+        // Onboarding (before sign-up)
+        case onboardingStarted = "onboarding_started"
+        case onboardingQuestionAnswered = "onboarding_question_answered"
+        case onboardingCompleted = "onboarding_completed"
+
+        // Import tutorial (onboarding and Explore banner)
+        case importTutorialStarted = "import_tutorial_started"
+        case importTutorialCompleted = "import_tutorial_completed"
+        case importTutorialSkipped = "import_tutorial_skipped"
+        case importBannerTapped = "import_banner_tapped"
+        case importBannerOptionSelected = "import_banner_option_selected"
+        case importBannerDismissed = "import_banner_dismissed"
+
         // Add Recipe
         case shareLinkReceived = "share_link_received"
         case importStarted = "import_started"
@@ -46,6 +59,9 @@ enum Analytics {
         case collectionLeft = "collection_left"
         case collectionMemberRemoved = "collection_member_removed"
         case recipeCopiedFromCollection = "recipe_copied_from_collection"
+        /// "Add to a collection?" after saving a recipe; `step` is pick, name or invite
+        case collectionPromptShown = "collection_prompt_shown"
+        case collectionPromptSkipped = "collection_prompt_skipped"
 
         // Sharing
         case recipeShared = "recipe_shared"
@@ -112,9 +128,10 @@ enum Analytics {
         PostHogSDK.shared.capture("$set", userProperties: ["is_premium": isPremium])
     }
 
-    static func log(_ event: Event, _ properties: [String: Any] = [:]) {
+    /// `userProperties` are also saved on the user's profile (e.g. onboarding answers)
+    static func log(_ event: Event, _ properties: [String: Any] = [:], userProperties: [String: Any]? = nil) {
         guard AnalyticsConfig.isConfigured else { return }
-        PostHogSDK.shared.capture(event.rawValue, properties: properties)
+        PostHogSDK.shared.capture(event.rawValue, properties: properties, userProperties: userProperties)
     }
 
     /// Screen view, for user paths and funnels

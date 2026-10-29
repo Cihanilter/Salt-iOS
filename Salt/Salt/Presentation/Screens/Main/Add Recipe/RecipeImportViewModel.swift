@@ -17,6 +17,8 @@ class RecipeImportViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showingPreview = false
     @Published var savedSuccessfully = false
+    /// The last saved recipe, for the "Add to a collection?" prompt
+    private(set) var savedRecipeId: UUID?
 
     // MARK: - Private Properties
 
@@ -82,7 +84,7 @@ class RecipeImportViewModel: ObservableObject {
         guard let recipe = importedRecipe else { return false }
 
         do {
-            _ = try await RecipeService.shared.saveImportedRecipe(recipe)
+            savedRecipeId = try await RecipeService.shared.saveImportedRecipe(recipe).id
             print("✅ Saved recipe: \(recipe.title)")
             Analytics.log(.recipeImported, [
                 "source": Analytics.importSource(for: recipe.sourceUrl),
@@ -128,7 +130,7 @@ class RecipeImportViewModel: ObservableObject {
                 sourceName: recipeDetail.sourceName ?? importedRecipe?.sourceName
             )
 
-            _ = try await RecipeService.shared.saveRecipeDetail(finalRecipeDetail, sourceUrl: importedRecipe?.sourceUrl)
+            savedRecipeId = try await RecipeService.shared.saveRecipeDetail(finalRecipeDetail, sourceUrl: importedRecipe?.sourceUrl).id
             print("✅ Saved edited recipe: \(recipeDetail.title)")
             Analytics.log(.recipeImported, [
                 "source": Analytics.importSource(for: importedRecipe?.sourceUrl),

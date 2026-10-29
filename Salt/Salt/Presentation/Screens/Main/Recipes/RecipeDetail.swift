@@ -147,6 +147,8 @@ struct RecipeDetailView: View {
 
     // Callbacks for preview mode - no parameters, data is in PendingSaveDataStorage
     var onSave: (() async -> Bool)? = nil
+    /// The recipe once `onSave` succeeds; when set, offers to add it to a collection
+    var savedRecipeId: (() -> UUID?)? = nil
 
     // Callbacks for saved state
     var onAddMoreRecipes: (() -> Void)? = nil
@@ -168,6 +170,8 @@ struct RecipeDetailView: View {
     @State private var shareLink: ShareLinkItem?
     @State private var shareErrorMessage: String?
     @State private var collectionTarget: CollectionRecipeRef?
+    /// Just-saved recipe for the "Add to a collection?" prompt
+    @State private var collectionPromptRef: CollectionRecipeRef?
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var bookmarkManager = BookmarkManager.shared
     @ObservedObject private var subscriptionManager = SubscriptionManager.shared
@@ -182,6 +186,7 @@ struct RecipeDetailView: View {
         previewNotice: String? = nil,
         pendingPhotos: [UIImage] = [],
         onSave: (() async -> Bool)? = nil,
+        savedRecipeId: (() -> UUID?)? = nil,
         onAddMoreRecipes: (() -> Void)? = nil,
         onGoToMyRecipes: (() -> Void)? = nil
     ) {
@@ -192,6 +197,7 @@ struct RecipeDetailView: View {
         self.previewNotice = previewNotice
         self._pendingPhotoImages = State(initialValue: pendingPhotos)
         self.onSave = onSave
+        self.savedRecipeId = savedRecipeId
         self.onAddMoreRecipes = onAddMoreRecipes
         self.onGoToMyRecipes = onGoToMyRecipes
     }
@@ -444,6 +450,9 @@ struct RecipeDetailView: View {
         .sheet(item: $collectionTarget) { ref in
             AddToCollectionSheet(ref: ref, source: "recipe_menu")
         }
+        .sheet(item: $collectionPromptRef) { ref in
+            SaveToCollectionPrompt(ref: ref)
+        }
         .sheet(item: $shareLink) { link in
             ActivityView(items: [link.url])
                 .presentationDetents([.medium, .large])
@@ -666,6 +675,13 @@ struct RecipeDetailView: View {
                             withAnimation {
                                 hasBeenSaved = true
                                 showSavedHeader = true
+                            }
+                            if let id = savedRecipeId?(), SaveToCollectionPrompt.shouldShow {
+                                // Lets "Saved to My Recipes" show for a moment first
+                                Task {
+                                    try? await Task.sleep(for: .seconds(1.5))
+                                    collectionPromptRef = .own(id)
+                                }
                             }
                         }
                     }

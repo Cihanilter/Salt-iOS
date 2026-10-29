@@ -54,6 +54,10 @@ final class SignUpViewModel: ObservableObject {
 
     init() {
         configureInputProperties()
+        // Name given in onboarding ("What should we call you?")
+        if let name = UserDefaults.standard.string(forKey: OnboardingStorage.nameKey), !name.isEmpty {
+            fullName.inputText = name
+        }
     }
 
     func handleFullName() {

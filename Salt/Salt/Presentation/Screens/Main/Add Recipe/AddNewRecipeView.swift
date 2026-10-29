@@ -11,8 +11,16 @@ struct AddNewRecipeView: View {
     @State private var recipeLink = ""
     @ObservedObject private var shareImportRouter = ShareImportRouter.shared
 
+    /// Set from another tab to open Create or Import; cleared once applied
+    @Binding var requestedTab: AddRecipeTab?
+
     // Callback to switch to My Recipes tab
     var switchToMyRecipes: (() -> Void)?
+
+    init(requestedTab: Binding<AddRecipeTab?> = .constant(nil), switchToMyRecipes: (() -> Void)? = nil) {
+        _requestedTab = requestedTab
+        self.switchToMyRecipes = switchToMyRecipes
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
@@ -44,6 +52,12 @@ struct AddNewRecipeView: View {
             if url != nil {
                 selectedTab = .import
             }
+        }
+        .onChange(of: requestedTab, initial: true) { _, tab in
+            // e.g. Create manually on the Explore banner
+            guard let tab else { return }
+            selectedTab = tab
+            requestedTab = nil
         }
     }
 }
@@ -246,6 +260,7 @@ struct ImportRecipeView: View {
                         }
                         return await viewModel.saveRecipe(from: recipeDetail, photos: savedData.photos)
                     },
+                    savedRecipeId: { viewModel.savedRecipeId },
                     onAddMoreRecipes: {
                         // Clear and go back
                         recipeLink = ""
@@ -733,6 +748,7 @@ struct CreateRecipeView: View {
                     }
                     return await viewModel.saveRecipe(from: recipeDetail, photos: savedData.photos)
                 },
+                savedRecipeId: { viewModel.savedRecipeId },
                 onAddMoreRecipes: {
                     // Pop to root - reset state and dismiss
                     viewModel.reset()
