@@ -28,7 +28,9 @@ struct ImportTutorialBanner: View {
     @State private var tutorialOutcome: ShareTutorialView.Outcome?
 
     var body: some View {
-        Group {
+        // A VStack rather than a Group: a Group's modifiers go to its contents, and it's
+        // empty until the import count loads, so onAppear (and the sheets) would never attach
+        VStack(spacing: 0) {
             if !isDismissed && !hasImported {
                 ImportTutorialBannerCard(
                     onTap: {
@@ -50,8 +52,13 @@ struct ImportTutorialBanner: View {
             // stays away once the user has imported anything.
             Task {
                 guard !isDismissed else { return }
-                let count = (try? await RecipeService.shared.getImportedRecipesCount()) ?? 1
-                hasImported = count > 0
+                do {
+                    let count = try await RecipeService.shared.getImportedRecipesCount()
+                    hasImported = count > 0
+                } catch {
+                    // Stays hidden: better than showing it to someone who has imported
+                    print("ImportTutorialBanner: Failed to count imports: \(error)")
+                }
             }
         }
         .sheet(isPresented: $showingOptions, onDismiss: openPendingOption) {
