@@ -77,7 +77,7 @@ struct WelcomeView: View {
     }
 }
 
-/// Phone showing the Explore page: the `exploreScreenshot` image, or recipe photos until it's added
+/// Phone showing a My Recipes screenshot (`welcomeScreenshot`), or recipe photos until it's added
 private struct WelcomePhoneMockup: View {
     private let photos: [URL?] = Array(
         CuratedRecipesManager.shared.recipes
@@ -87,7 +87,7 @@ private struct WelcomePhoneMockup: View {
 
     var body: some View {
         Group {
-            if let screenshot = UIImage(named: "exploreScreenshot") {
+            if let screenshot = UIImage(named: "welcomeScreenshot") {
                 Image(uiImage: screenshot)
                     .resizable()
                     .scaledToFill()
@@ -105,7 +105,7 @@ private struct WelcomePhoneMockup: View {
 
     private var photoGrid: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Explore Recipes")
+            Text("My Recipes")
                 .font(.custom("Playfair9pt-SemiBold", size: 16))
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
                 ForEach(0..<6, id: \.self) { index in
