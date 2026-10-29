@@ -3,13 +3,11 @@
 //  Salt
 //
 //  First screens for signed-out users: Welcome (Get started / Log in), then a short
-//  questionnaire with the import tutorial, the paywall, and finally account creation.
+//  questionnaire with the import tutorial, and finally account creation. The paywall
+//  comes after sign-up (see LaunchPaywall).
 //
 
 import SwiftUI
-import StoreKit
-import RevenueCat
-import RevenueCatUI
 
 /// Onboarding values kept on the device until sign-up
 enum OnboardingStorage {
@@ -17,10 +15,28 @@ enum OnboardingStorage {
     static let completedKey = "hasCompletedOnboarding"
     /// Name from "What should we call you?", pre-filled on the email sign-up form
     static let nameKey = "onboardingName"
-    /// The App Store rating prompt is requested only once
-    static let reviewRequestedKey = "onboardingReviewRequested"
-    /// When the paywall was shown in onboarding, so the launch paywall doesn't repeat it right after sign-up
-    static let paywallShownKey = "onboardingPaywallShownAt"
+}
+
+// MARK: - Review
+
+/// The user review on the first onboarding screen.
+/// Use a real review (an App Store rating, or a user who agreed to be quoted), never a made-up one.
+struct OnboardingReview {
+    let quote: String
+    let name: String
+    /// Image in the asset catalog; initials are shown without one
+    let avatarImage: String?
+
+    #warning("Replace the placeholder with a real user review before release")
+    static let featured = OnboardingReview(
+        quote: "Placeholder: paste a real review here, e.g. from an App Store rating or a user who agreed to be quoted.",
+        name: "Reviewer Name",
+        avatarImage: nil
+    )
+
+    var initials: String {
+        name.split(separator: " ").prefix(2).compactMap(\.first).map(String.init).joined()
+    }
 }
 
 // MARK: - Welcome
@@ -37,16 +53,9 @@ struct WelcomeView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 40)
 
-            Group {
-                // Recording of a recipe going from Instagram into Salt
-                if let url = HowToApp.instagram.videoURL {
-                    PhoneFrameVideo(url: url)
-                } else {
-                    WelcomePhoneMockup()
-                }
-            }
-            .padding(.vertical, 24)
-            .frame(maxHeight: .infinity)
+            WelcomePhoneMockup()
+                .padding(.vertical, 24)
+                .frame(maxHeight: .infinity)
 
             VStack(spacing: 14) {
                 OnboardingPrimaryButton(title: "Get started") {
@@ -68,7 +77,7 @@ struct WelcomeView: View {
     }
 }
 
-/// Phone showing a grid of recipe photos, like a filled-in Salt library
+/// Phone showing the Explore page: the `exploreScreenshot` image, or recipe photos until it's added
 private struct WelcomePhoneMockup: View {
     private let photos: [URL?] = Array(
         CuratedRecipesManager.shared.recipes
@@ -77,17 +86,27 @@ private struct WelcomePhoneMockup: View {
     )
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("My Recipes")
-                    .font(.custom("Playfair9pt-SemiBold", size: 16))
-                Spacer()
-                Image("saltAppIcon")
+        Group {
+            if let screenshot = UIImage(named: "exploreScreenshot") {
+                Image(uiImage: screenshot)
                     .resizable()
-                    .frame(width: 22, height: 22)
-                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .scaledToFill()
+            } else {
+                photoGrid
             }
+        }
+        .aspectRatio(9.0 / 19.5, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .padding(6)
+        .background(RoundedRectangle(cornerRadius: 32, style: .continuous).fill(Color.black))
+        .shadow(color: .black.opacity(0.12), radius: 16, y: 8)
+        .accessibilityHidden(true)
+    }
 
+    private var photoGrid: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Explore Recipes")
+                .font(.custom("Playfair9pt-SemiBold", size: 16))
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
                 ForEach(0..<6, id: \.self) { index in
                     TutorialRecipePhoto(url: index < photos.count ? photos[index] : nil)
@@ -99,49 +118,59 @@ private struct WelcomePhoneMockup: View {
             Spacer(minLength: 0)
         }
         .padding(14)
-        .padding(.top, 10)
-        .frame(width: 210)
-        .frame(maxHeight: 400)
+        .padding(.top, 24)
         .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 30))
-        .overlay(RoundedRectangle(cornerRadius: 30).stroke(Color.black, lineWidth: 6))
-        .shadow(color: .black.opacity(0.12), radius: 16, y: 8)
-        .accessibilityHidden(true)
     }
 }
 
 // MARK: - Questionnaire
 
-private struct OnboardingOption: Identifiable, Hashable {
-    let id: String
-    let emoji: String
-    let title: String
-}
-
 private enum OnboardingPage: Int, CaseIterable {
     case intro
-    case goals
-    case goalsGreat
-    case goalsPlan
-    case cookingTime
     case name
     case sources
     case showHow
     case settingUp
-    case progress
 
     var analyticsName: String {
         switch self {
         case .intro: "intro"
-        case .goals: "goals"
-        case .goalsGreat: "goals_great"
-        case .goalsPlan: "goals_plan"
-        case .cookingTime: "cooking_time"
         case .name: "name"
         case .sources: "recipe_sources"
         case .showHow: "show_how"
         case .settingUp: "setting_up"
-        case .progress: "progress"
+        }
+    }
+}
+
+/// Where the user gets recipes, on "Where do you get your recipes from?"
+private enum RecipeSource: String, CaseIterable, Identifiable {
+    case instagram
+    case tiktok
+    case facebook
+    case youtubeShorts = "youtube_shorts"
+    case websites
+
+    var id: String { rawValue }
+
+    var name: String {
+        switch self {
+        case .instagram: "Instagram"
+        case .tiktok: "TikTok"
+        case .facebook: "Facebook"
+        case .youtubeShorts: "YouTube Shorts"
+        case .websites: "Recipe websites"
+        }
+    }
+
+    /// Logo in the asset catalog; websites use a globe symbol
+    var logo: String? {
+        switch self {
+        case .instagram: "instagramLogo"
+        case .tiktok: "tiktokLogo"
+        case .facebook: "facebookLogo"
+        case .youtubeShorts: "youtubeShortsLogo"
+        case .websites: nil
         }
     }
 }
@@ -149,52 +178,25 @@ private enum OnboardingPage: Int, CaseIterable {
 struct OnboardingFlowView: View {
     @ObservedObject var router: AuthRouter
     @AppStorage(OnboardingStorage.completedKey) private var hasCompletedOnboarding = false
-    @AppStorage(OnboardingStorage.reviewRequestedKey) private var hasRequestedReview = false
 
     @State private var page: OnboardingPage
-    @State private var goals: Set<String>
-    @State private var cookingTime: String?
     @State private var name = ""
-    @State private var sources: Set<String> = []
+    @State private var sources: Set<RecipeSource> = []
     @State private var tutorialOutcome: ShareTutorialView.Outcome?
     @State private var showingTutorial = false
-    @State private var showingPaywall = false
-    /// App whose how-to video is open
-    @State private var howToApp: HowToApp?
     @FocusState private var isTextFieldFocused: Bool
-    @Environment(\.requestReview) private var requestReview
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(router: AuthRouter) {
         self.router = router
         _page = State(initialValue: .intro)
-        _goals = State(initialValue: [])
     }
 
-    /// `page` and `goals` are only for previews; onboarding always starts at the intro
-    fileprivate init(router: AuthRouter, startingAt page: OnboardingPage, goals: Set<String> = []) {
+    /// `page` is only for previews; onboarding always starts at the intro
+    fileprivate init(router: AuthRouter, startingAt page: OnboardingPage) {
         self.router = router
         _page = State(initialValue: page)
-        _goals = State(initialValue: goals)
     }
-
-    private let goalOptions = [
-        OnboardingOption(id: "eat_healthier", emoji: "🥗", title: "Eat healthier"),
-        OnboardingOption(id: "save_money", emoji: "💰", title: "Save money"),
-        OnboardingOption(id: "cooking_skills", emoji: "🔪", title: "Improve cooking skills"),
-        OnboardingOption(id: "organize", emoji: "🗂️", title: "Organize recipes"),
-        OnboardingOption(id: "plan_meals", emoji: "🗓️", title: "Plan out meals"),
-        OnboardingOption(id: "new_cuisines", emoji: "🌶️", title: "Try new cuisines")
-    ]
-
-    private let cookingTimeOptions = [
-        OnboardingOption(id: "morning", emoji: "", title: "In the morning, I like to plan ahead"),
-        OnboardingOption(id: "lunch", emoji: "", title: "Around lunch time, when I start thinking about it"),
-        OnboardingOption(id: "evening", emoji: "", title: "In the evening, when I'm ready to cook")
-    ]
-
-    /// Recipe websites has no how-to: links are pasted into the Import screen
-    private let websitesOption = OnboardingOption(id: "websites", emoji: "🌐", title: "Recipe websites")
 
     var body: some View {
         VStack(spacing: 0) {
@@ -203,45 +205,10 @@ struct OnboardingFlowView: View {
             Group {
                 switch page {
                 case .intro: introPage
-                case .goals:
-                    questionPage(title: "What are your goals?", subtitle: "Select all that apply") {
-                        ForEach(goalOptions) { option in
-                            OnboardingOptionRow(option: option, isSelected: goals.contains(option.id)) {
-                                toggle(option.id, in: &goals)
-                            }
-                        }
-                    }
-                case .goalsGreat: goalsGreatPage
-                case .goalsPlan: goalsPlanPage
-                case .cookingTime:
-                    questionPage(
-                        title: "When do you usually think about what to cook?",
-                        subtitle: "We'll check in at the right moment, not a random one."
-                    ) {
-                        ForEach(cookingTimeOptions) { option in
-                            OnboardingOptionRow(option: option, isSelected: cookingTime == option.id) {
-                                cookingTime = option.id
-                            }
-                        }
-                    }
                 case .name: namePage
-                case .sources:
-                    questionPage(title: "Where do you get your recipes from?", subtitle: "Select all that apply") {
-                        ForEach(HowToApp.allCases) { app in
-                            SourceOptionRow(
-                                app: app,
-                                isSelected: sources.contains(app.rawValue),
-                                onSelect: { toggle(app.rawValue, in: &sources) },
-                                onHowTo: { howToApp = app }
-                            )
-                        }
-                        OnboardingOptionRow(option: websitesOption, isSelected: sources.contains(websitesOption.id)) {
-                            toggle(websitesOption.id, in: &sources)
-                        }
-                    }
+                case .sources: sourcesPage
                 case .showHow: showHowPage
                 case .settingUp: settingUpPage
-                case .progress: progressPage
                 }
             }
             .id(page)
@@ -254,9 +221,7 @@ struct OnboardingFlowView: View {
             footer
         }
         .background(Color.white.ignoresSafeArea())
-        .sensoryFeedback(.selection, trigger: goals)
         .sensoryFeedback(.selection, trigger: sources)
-        .sensoryFeedback(.selection, trigger: cookingTime)
         .onAppear {
             Analytics.log(.onboardingStarted)
         }
@@ -268,24 +233,6 @@ struct OnboardingFlowView: View {
                 tutorialOutcome = outcome
                 showingTutorial = false
             }
-        }
-        .sheet(item: $howToApp) { app in
-            HowToVideoSheet(app: app)
-        }
-        .fullScreenCover(isPresented: $showingPaywall, onDismiss: finish) {
-            // Remote paywall: shows whatever is attached to the current offering in the RevenueCat dashboard
-            PaywallView(displayCloseButton: true)
-                .onAppear {
-                    Analytics.log(.paywallShown, ["source": "onboarding"])
-                }
-                .onPurchaseCompleted { customerInfo in
-                    Analytics.log(.subscriptionStarted, ["source": "onboarding"])
-                    closePaywallIfPremium(customerInfo)
-                }
-                .onRestoreCompleted { customerInfo in
-                    Analytics.log(.purchasesRestored, ["source": "onboarding"])
-                    closePaywallIfPremium(customerInfo)
-                }
         }
     }
 
@@ -342,8 +289,6 @@ struct OnboardingFlowView: View {
 
     private var canContinue: Bool {
         switch page {
-        case .goals: !goals.isEmpty
-        case .cookingTime: cookingTime != nil
         case .name: !name.trimmed.isEmpty
         case .sources: !sources.isEmpty
         default: true
@@ -352,105 +297,25 @@ struct OnboardingFlowView: View {
 
     // MARK: Pages
 
-    private func questionPage<Options: View>(
-        title: String,
-        subtitle: String?,
-        @ViewBuilder options: () -> Options
-    ) -> some View {
-        ScrollView(showsIndicators: false) {
-            OnboardingTitle(title: title, subtitle: subtitle)
-                .padding(.bottom, 24)
-
-            VStack(spacing: 10) {
-                options()
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 16)
-        }
-    }
-
-    /// What Salt is for, in place of ReciMe's user count and review
+    /// Social proof: a user review
     private var introPage: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 6) {
-                Text("Your recipes,")
+                Text("We're helping cooks")
                     .font(.custom("Playfair9pt-SemiBold", size: 26))
-                Text("finally in one place")
+                Text("be more organized")
                     .font(.custom("Playfair9pt-SemiBold", size: 26))
                     .foregroundColor(Color("Orange"))
-                Text("Be more organized and save time in the kitchen.")
-                    .font(.custom("OpenSans-Regular", size: 15))
-                    .foregroundColor(Color("GraniteGray"))
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 4)
+                Text("in the kitchen")
+                    .font(.custom("Playfair9pt-SemiBold", size: 26))
             }
+            .multilineTextAlignment(.center)
             .padding(.horizontal, 24)
             .padding(.top, 28)
 
-            VStack(alignment: .leading, spacing: 14) {
-                Image(systemName: "quote.opening")
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundColor(Color("Orange"))
-                Text("No more lost screenshots")
-                    .font(.custom("Playfair9pt-SemiBold", size: 20))
-                Text("Recipes from Instagram, TikTok and Pinterest end up buried in your camera roll. With Salt, you import them straight from the app and keep everything organized in one place.")
-                    .font(.custom("OpenSans-Regular", size: 15))
-                    .foregroundColor(Color("GraniteGray"))
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Divider()
-
-                VStack(alignment: .leading, spacing: 10) {
-                    benefitRow("square.and.arrow.down", "Import from social media and any website")
-                    benefitRow("folder", "Sort recipes into collections")
-                    benefitRow("arrow.left.arrow.right", "Scale servings and swap ingredients")
-                }
-            }
-            .padding(20)
-            .background(RoundedRectangle(cornerRadius: 20).fill(Color.white))
-            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color("GrayButtonBorderColor"), lineWidth: 1))
-            .padding(.horizontal, 20)
-            .padding(.top, 28)
-        }
-    }
-
-    private func benefitRow(_ systemImage: String, _ text: String) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: systemImage)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundColor(Color("Orange"))
-                .frame(width: 22)
-            Text(text)
-                .font(.custom("OpenSans-Regular", size: 14))
-        }
-    }
-
-    private var goalsGreatPage: some View {
-        VStack(spacing: 0) {
-            OnboardingTitle(
-                title: "That's great!",
-                subtitle: "Salt helps you \(selectedGoalPhrases.formatted(.list(type: .and))), all from one recipe library."
-            )
-
-            OnboardingPhotoBlob()
-                .padding(.top, 28)
-
-            Text("We're here to help you\nwith your goals 🤝")
-                .font(.custom("OpenSans-SemiBold", size: 17))
-                .multilineTextAlignment(.center)
-                .padding(.top, 24)
-        }
-    }
-
-    private var goalsPlanPage: some View {
-        VStack(spacing: 0) {
-            OnboardingTitle(
-                title: "Let's make your goals happen!",
-                subtitle: "You want to \(selectedGoalPhrases.formatted(.list(type: .and))) — we'll help you get there."
-            )
-
-            GoalsIllustration(emojis: goalOptions.filter { goals.contains($0.id) }.map(\.emoji))
-                .padding(.top, 36)
+            ReviewCard(review: .featured)
+                .padding(.horizontal, 20)
+                .padding(.top, 32)
         }
     }
 
@@ -472,6 +337,23 @@ struct OnboardingFlowView: View {
         .onAppear { isTextFieldFocused = true }
     }
 
+    private var sourcesPage: some View {
+        ScrollView(showsIndicators: false) {
+            OnboardingTitle(title: "Where do you get your recipes from?", subtitle: "Select all that apply")
+                .padding(.bottom, 24)
+
+            VStack(spacing: 10) {
+                ForEach(RecipeSource.allCases) { source in
+                    SourceOptionRow(source: source, isSelected: sources.contains(source)) {
+                        toggle(source)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
+        }
+    }
+
     /// "Awesome" page before the tutorial, mentioning where the user gets recipes
     private var showHowPage: some View {
         VStack(spacing: 0) {
@@ -483,11 +365,11 @@ struct OnboardingFlowView: View {
 
     /// Names the apps the user picked, plus websites
     private var showHowMessage: String {
-        var names = HowToApp.allCases.filter { sources.contains($0.rawValue) }.map(\.name)
+        var names = RecipeSource.allCases.filter { $0 != .websites && sources.contains($0) }.map(\.name)
         if names.isEmpty {
-            names = HowToApp.allCases.map(\.name)
+            names = RecipeSource.allCases.filter { $0 != .websites }.map(\.name)
         }
-        if sources.contains(websitesOption.id) {
+        if sources.contains(.websites) {
             names.append("websites")
         }
         return "Salt can import recipes from \(names.formatted(.list(type: .and)))."
@@ -513,52 +395,13 @@ struct OnboardingFlowView: View {
         }
     }
 
-    private var progressPage: some View {
-        VStack(spacing: 0) {
-            OnboardingTitle(title: "Become a better cook,\nwith Salt", subtitle: nil)
-
-            ProgressCurveChart()
-                .frame(height: 200)
-                .padding(.horizontal, 32)
-                .padding(.top, 48)
-
-            Text("You're on your way! Watch as your cooking habits evolve and your kitchen experience gets easier.")
-                .font(.custom("OpenSans-Regular", size: 15))
-                .foregroundColor(Color("GraniteGray"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-                .padding(.top, 48)
-        }
-        .task {
-            // App Store rating prompt, once. iOS decides whether it actually appears.
-            guard !hasRequestedReview else { return }
-            try? await Task.sleep(for: .seconds(0.8))
-            guard !Task.isCancelled else { return }
-            hasRequestedReview = true
-            requestReview()
-        }
-    }
-
     // MARK: Navigation
 
-    private var selectedGoalPhrases: [String] {
-        let phrases: [String: String] = [
-            "eat_healthier": "eat healthier",
-            "save_money": "save money",
-            "cooking_skills": "improve your cooking skills",
-            "organize": "organize your recipes",
-            "plan_meals": "plan out your meals",
-            "new_cuisines": "try new cuisines"
-        ]
-        let picked = goalOptions.compactMap { goals.contains($0.id) ? phrases[$0.id] : nil }
-        return picked.isEmpty ? ["organize your recipes"] : picked
-    }
-
-    private func toggle(_ id: String, in set: inout Set<String>) {
-        if set.contains(id) {
-            set.remove(id)
+    private func toggle(_ source: RecipeSource) {
+        if sources.contains(source) {
+            sources.remove(source)
         } else {
-            set.insert(id)
+            sources.insert(source)
         }
     }
 
@@ -566,7 +409,7 @@ struct OnboardingFlowView: View {
         logAnswer(for: page)
         isTextFieldFocused = false
         guard let next = OnboardingPage(rawValue: page.rawValue + 1) else {
-            showPaywallOrFinish()
+            finish()
             return
         }
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) {
@@ -591,35 +434,11 @@ struct OnboardingFlowView: View {
     }
 
     private func logAnswer(for page: OnboardingPage) {
-        let answers: [String]
-        switch page {
-        case .goals: answers = goals.sorted()
-        case .cookingTime: answers = cookingTime.map { [$0] } ?? []
-        case .sources: answers = sources.sorted()
-        default: return
-        }
-        Analytics.log(.onboardingQuestionAnswered, ["question": page.analyticsName, "answers": answers])
-    }
-
-    /// After "Become a better cook": the paywall for free users, then Create account
-    private func showPaywallOrFinish() {
-        Task {
-            guard RevenueCatConfig.isEnabled,
-                  await SubscriptionManager.shared.verifiedPremiumStatus() != true else {
-                finish()
-                return
-            }
-            UserDefaults.standard.set(Date(), forKey: OnboardingStorage.paywallShownKey)
-            showingPaywall = true
-        }
-    }
-
-    /// A restore without an active subscription leaves the paywall open
-    private func closePaywallIfPremium(_ customerInfo: CustomerInfo) {
-        SubscriptionManager.shared.update(with: customerInfo)
-        if SubscriptionManager.shared.isPremium {
-            showingPaywall = false
-        }
+        guard page == .sources else { return }
+        Analytics.log(.onboardingQuestionAnswered, [
+            "question": page.analyticsName,
+            "answers": sources.map(\.rawValue).sorted()
+        ])
     }
 
     /// Saves the answers on the user's analytics profile and moves on to Create account.
@@ -634,11 +453,7 @@ struct OnboardingFlowView: View {
         Analytics.log(
             .onboardingCompleted,
             ["tutorial": tutorial],
-            userProperties: [
-                "onboarding_goals": goals.sorted(),
-                "onboarding_cooking_time": cookingTime ?? "",
-                "onboarding_recipe_sources": sources.sorted()
-            ]
+            userProperties: ["onboarding_recipe_sources": sources.map(\.rawValue).sorted()]
         )
         UserDefaults.standard.set(name.trimmed, forKey: OnboardingStorage.nameKey)
         hasCompletedOnboarding = true
@@ -648,7 +463,8 @@ struct OnboardingFlowView: View {
 
 // MARK: - Create Account
 
-/// Last onboarding step: Apple, Google, or the email form under Other options
+/// Last onboarding step: Apple, Google, or the email form under Other options.
+/// The launch paywall shows right after the account is created.
 struct OnboardingAccountView: View {
     @ObservedObject var router: AuthRouter
     @StateObject private var viewModel = SignUpViewModel()
@@ -793,32 +609,98 @@ private struct OnboardingTitle: View {
     }
 }
 
-private struct OnboardingOptionRow: View {
-    let option: OnboardingOption
+/// Five stars, the quote and the reviewer, like an App Store review
+private struct ReviewCard: View {
+    let review: OnboardingReview
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Image(systemName: "quote.opening")
+                .font(.system(size: 34, weight: .bold))
+                .foregroundColor(Color("Orange"))
+
+            HStack(spacing: 3) {
+                ForEach(0..<5, id: \.self) { _ in
+                    Image(systemName: "star.fill")
+                        .foregroundColor(Color(red: 1.0, green: 0.76, blue: 0.03))
+                }
+            }
+            .font(.system(size: 18))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("5 stars")
+
+            Text("\u{201C}\(review.quote)\u{201D}")
+                .font(.custom("OpenSans-Regular", size: 15))
+                .foregroundColor(Color("GraniteGray"))
+                .fixedSize(horizontal: false, vertical: true)
+
+            Divider()
+
+            HStack(spacing: 10) {
+                avatar
+                Text(review.name)
+                    .font(.custom("OpenSans-SemiBold", size: 14))
+            }
+        }
+        .padding(20)
+        .background(RoundedRectangle(cornerRadius: 20).fill(Color.white))
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color("GrayButtonBorderColor"), lineWidth: 1))
+        .shadow(color: .black.opacity(0.05), radius: 10, y: 4)
+    }
+
+    @ViewBuilder
+    private var avatar: some View {
+        if let image = review.avatarImage {
+            Image(image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 36, height: 36)
+                .clipShape(Circle())
+        } else {
+            Text(review.initials)
+                .font(.custom("OpenSans-SemiBold", size: 14))
+                .foregroundColor(Color("Orange"))
+                .frame(width: 36, height: 36)
+                .background(Circle().fill(Color("PeachCream")))
+        }
+    }
+}
+
+/// A recipe source with its logo and a checkbox
+private struct SourceOptionRow: View {
+    let source: RecipeSource
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
-                if !option.emoji.isEmpty {
-                    Text(option.emoji)
-                        .font(.system(size: 20))
+            HStack(spacing: 14) {
+                Group {
+                    if let logo = source.logo {
+                        Image(logo)
+                            .resizable()
+                            .scaledToFit()
+                    } else {
+                        Image(systemName: "globe")
+                            .resizable()
+                            .scaledToFit()
+                            .foregroundColor(Color("GraniteGray"))
+                    }
                 }
-                Text(option.title)
+                .frame(width: 24, height: 24)
+
+                Text(source.name)
                     .font(.custom("OpenSans-Regular", size: 16))
                     .foregroundColor(.black)
-                    .multilineTextAlignment(.leading)
+
                 Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(Color("Orange"))
-                        .transition(.scale.combined(with: .opacity))
-                }
+
+                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 22))
+                    .foregroundColor(isSelected ? Color("Orange") : Color("GrayButtonBorderColor"))
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .frame(minHeight: 56)
+            .frame(height: 56)
             .background(
                 RoundedRectangle(cornerRadius: 14)
                     .fill(isSelected ? Color("PeachCream") : Color.white)
@@ -827,65 +709,11 @@ private struct OnboardingOptionRow: View {
                 RoundedRectangle(cornerRadius: 14)
                     .stroke(isSelected ? Color("Orange") : Color("GrayButtonBorderColor"), lineWidth: isSelected ? 2 : 1)
             )
+            .contentShape(Rectangle())
             .animation(.easeInOut(duration: 0.15), value: isSelected)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-}
-
-/// A recipe app to pick, with a button for its how-to video
-private struct SourceOptionRow: View {
-    let app: HowToApp
-    let isSelected: Bool
-    let onSelect: () -> Void
-    let onHowTo: () -> Void
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Button(action: onSelect) {
-                HStack(spacing: 12) {
-                    Text(app.emoji)
-                        .font(.system(size: 20))
-                    Text(app.name)
-                        .font(.custom("OpenSans-Regular", size: 16))
-                        .foregroundColor(.black)
-                    Spacer()
-                }
-                .frame(maxHeight: .infinity)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityAddTraits(isSelected ? .isSelected : [])
-
-            Button(action: onHowTo) {
-                Label("How to", systemImage: "play.fill")
-                    .font(.custom("OpenSans-SemiBold", size: 13))
-                    .foregroundColor(Color("Orange"))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(Color("Orange").opacity(0.12)))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("How to save recipes from \(app.name)")
-
-            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                .foregroundColor(isSelected ? Color("Orange") : Color("GrayButtonBorderColor"))
-                .font(.system(size: 20))
-                .onTapGesture(perform: onSelect)
-                .accessibilityHidden(true)
-        }
-        .padding(.horizontal, 16)
-        .frame(height: 56)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(isSelected ? Color("PeachCream") : Color.white)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(isSelected ? Color("Orange") : Color("GrayButtonBorderColor"), lineWidth: isSelected ? 2 : 1)
-        )
-        .animation(.easeInOut(duration: 0.15), value: isSelected)
     }
 }
 
@@ -910,45 +738,7 @@ struct OnboardingPrimaryButton: View {
     }
 }
 
-/// Recipe photo in a soft rounded shape, for "That's great!"
-private struct OnboardingPhotoBlob: View {
-    private let recipe = TutorialSampleRecipe.current
-
-    var body: some View {
-        TutorialRecipePhoto(url: recipe.imageUrl)
-            .frame(width: 250, height: 250)
-            .clipShape(RoundedRectangle(cornerRadius: 110, style: .continuous))
-            .background(
-                RoundedRectangle(cornerRadius: 120, style: .continuous)
-                    .fill(Color("PeachCream"))
-                    .frame(width: 280, height: 270)
-                    .rotationEffect(.degrees(-8))
-            )
-            .accessibilityHidden(true)
-    }
-}
-
-/// The chosen goals' emojis spilling out of a bowl
-private struct GoalsIllustration: View {
-    let emojis: [String]
-
-    var body: some View {
-        ZStack(alignment: .bottom) {
-            ForEach(Array(emojis.prefix(6).enumerated()), id: \.offset) { index, emoji in
-                Text(emoji)
-                    .font(.system(size: 54))
-                    .rotationEffect(.degrees(Double(index % 3 - 1) * 12))
-                    .offset(x: CGFloat(index % 3 - 1) * 70, y: index < 3 ? -150 : -90)
-            }
-            Text("🥣")
-                .font(.system(size: 150))
-        }
-        .frame(height: 280)
-        .accessibilityHidden(true)
-    }
-}
-
-/// Recipe photo surrounded by the apps Salt imports from
+/// Recipe photo surrounded by the logos of the apps Salt imports from
 private struct ImportSourcesIllustration: View {
     private let recipe = TutorialSampleRecipe.current
 
@@ -959,38 +749,38 @@ private struct ImportSourcesIllustration: View {
                 .clipShape(RoundedRectangle(cornerRadius: 20))
                 .shadow(color: .black.opacity(0.12), radius: 12, y: 6)
 
-            sourceChip("Instagram", systemImage: "camera", color: Color(red: 0.84, green: 0.16, blue: 0.46))
-                .offset(x: -110, y: -70)
-            sourceChip("TikTok", systemImage: "music.note", color: .black)
-                .offset(x: 115, y: -30)
-            sourceChip("YouTube", systemImage: "play.fill", color: .red)
-                .offset(x: -105, y: 60)
-            sourceChip("Pinterest", systemImage: "pin.fill", color: Color(red: 0.8, green: 0.1, blue: 0.15))
-                .offset(x: 105, y: 95)
+            logoBadge("instagramLogo")
+                .offset(x: -100, y: -80)
+            logoBadge("tiktokLogo")
+                .offset(x: 105, y: -40)
+            logoBadge("facebookLogo")
+                .offset(x: -100, y: 55)
+            logoBadge("youtubeShortsLogo")
+                .offset(x: 100, y: 90)
         }
         .frame(height: 260)
         .accessibilityHidden(true)
     }
 
-    private func sourceChip(_ title: String, systemImage: String, color: Color) -> some View {
-        Label(title, systemImage: systemImage)
-            .font(.custom("OpenSans-SemiBold", size: 13))
-            .foregroundColor(.white)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Capsule().fill(color))
-            .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+    private func logoBadge(_ logo: String) -> some View {
+        Image(logo)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 30, height: 30)
+            .padding(12)
+            .background(RoundedRectangle(cornerRadius: 14).fill(Color.white))
+            .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
     }
 }
 
-/// Salt icon with ingredients circling it
+/// Salt icon with ramen ingredients circling it
 private struct SettingUpAnimation: View {
     @State private var isAnimating = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
-            ForEach(Array(["🥑", "🍋", "🌶️", "🥕"].enumerated()), id: \.offset) { index, emoji in
+            ForEach(Array(["🍜", "🥚", "🌶️", "🧄"].enumerated()), id: \.offset) { index, emoji in
                 Text(emoji)
                     .font(.system(size: 38))
                     .offset(y: -90)
@@ -1012,83 +802,6 @@ private struct SettingUpAnimation: View {
     }
 }
 
-/// "Scattered recipes" now, rising to "Organized recipes" at your goal
-private struct ProgressCurveChart: View {
-    @State private var progress: CGFloat = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        GeometryReader { geo in
-            let width = geo.size.width
-            let height = geo.size.height - 24
-            let start = CGPoint(x: width * 0.12, y: height * 0.75)
-            let end = CGPoint(x: width * 0.88, y: height * 0.12)
-
-            ZStack(alignment: .topLeading) {
-                // Grid lines
-                ForEach(0..<4, id: \.self) { line in
-                    Path { path in
-                        let y = height * CGFloat(line) / 3
-                        path.move(to: CGPoint(x: 0, y: y))
-                        path.addLine(to: CGPoint(x: width, y: y))
-                    }
-                    .stroke(Color("GrayButtonBorderColor"), lineWidth: 1)
-                }
-
-                // Flat at first, then steep
-                Path { path in
-                    path.move(to: start)
-                    path.addCurve(
-                        to: end,
-                        control1: CGPoint(x: width * 0.55, y: height * 0.78),
-                        control2: CGPoint(x: width * 0.85, y: height * 0.6)
-                    )
-                }
-                .trim(from: 0, to: progress)
-                .stroke(
-                    LinearGradient(colors: [Color("GraniteGray"), Color("Orange")], startPoint: .leading, endPoint: .trailing),
-                    style: StrokeStyle(lineWidth: 3, lineCap: .round)
-                )
-
-                marker(at: start, label: "Scattered recipes", color: Color("GraniteGray"))
-                marker(at: end, label: "Organized recipes", color: Color("Orange"))
-                    .opacity(progress >= 1 ? 1 : 0)
-
-                Text("Now")
-                    .position(x: start.x, y: height + 14)
-                Text("Your goal")
-                    .position(x: end.x, y: height + 14)
-            }
-            .font(.custom("OpenSans-Regular", size: 12))
-            .foregroundColor(Color("GraniteGray"))
-        }
-        .onAppear {
-            withAnimation(reduceMotion ? nil : .easeInOut(duration: 1.2).delay(0.2)) {
-                progress = 1
-            }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Your recipes go from scattered now to organized at your goal")
-    }
-
-    private func marker(at point: CGPoint, label: String, color: Color) -> some View {
-        ZStack {
-            Circle()
-                .fill(color)
-                .frame(width: 10, height: 10)
-                .position(point)
-            Text(label)
-                .font(.custom("OpenSans-SemiBold", size: 11))
-                .foregroundColor(.white)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Capsule().fill(color))
-                .fixedSize()
-                .position(x: point.x, y: point.y - 22)
-        }
-    }
-}
-
 // MARK: - Preview
 
 #Preview("Welcome") {
@@ -1099,28 +812,16 @@ private struct ProgressCurveChart: View {
     OnboardingFlowView(router: AuthRouter())
 }
 
-#Preview("Goals") {
-    OnboardingFlowView(router: AuthRouter(), startingAt: .goals, goals: ["eat_healthier", "organize"])
-}
-
-#Preview("That's Great") {
-    OnboardingFlowView(router: AuthRouter(), startingAt: .goalsGreat, goals: ["eat_healthier", "organize"])
-}
-
-#Preview("Goals Plan") {
-    OnboardingFlowView(router: AuthRouter(), startingAt: .goalsPlan, goals: ["eat_healthier", "organize"])
-}
-
 #Preview("Sources") {
     OnboardingFlowView(router: AuthRouter(), startingAt: .sources)
 }
 
-#Preview("Setting Up") {
-    OnboardingFlowView(router: AuthRouter(), startingAt: .settingUp)
+#Preview("Show How") {
+    OnboardingFlowView(router: AuthRouter(), startingAt: .showHow)
 }
 
-#Preview("Progress") {
-    OnboardingFlowView(router: AuthRouter(), startingAt: .progress)
+#Preview("Setting Up") {
+    OnboardingFlowView(router: AuthRouter(), startingAt: .settingUp)
 }
 
 #Preview("Create Account") {

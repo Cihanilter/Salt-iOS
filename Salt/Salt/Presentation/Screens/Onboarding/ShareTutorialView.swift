@@ -175,19 +175,19 @@ struct TutorialSampleRecipe {
     let totalTimeMinutes: Int?
     let servings: Int?
 
-    /// No-Cook Chicken and Avocado Bowls: short, photogenic, few ingredients
-    private static let preferredId = UUID(uuidString: "03923292-775d-4833-b071-59483cb0122f")
+    /// Quick Chicken Ramen Bowl: short, recognizable, few ingredients
+    private static let preferredId = UUID(uuidString: "92f3f1b9-dd2b-4d70-9a0a-0ebd33e8dbd7")
 
     @MainActor
     static var current: TutorialSampleRecipe {
         let recipes = CuratedRecipesManager.shared.recipes
         guard let recipe = recipes.first(where: { $0.id == preferredId }) ?? recipes.first else {
             return TutorialSampleRecipe(
-                title: "Chicken and Avocado Bowls",
+                title: "Quick Chicken Ramen Bowl",
                 imageUrl: nil,
-                ingredients: ["Chicken", "Avocados", "Cilantro", "Chili powder", "Lime juice"],
-                totalTimeMinutes: 10,
-                servings: 3
+                ingredients: ["Ramen noodles", "Cooked chicken", "Water", "Creole seasoning", "Hot sauce"],
+                totalTimeMinutes: 20,
+                servings: 1
             )
         }
         return TutorialSampleRecipe(
@@ -324,7 +324,7 @@ private struct TutorialPostView: View {
                 Text("dinnerin10")
                     .font(.custom("OpenSans-SemiBold", size: 14))
             }
-            Text("\(recipe.title) 🥑 Recipe in caption!")
+            Text("\(recipe.title) 🍜 Recipe in caption!")
                 .font(.custom("OpenSans-Regular", size: 13))
                 .lineLimit(2)
         }

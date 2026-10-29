@@ -29,7 +29,6 @@ enum Analytics {
         case importTutorialSkipped = "import_tutorial_skipped"
         case importBannerTapped = "import_banner_tapped"
         case importBannerDismissed = "import_banner_dismissed"
-        case howToVideoOpened = "how_to_video_opened"
 
         // Add Recipe
         case shareLinkReceived = "share_link_received"
