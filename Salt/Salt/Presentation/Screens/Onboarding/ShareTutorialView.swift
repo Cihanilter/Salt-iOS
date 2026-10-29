@@ -61,7 +61,8 @@ struct ShareTutorialView: View {
 
     private var primaryTitle: String {
         if hasNextSource { return "Next: recipe websites" }
-        return context == .explore ? "Try it on Instagram" : "Continue"
+        guard context == .explore else { return "Continue" }
+        return source == .website ? "Try it in Safari" : "Try it on Instagram"
     }
 
     enum Step: Int {
@@ -196,8 +197,12 @@ struct ShareTutorialView: View {
             return
         }
         if context == .explore {
-            // The real thing: open Instagram to share a recipe; without Instagram, paste a link
-            openURL(URL(string: "instagram://app")!) { opened in
+            // The real thing: open Instagram (or recipes in Safari) to share a recipe;
+            // if that doesn't open, paste a link instead
+            let url = source == .website
+                ? URL(string: "https://www.google.com/search?q=easy+dinner+recipes")!
+                : URL(string: "instagram://app")!
+            openURL(url) { opened in
                 finish(opened ? .completed : .pasteLink)
             }
         } else {

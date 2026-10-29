@@ -33,6 +33,8 @@ struct ExploreRecipesView: View {
     var scrollToTopTrigger: UUID = UUID()
     /// Opens the Add Recipe tab (from the import tutorial banner)
     var switchToAddRecipe: () -> Void = {}
+    /// Opens the Add Recipe tab on Create (from the import tutorial banner)
+    var openCreateRecipe: () -> Void = {}
     @State private var contentID = UUID()
 
     // Popular searches (fixed list)
@@ -228,7 +230,7 @@ struct ExploreRecipesView: View {
         ScrollView(showsIndicators: false) {
             LazyVStack(alignment: .leading, spacing: 10) {
                 // Helps new users get to their first import
-                ImportTutorialBanner(switchToAddRecipe: switchToAddRecipe)
+                ImportTutorialBanner(switchToAddRecipe: switchToAddRecipe, openCreateRecipe: openCreateRecipe)
                     .padding(.horizontal, 18)
 
                 // Cuisine sections

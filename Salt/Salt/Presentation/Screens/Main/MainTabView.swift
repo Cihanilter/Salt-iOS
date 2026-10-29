@@ -9,6 +9,8 @@ import RevenueCatUI
 
 struct MainTabView: View {
     @State private var selectedTab = 0
+    /// Page to show on the Add Recipe tab when switching to it (Create or Import)
+    @State private var addRecipeTabRequest: AddRecipeTab?
     @State private var exploreScrollToTop = UUID()
     @ObservedObject private var shareImportRouter = ShareImportRouter.shared
     @ObservedObject private var sharedRecipeRouter = SharedRecipeRouter.shared
@@ -65,7 +67,14 @@ struct MainTabView: View {
         TabView(selection: tabSelection) {
             // Explore Tab
             NavigationStack {
-                ExploreRecipesView(scrollToTopTrigger: exploreScrollToTop, switchToAddRecipe: { selectedTab = 1 })
+                ExploreRecipesView(
+                    scrollToTopTrigger: exploreScrollToTop,
+                    switchToAddRecipe: { selectedTab = 1 },
+                    openCreateRecipe: {
+                        addRecipeTabRequest = .create
+                        selectedTab = 1
+                    }
+                )
                     .navigationBarHidden(true)
             }
             .tabItem {
@@ -78,7 +87,7 @@ struct MainTabView: View {
 
             // Add Recipe Tab
             NavigationStack {
-                AddNewRecipeView(switchToMyRecipes: { selectedTab = 2 })
+                AddNewRecipeView(requestedTab: $addRecipeTabRequest, switchToMyRecipes: { selectedTab = 2 })
                     .navigationBarHidden(true)
             }
             .tabItem {
