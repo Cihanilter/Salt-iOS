@@ -370,11 +370,17 @@ struct OnboardingFlowView: View {
         }
     }
 
-    /// Social media walkthrough first (unless only websites were picked), then websites if picked
+    /// The first social app picked (Instagram if none), unless only websites were picked;
+    /// then websites if picked
     private var tutorialSources: [ShareTutorialView.Source] {
         var tutorials: [ShareTutorialView.Source] = []
-        if sources.isEmpty || sources.contains(where: { $0 != .websites }) {
-            tutorials.append(.social)
+        let apps: [(RecipeSource, ShareTutorialView.Source)] = [
+            (.instagram, .instagram), (.tiktok, .tiktok), (.facebook, .facebook), (.youtubeShorts, .youtubeShorts)
+        ]
+        if let app = apps.first(where: { sources.contains($0.0) }) {
+            tutorials.append(app.1)
+        } else if !sources.contains(.websites) {
+            tutorials.append(.instagram)
         }
         if sources.contains(.websites) {
             tutorials.append(.website)

@@ -26,12 +26,83 @@ struct ShareTutorialView: View {
         case skipped
     }
 
-    /// What the walkthrough imports from
+    /// What the walkthrough imports from: a social app's recipe post, or a website in Safari
     enum Source: String {
-        /// A recipe post in a social app (Instagram, TikTok...)
-        case social
-        /// A recipe website in Safari
+        case instagram
+        case tiktok
+        case facebook
+        case youtubeShorts = "youtube_shorts"
         case website
+
+        var isSocial: Bool { self != .website }
+
+        var name: String {
+            switch self {
+            case .instagram: "Instagram"
+            case .tiktok: "TikTok"
+            case .facebook: "Facebook"
+            case .youtubeShorts: "YouTube Shorts"
+            case .website: "Safari"
+            }
+        }
+
+        /// Logo in the asset catalog
+        var logo: String? {
+            switch self {
+            case .instagram: "instagramLogo"
+            case .tiktok: "tiktokLogo"
+            case .facebook: "facebookLogo"
+            case .youtubeShorts: "youtubeShortsLogo"
+            case .website: nil
+            }
+        }
+
+        /// Shown under the shared item on the iOS share sheet
+        var domain: String {
+            switch self {
+            case .instagram: "instagram.com"
+            case .tiktok: "tiktok.com"
+            case .facebook: "facebook.com"
+            case .youtubeShorts: "youtube.com"
+            case .website: TutorialWebsiteView.domain
+            }
+        }
+
+        /// The post's share button
+        var shareIcon: String {
+            self == .instagram ? "paperplane" : "arrowshape.turn.up.right.fill"
+        }
+
+        /// Button on the app's own share sheet that opens the iOS share sheet
+        var shareToLabel: String {
+            switch self {
+            case .instagram: "Share to..."
+            case .facebook: "More options"
+            case .tiktok, .youtubeShorts, .website: "More"
+            }
+        }
+
+        /// Opens the app, to try a real import after the tutorial
+        var appURL: URL {
+            switch self {
+            case .instagram: URL(string: "instagram://app")!
+            case .tiktok: URL(string: "tiktok://")!
+            case .facebook: URL(string: "fb://")!
+            case .youtubeShorts: URL(string: "youtube://")!
+            case .website: webURL
+            }
+        }
+
+        /// Used when the app isn't installed
+        var webURL: URL {
+            switch self {
+            case .instagram: URL(string: "https://www.instagram.com")!
+            case .tiktok: URL(string: "https://www.tiktok.com")!
+            case .facebook: URL(string: "https://www.facebook.com")!
+            case .youtubeShorts: URL(string: "https://www.youtube.com/shorts")!
+            case .website: URL(string: "https://www.google.com/search?q=easy+dinner+recipes")!
+            }
+        }
     }
 
     let context: Context
@@ -49,9 +120,9 @@ struct ShareTutorialView: View {
     private let recipe = TutorialSampleRecipe.current
 
     /// `step` is only for previews; the tutorial always starts on the post
-    init(context: Context, sources: [Source] = [.social], startingAt step: Step = .post, onFinish: @escaping (Outcome) -> Void) {
+    init(context: Context, sources: [Source] = [.instagram], startingAt step: Step = .post, onFinish: @escaping (Outcome) -> Void) {
         self.context = context
-        self.sources = sources.isEmpty ? [.social] : sources
+        self.sources = sources.isEmpty ? [.instagram] : sources
         self.onFinish = onFinish
         _step = State(initialValue: step)
     }
@@ -62,7 +133,7 @@ struct ShareTutorialView: View {
     private var primaryTitle: String {
         if hasNextSource { return "Next: recipe websites" }
         guard context == .explore else { return "Continue" }
-        return source == .website ? "Try it in Safari" : "Try it on Instagram"
+        return "Try it on \(source.name)"
     }
 
     enum Step: Int {
@@ -139,10 +210,9 @@ struct ShareTutorialView: View {
     private var appScreen: some View {
         ZStack(alignment: .bottom) {
             Group {
-                switch source {
-                case .social:
-                    TutorialPostView(recipe: recipe, isDimmed: step != .post, missedTaps: missedTaps, onShare: { advance(to: .appShareSheet) })
-                case .website:
+                if source.isSocial {
+                    TutorialPostView(recipe: recipe, source: source, isDimmed: step != .post, missedTaps: missedTaps, onShare: { advance(to: .appShareSheet) })
+                } else {
                     TutorialWebsiteView(recipe: recipe, isDimmed: step != .post, missedTaps: missedTaps, onMenu: { advance(to: .appShareSheet) })
                 }
             }
@@ -150,11 +220,10 @@ struct ShareTutorialView: View {
             .onTapGesture { missedTap() }
 
             if step == .appShareSheet {
-                switch source {
-                case .social:
-                    TutorialAppShareSheet(missedTaps: missedTaps, onShareTo: { advance(to: .systemShareSheet) })
+                if source.isSocial {
+                    TutorialAppShareSheet(source: source, missedTaps: missedTaps, onShareTo: { advance(to: .systemShareSheet) })
                         .transition(.move(edge: .bottom))
-                case .website:
+                } else {
                     TutorialSafariMenu(missedTaps: missedTaps, onShare: { advance(to: .systemShareSheet) })
                         .transition(.scale(scale: 0.6, anchor: .bottomTrailing).combined(with: .opacity))
                 }
@@ -197,13 +266,15 @@ struct ShareTutorialView: View {
             return
         }
         if context == .explore {
-            // The real thing: open Instagram (or recipes in Safari) to share a recipe;
-            // if that doesn't open, paste a link instead
-            let url = source == .website
-                ? URL(string: "https://www.google.com/search?q=easy+dinner+recipes")!
-                : URL(string: "instagram://app")!
-            openURL(url) { opened in
-                finish(opened ? .completed : .pasteLink)
+            // The real thing: open the app to share a recipe from it.
+            // Without the app installed, its website (sharing from Safari works too).
+            let source = source
+            openURL(source.appURL) { opened in
+                if opened {
+                    finish(.completed)
+                } else {
+                    openURL(source.webURL) { _ in finish(.completed) }
+                }
             }
         } else {
             finish(.completed)
@@ -345,6 +416,7 @@ private extension View {
 /// Full-screen recipe video post, like an Instagram Reel or TikTok
 private struct TutorialPostView: View {
     let recipe: TutorialSampleRecipe
+    let source: ShareTutorialView.Source
     let isDimmed: Bool
     let missedTaps: Int
     let onShare: () -> Void
@@ -362,9 +434,33 @@ private struct TutorialPostView: View {
                 LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .center, endPoint: .bottom)
                     .ignoresSafeArea()
             }
+            .overlay(alignment: .topLeading) { appLabel }
             .overlay(alignment: .bottomLeading) { caption }
             .overlay(alignment: .bottomTrailing) { sideActions }
             .overlay(Color.black.opacity(isDimmed ? 0.45 : 0).ignoresSafeArea())
+    }
+
+    /// Which app this is, e.g. "Instagram example"
+    private var appLabel: some View {
+        HStack(spacing: 6) {
+            if let logo = source.logo {
+                Image(logo)
+                    .resizable()
+                    .frame(width: 16, height: 16)
+                    .padding(4)
+                    .background(Circle().fill(Color.white))
+            }
+            Text("\(source.name) example")
+                .font(.custom("OpenSans-SemiBold", size: 13))
+                .foregroundColor(.white)
+        }
+        .padding(.leading, 6)
+        .padding(.trailing, 12)
+        .padding(.vertical, 5)
+        .background(Capsule().fill(Color.black.opacity(0.55)))
+        .padding(.leading, 16)
+        .padding(.top, 8)
+        .accessibilityHidden(true)
     }
 
     private var caption: some View {
@@ -392,7 +488,7 @@ private struct TutorialPostView: View {
             postAction("heart", label: "12.4K")
             postAction("bubble.right", label: "318")
             Button(action: onShare) {
-                postAction("paperplane", label: "Share")
+                postAction(source.shareIcon, label: "Share")
             }
             .buttonStyle(.plain)
             .disabled(isDimmed)
@@ -435,6 +531,7 @@ private struct TutorialPostView: View {
 // MARK: - Step 2: Social App's Share Sheet
 
 private struct TutorialAppShareSheet: View {
+    let source: ShareTutorialView.Source
     let missedTaps: Int
     let onShareTo: () -> Void
 
@@ -484,11 +581,11 @@ private struct TutorialAppShareSheet: View {
                 sheetAction("plus", label: "Add to story")
                 sheetAction("link", label: "Copy link")
                 Button(action: onShareTo) {
-                    sheetAction("square.and.arrow.up", label: "Share to...")
+                    sheetAction(source == .instagram ? "square.and.arrow.up" : "ellipsis", label: source.shareToLabel)
                 }
                 .buttonStyle(.plain)
                 .tutorialPulse()
-                .accessibilityLabel("Share to")
+                .accessibilityLabel(source.shareToLabel)
                 .accessibilityHint("Step 2 of 4")
                 sheetAction("message.fill", label: "Messages", tint: .green)
             }
@@ -501,7 +598,7 @@ private struct TutorialAppShareSheet: View {
                 .ignoresSafeArea(edges: .bottom)
         )
         .overlay(alignment: .bottom) {
-            TutorialHint(text: "TAP SHARE TO...", missedTaps: missedTaps)
+            TutorialHint(text: "TAP \(source.shareToLabel.uppercased())", missedTaps: missedTaps)
                 .padding(.bottom, 100)
                 .allowsHitTesting(false)
         }
@@ -545,7 +642,7 @@ private struct TutorialSystemShareSheet: View {
                         .font(.custom("OpenSans-SemiBold", size: 14))
                         .foregroundColor(.black)
                         .lineLimit(1)
-                    Text(source == .website ? TutorialWebsiteView.domain : "instagram.com")
+                    Text(source.domain)
                         .font(.custom("OpenSans-Regular", size: 12))
                         .foregroundColor(Color(.systemGray))
                 }
@@ -1071,6 +1168,10 @@ private struct TutorialImportedView: View {
 
 #Preview("Safari Menu") {
     ShareTutorialView(context: .onboarding, sources: [.website], startingAt: .appShareSheet) { _ in }
+}
+
+#Preview("TikTok") {
+    ShareTutorialView(context: .explore, sources: [.tiktok], startingAt: .appShareSheet) { _ in }
 }
 
 #Preview("Imported (Explore)") {

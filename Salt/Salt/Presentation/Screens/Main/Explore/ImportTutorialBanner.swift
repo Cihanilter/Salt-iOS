@@ -42,6 +42,8 @@ struct ImportTutorialBanner: View {
                         isDismissed = true
                     }
                 )
+                // Inside the condition, so the hidden banner takes no space
+                .padding(.top, 8)
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
@@ -67,7 +69,7 @@ struct ImportTutorialBanner: View {
                 pendingOption = option
                 showingOptions = false
             }
-            .presentationDetents([.medium])
+            .presentationDetents([.height(460)])
             .presentationDragIndicator(.visible)
         }
         .fullScreenCover(item: $tutorialSource, onDismiss: {
@@ -92,10 +94,10 @@ struct ImportTutorialBanner: View {
     private func openPendingOption() {
         guard let option = pendingOption else { return }
         pendingOption = nil
-        switch option {
-        case .socialMedia: tutorialSource = .social
-        case .website: tutorialSource = .website
-        case .createManually: openCreateRecipe()
+        if let source = option.tutorialSource {
+            tutorialSource = source
+        } else {
+            openCreateRecipe()
         }
     }
 }
@@ -106,25 +108,26 @@ extension ShareTutorialView.Source: Identifiable {
 
 /// Ways to add a first recipe, in the banner's sheet
 enum ImportBannerOption: String, CaseIterable, Identifiable {
-    case socialMedia = "social_media"
+    case instagram
+    case tiktok
+    case facebook
+    case youtubeShorts = "youtube_shorts"
     case website
     case createManually = "create_manually"
 
     var id: String { rawValue }
 
-    var title: String {
-        switch self {
-        case .socialMedia: "From social media"
-        case .website: "From a website"
-        case .createManually: "Create manually"
-        }
-    }
+    static let socialApps: [ImportBannerOption] = [.instagram, .tiktok, .facebook, .youtubeShorts]
 
-    var subtitle: String {
+    /// The walkthrough it opens; Create manually has none
+    var tutorialSource: ShareTutorialView.Source? {
         switch self {
-        case .socialMedia: "Instagram, TikTok, Facebook, YouTube Shorts"
-        case .website: "Any recipe blog or website"
-        case .createManually: "Type in your own recipe"
+        case .instagram: .instagram
+        case .tiktok: .tiktok
+        case .facebook: .facebook
+        case .youtubeShorts: .youtubeShorts
+        case .website: .website
+        case .createManually: nil
         }
     }
 }
@@ -257,21 +260,38 @@ private struct ImportOptionsSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Add your first recipe")
                     .font(.custom("Playfair9pt-SemiBold", size: 24))
-                Text("We'll show you how in a few taps.")
+                Text("Pick where it's from and we'll show you how.")
                     .font(.custom("OpenSans-Regular", size: 14))
                     .foregroundColor(Color("GraniteGray"))
             }
             .padding(.top, 28)
 
-            VStack(spacing: 10) {
-                ForEach(ImportBannerOption.allCases) { option in
+            // One tile per social app
+            HStack(spacing: 10) {
+                ForEach(ImportBannerOption.socialApps) { option in
                     Button {
                         onSelect(option)
                     } label: {
-                        optionRow(option)
+                        appTile(option)
                     }
                     .buttonStyle(.plain)
                 }
+            }
+
+            VStack(spacing: 10) {
+                Button {
+                    onSelect(.website)
+                } label: {
+                    optionRow(title: "From a website", subtitle: "Any recipe blog or website", systemImage: "globe")
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    onSelect(.createManually)
+                } label: {
+                    optionRow(title: "Create manually", subtitle: "Type in your own recipe", systemImage: "square.and.pencil")
+                }
+                .buttonStyle(.plain)
             }
 
             Spacer(minLength: 0)
@@ -281,21 +301,43 @@ private struct ImportOptionsSheet: View {
         .background(Color.white.ignoresSafeArea())
     }
 
-    private func optionRow(_ option: ImportBannerOption) -> some View {
+    private func appTile(_ option: ImportBannerOption) -> some View {
+        let source = option.tutorialSource
+        return VStack(spacing: 8) {
+            if let logo = source?.logo {
+                Image(logo)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 30, height: 30)
+            }
+            Text(source?.name ?? "")
+                .font(.custom("OpenSans-SemiBold", size: 12))
+                .foregroundColor(.black)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.85)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 92)
+        .background(RoundedRectangle(cornerRadius: 16).stroke(Color("GrayButtonBorderColor"), lineWidth: 1))
+        .contentShape(Rectangle())
+    }
+
+    private func optionRow(title: String, subtitle: String, systemImage: String) -> some View {
         HStack(spacing: 14) {
-            icon(for: option)
+            Image(systemName: systemImage)
+                .font(.system(size: 22))
+                .foregroundColor(Color("Orange"))
                 .frame(width: 48, height: 48)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color("PeachCream")))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(option.title)
+                Text(title)
                     .font(.custom("OpenSans-SemiBold", size: 16))
                     .foregroundColor(.black)
-                Text(option.subtitle)
+                Text(subtitle)
                     .font(.custom("OpenSans-Regular", size: 13))
                     .foregroundColor(Color("GraniteGray"))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
             }
 
             Spacer(minLength: 0)
@@ -307,34 +349,6 @@ private struct ImportOptionsSheet: View {
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 16).stroke(Color("GrayButtonBorderColor"), lineWidth: 1))
         .contentShape(Rectangle())
-    }
-
-    @ViewBuilder
-    private func icon(for option: ImportBannerOption) -> some View {
-        switch option {
-        case .socialMedia:
-            // Two overlapping logos
-            ZStack {
-                Image("instagramLogo")
-                    .resizable()
-                    .frame(width: 20, height: 20)
-                    .offset(x: -6, y: -5)
-                Image("tiktokLogo")
-                    .resizable()
-                    .frame(width: 20, height: 20)
-                    .padding(2)
-                    .background(Circle().fill(Color("PeachCream")))
-                    .offset(x: 7, y: 6)
-            }
-        case .website:
-            Image(systemName: "globe")
-                .font(.system(size: 22))
-                .foregroundColor(Color("Orange"))
-        case .createManually:
-            Image(systemName: "square.and.pencil")
-                .font(.system(size: 22))
-                .foregroundColor(Color("Orange"))
-        }
     }
 }
 

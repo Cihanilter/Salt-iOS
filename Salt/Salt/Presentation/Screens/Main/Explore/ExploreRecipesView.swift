@@ -65,6 +65,13 @@ struct ExploreRecipesView: View {
             VStack(spacing: 0) {
                 // Header (fixed) - with explicit background to maintain safe area
                 VStack(spacing: 0) {
+                    // First thing new users see: importing is what Salt is for.
+                    // Empty once they've imported or dismissed it.
+                    if searchState == .idle {
+                        ImportTutorialBanner(switchToAddRecipe: switchToAddRecipe, openCreateRecipe: openCreateRecipe)
+                            .padding(.horizontal, 18)
+                    }
+
                     HStack {
                         Text("Explore Recipes")
                             .font(.custom("Playfair9pt-Medium", size: 28))
@@ -229,10 +236,6 @@ struct ExploreRecipesView: View {
     private var exploreContent: some View {
         ScrollView(showsIndicators: false) {
             LazyVStack(alignment: .leading, spacing: 10) {
-                // Helps new users get to their first import
-                ImportTutorialBanner(switchToAddRecipe: switchToAddRecipe, openCreateRecipe: openCreateRecipe)
-                    .padding(.horizontal, 18)
-
                 // Cuisine sections
                 ForEach(viewModel.cuisineSections) { section in
                     RecipeSection(

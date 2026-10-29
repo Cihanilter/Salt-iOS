@@ -69,7 +69,11 @@ struct MainTabView: View {
             NavigationStack {
                 ExploreRecipesView(
                     scrollToTopTrigger: exploreScrollToTop,
-                    switchToAddRecipe: { selectedTab = 1 },
+                    switchToAddRecipe: {
+                        // Paste a link: the Import page, even if Create was open last
+                        addRecipeTabRequest = .import
+                        selectedTab = 1
+                    },
                     openCreateRecipe: {
                         addRecipeTabRequest = .create
                         selectedTab = 1
