@@ -298,6 +298,8 @@ struct TutorialSampleRecipe {
     let ingredients: [String]
     let totalTimeMinutes: Int?
     let servings: Int?
+    /// Time and ingredient count as the recipe screen shows them
+    let detail: RecipeDetail
 
     /// Quick Chicken Ramen Bowl: short, recognizable, few ingredients
     private static let preferredId = UUID(uuidString: "92f3f1b9-dd2b-4d70-9a0a-0ebd33e8dbd7")
@@ -311,15 +313,32 @@ struct TutorialSampleRecipe {
                 imageUrl: nil,
                 ingredients: ["Ramen noodles", "Cooked chicken", "Water", "Creole seasoning", "Hot sauce"],
                 totalTimeMinutes: 20,
-                servings: 1
+                servings: 1,
+                detail: RecipeDetail(
+                    title: "Quick Chicken Ramen Bowl",
+                    duration: "20 mins",
+                    ingredientsCount: "5 ingredients",
+                    description: "A quick, cozy bowl of ramen with chicken.",
+                    servings: "1 serving",
+                    prepTime: "5",
+                    cookTime: "15",
+                    ingredients: ["Ramen noodles", "Cooked chicken", "Water", "Creole seasoning", "Hot sauce"],
+                    instructions: ["Bring the water to a boil.", "Add the noodles and chicken, and cook until tender."],
+                    notes: "",
+                    images: [],
+                    sourceUrl: nil,
+                    sourceName: nil
+                )
             )
         }
+        let detail = recipe.toRecipeDetail()
         return TutorialSampleRecipe(
             title: recipe.title,
             imageUrl: recipe.imageUrl.flatMap(URL.init(string:)),
             ingredients: recipe.ingredients,
             totalTimeMinutes: recipe.totalTimeMinutes,
-            servings: recipe.servings
+            servings: recipe.servings,
+            detail: detail
         )
     }
 }
@@ -1053,7 +1072,7 @@ private struct TutorialImportedView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 6) {
-                Text("Recipe imported\nsuccessfully! 🎉")
+                Text("Recipe imported\nsuccessfully! \u{1F389}")
                     .font(.custom("Playfair9pt-SemiBold", size: 28))
                     .multilineTextAlignment(.center)
                 Text("Ingredients and steps, saved in one tap.\nNo more screenshots.")
@@ -1064,7 +1083,7 @@ private struct TutorialImportedView: View {
             .padding(.top, 24)
             .padding(.horizontal, 24)
 
-            recipeCard
+            recipeSnippet
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
 
@@ -1092,55 +1111,45 @@ private struct TutorialImportedView: View {
         .background(Color.white.ignoresSafeArea())
     }
 
-    private var recipeCard: some View {
+    /// A small version of Salt's recipe screen: photo, the cream title card over it,
+    /// and the first ingredients
+    private var recipeSnippet: some View {
         VStack(alignment: .leading, spacing: 0) {
             TutorialRecipePhoto(url: recipe.imageUrl)
-                .frame(height: 150)
+                .frame(height: 160)
                 .frame(maxWidth: .infinity)
                 .clipped()
 
-            VStack(alignment: .leading, spacing: 10) {
-                Text(recipe.title)
+            // Same card as the recipe screen, overlapping the photo
+            RecipeInfoCard(title: recipe.detail.title, duration: recipe.detail.duration, ingredientsCount: recipe.detail.ingredientsCount)
+                .scaleEffect(0.92)
+                .padding(.top, -44)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Ingredients")
                     .font(.custom("Playfair9pt-SemiBold", size: 20))
+                    .padding(.bottom, 2)
 
-                HStack(spacing: 14) {
-                    if let minutes = recipe.totalTimeMinutes {
-                        Label("\(minutes) min", systemImage: "clock")
-                    }
-                    if let servings = recipe.servings {
-                        Label("\(servings) servings", systemImage: "person.2")
-                    }
+                ForEach(recipe.ingredients.prefix(3), id: \.self) { ingredient in
+                    Text(ingredient)
+                        .font(.custom("OpenSans-Regular", size: 15))
+                        .lineLimit(1)
                 }
-                .font(.custom("OpenSans-Regular", size: 13))
-                .foregroundColor(Color("GraniteGray"))
-
-                Text("INGREDIENTS")
-                    .font(.custom("OpenSans-SemiBold", size: 12))
-                    .foregroundColor(Color("Orange"))
-                    .padding(.top, 4)
-
-                ForEach(recipe.ingredients.prefix(4), id: \.self) { ingredient in
-                    HStack(alignment: .top, spacing: 8) {
-                        Circle()
-                            .fill(Color("Orange"))
-                            .frame(width: 5, height: 5)
-                            .padding(.top, 7)
-                        Text(ingredient)
-                            .font(.custom("OpenSans-Regular", size: 14))
-                            .lineLimit(1)
-                    }
-                }
-                if recipe.ingredients.count > 4 {
-                    Text("+ \(recipe.ingredients.count - 4) more")
+                if recipe.ingredients.count > 3 {
+                    Text("+ \(recipe.ingredients.count - 3) more")
                         .font(.custom("OpenSans-Regular", size: 13))
                         .foregroundColor(Color("GraniteGray"))
                 }
             }
-            .padding(16)
+            .padding(.horizontal, 18)
+            .padding(.top, 14)
+            .padding(.bottom, 18)
         }
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 20))
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color("GrayButtonBorderColor"), lineWidth: 1))
         .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
+        .accessibilityElement(children: .combine)
     }
 }
 
