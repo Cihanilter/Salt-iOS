@@ -37,20 +37,6 @@ struct SaveToCollectionPrompt: View {
         }
     }
 
-    /// Set when the user taps Not now; the prompt isn't shown again on this device
-    /// (cleared on sign out, see `resetOptOut()`)
-    private static let optedOutKey = "collectionPromptOptedOut"
-
-    /// Whether to offer the prompt after a save
-    static var shouldShow: Bool {
-        !UserDefaults.standard.bool(forKey: optedOutKey)
-    }
-
-    /// Asks again for the next account signed in on this device
-    static func resetOptOut() {
-        UserDefaults.standard.removeObject(forKey: optedOutKey)
-    }
-
     @ObservedObject private var manager = CollectionsManager.shared
     @StateObject private var invite = CollectionInviteState()
     @Environment(\.dismiss) private var dismiss
@@ -92,10 +78,11 @@ struct SaveToCollectionPrompt: View {
         .onChange(of: step) { _, newStep in
             Analytics.log(.collectionPromptShown, ["step": newStep.analyticsName])
         }
-        .sheet(item: $invite.shareItem, onDismiss: { dismiss() }) { item in
-            ActivityView(items: [item.message, item.url])
+        .sheet(item: $invite.shareItem, onDismiss: closeAfterInvite) { item in
+            ActivityView(items: [item.message, item.url], onComplete: invite.shareFinished)
                 .presentationDetents([.medium, .large])
         }
+        .collectionToast($invite.sentMessage)
         .overlay(alignment: .bottom) {
             if invite.isCreating {
                 CreatingLinkToast()
@@ -143,11 +130,7 @@ struct SaveToCollectionPrompt: View {
                 }
             }
 
-            secondaryButton("Not now") {
-                // Once is enough: don't ask after later saves
-                UserDefaults.standard.set(true, forKey: Self.optedOutKey)
-                skip()
-            }
+            secondaryButton("Not now") { skip() }
         }
         .overlay(alignment: .bottom) {
             if let addedTo {
@@ -243,12 +226,6 @@ struct SaveToCollectionPrompt: View {
             // Two people sharing a cookbook
             HStack(spacing: -14) {
                 personCircle("person.fill", color: Color("PeachCream"))
-                Image("saltAppIcon")
-                    .resizable()
-                    .frame(width: 64, height: 64)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white, lineWidth: 3))
-                    .zIndex(1)
                 personCircle("person.fill", color: Color("LightGrayishPink"))
             }
             .padding(.top, 8)
@@ -332,6 +309,16 @@ struct SaveToCollectionPrompt: View {
         isNameFocused = false
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
             step = next
+        }
+    }
+
+    /// After the share sheet: if the invite went out, show "Invite sent" for a moment, then close.
+    /// If it was cancelled, stay on the invite step.
+    private func closeAfterInvite() {
+        guard invite.sentMessage != nil else { return }
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            dismiss()
         }
     }
 

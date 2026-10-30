@@ -103,7 +103,11 @@ struct MainTabView: View {
             .tag(1)
 
             // My Recipes Tab
-            MyRecipesView(switchToAddRecipe: { selectedTab = 1 })
+            MyRecipesView(switchToAddRecipe: {
+                // Add Your First Recipe: the Import page, even if Create was open last
+                addRecipeTabRequest = .import
+                selectedTab = 1
+            })
                 .tabItem {
                     Image("menuIcon")
                         .renderingMode(.template)
