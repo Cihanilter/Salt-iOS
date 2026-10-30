@@ -234,7 +234,7 @@ struct SaveToCollectionPrompt: View {
             VStack(spacing: 6) {
                 Text("Cook together")
                     .font(.custom("Playfair9pt-SemiBold", size: 24))
-                Text("Invite your partner, friends or family to \u{201C}\(collectionName)\u{201D}. They can see, add and remove recipes, so it becomes your shared cookbook.")
+                Text("Invite your partner, friends, or family to \u{2018}\(collectionName)\u{2019}.\n\nThey can see, add and remove recipes, making it your shared cookbook.")
                     .font(.custom("OpenSans-Regular", size: 14))
                     .foregroundColor(Color("GraniteGray"))
                     .multilineTextAlignment(.center)
