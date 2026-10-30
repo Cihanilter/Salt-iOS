@@ -171,6 +171,13 @@ struct ShareTutorialView: View {
             case .imported:
                 TutorialImportedView(recipe: recipe, context: context, primaryTitle: primaryTitle, showsPasteLink: context == .explore && !hasNextSource, onPrimary: finishPrimary, onPasteLink: {
                     finish(.pasteLink)
+                }, onClose: {
+                    // Back arrow on the recipe: leave without opening another app
+                    if hasNextSource {
+                        finishPrimary()
+                    } else {
+                        finish(.completed)
+                    }
                 })
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -298,6 +305,8 @@ struct TutorialSampleRecipe {
     let ingredients: [String]
     let totalTimeMinutes: Int?
     let servings: Int?
+    /// For the real recipe screen at the end
+    let detail: RecipeDetail
 
     /// Quick Chicken Ramen Bowl: short, recognizable, few ingredients
     private static let preferredId = UUID(uuidString: "92f3f1b9-dd2b-4d70-9a0a-0ebd33e8dbd7")
@@ -311,15 +320,34 @@ struct TutorialSampleRecipe {
                 imageUrl: nil,
                 ingredients: ["Ramen noodles", "Cooked chicken", "Water", "Creole seasoning", "Hot sauce"],
                 totalTimeMinutes: 20,
-                servings: 1
+                servings: 1,
+                detail: RecipeDetail(
+                    title: "Quick Chicken Ramen Bowl",
+                    duration: "20 mins",
+                    ingredientsCount: "5 ingredients",
+                    description: "A quick, cozy bowl of ramen with chicken.",
+                    servings: "1 serving",
+                    prepTime: "5",
+                    cookTime: "15",
+                    ingredients: ["Ramen noodles", "Cooked chicken", "Water", "Creole seasoning", "Hot sauce"],
+                    instructions: ["Bring the water to a boil.", "Add the noodles and chicken, and cook until tender."],
+                    notes: "",
+                    images: [],
+                    sourceUrl: nil,
+                    sourceName: nil
+                )
             )
         }
+        var detail = recipe.toRecipeDetail()
+        // Nutrition is a Premium card; the tutorial shouldn't lead to the paywall
+        detail.nutrition = nil
         return TutorialSampleRecipe(
             title: recipe.title,
             imageUrl: recipe.imageUrl.flatMap(URL.init(string:)),
             ingredients: recipe.ingredients,
             totalTimeMinutes: recipe.totalTimeMinutes,
-            servings: recipe.servings
+            servings: recipe.servings,
+            detail: detail
         )
     }
 }
@@ -1049,98 +1077,74 @@ private struct TutorialImportedView: View {
     let showsPasteLink: Bool
     let onPrimary: () -> Void
     let onPasteLink: () -> Void
+    let onClose: () -> Void
+
+    @State private var showsBanner = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 0) {
-            VStack(spacing: 6) {
-                Text("Recipe imported\nsuccessfully! 🎉")
-                    .font(.custom("Playfair9pt-SemiBold", size: 28))
-                    .multilineTextAlignment(.center)
-                Text("Ingredients and steps, saved in one tap.\nNo more screenshots.")
-                    .font(.custom("OpenSans-Regular", size: 14))
-                    .foregroundColor(Color("GraniteGray"))
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.top, 24)
-            .padding(.horizontal, 24)
-
-            recipeCard
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-
-            Spacer(minLength: 16)
-
-            VStack(spacing: 12) {
-                Button(action: onPrimary) {
-                    Text(primaryTitle)
-                        .font(.custom("OpenSans-SemiBold", size: 16))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(RoundedRectangle(cornerRadius: 16).fill(Color("Orange")))
-                }
-                if showsPasteLink {
-                    Button("Paste a link instead", action: onPasteLink)
-                        .font(.custom("OpenSans-Regular", size: 15))
-                        .foregroundColor(Color("OrangeRed"))
+        // The real recipe screen, so it looks exactly like a recipe in Salt
+        RecipeDetailView(recipe: recipe.detail, onBack: onClose)
+            .safeAreaInset(edge: .bottom) { buttons }
+            .overlay(alignment: .top) {
+                if showsBanner {
+                    successBanner
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 16)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.white.ignoresSafeArea())
+            .onAppear {
+                withAnimation(reduceMotion ? nil : .spring(duration: 0.5).delay(0.3)) {
+                    showsBanner = true
+                }
+            }
     }
 
-    private var recipeCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            TutorialRecipePhoto(url: recipe.imageUrl)
-                .frame(height: 150)
-                .frame(maxWidth: .infinity)
-                .clipped()
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text(recipe.title)
-                    .font(.custom("Playfair9pt-SemiBold", size: 20))
-
-                HStack(spacing: 14) {
-                    if let minutes = recipe.totalTimeMinutes {
-                        Label("\(minutes) min", systemImage: "clock")
-                    }
-                    if let servings = recipe.servings {
-                        Label("\(servings) servings", systemImage: "person.2")
-                    }
-                }
-                .font(.custom("OpenSans-Regular", size: 13))
-                .foregroundColor(Color("GraniteGray"))
-
-                Text("INGREDIENTS")
-                    .font(.custom("OpenSans-SemiBold", size: 12))
-                    .foregroundColor(Color("Orange"))
-                    .padding(.top, 4)
-
-                ForEach(recipe.ingredients.prefix(4), id: \.self) { ingredient in
-                    HStack(alignment: .top, spacing: 8) {
-                        Circle()
-                            .fill(Color("Orange"))
-                            .frame(width: 5, height: 5)
-                            .padding(.top, 7)
-                        Text(ingredient)
-                            .font(.custom("OpenSans-Regular", size: 14))
-                            .lineLimit(1)
-                    }
-                }
-                if recipe.ingredients.count > 4 {
-                    Text("+ \(recipe.ingredients.count - 4) more")
-                        .font(.custom("OpenSans-Regular", size: 13))
-                        .foregroundColor(Color("GraniteGray"))
-                }
+    private var successBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 22))
+                .foregroundColor(Color("Orange"))
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Recipe imported! \u{1F389}")
+                    .font(.custom("OpenSans-SemiBold", size: 15))
+                    .foregroundColor(.black)
+                Text("Saved to My Recipes")
+                    .font(.custom("OpenSans-Regular", size: 13))
+                    .foregroundColor(Color("GraniteGray"))
             }
-            .padding(16)
         }
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
+        .background(Capsule().fill(Color.white))
+        .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
+        .padding(.top, 8)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var buttons: some View {
+        VStack(spacing: 10) {
+            Button(action: onPrimary) {
+                Text(primaryTitle)
+                    .font(.custom("OpenSans-SemiBold", size: 16))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(RoundedRectangle(cornerRadius: 16).fill(Color("Orange")))
+            }
+            if showsPasteLink {
+                Button("Paste a link instead", action: onPasteLink)
+                    .font(.custom("OpenSans-Regular", size: 15))
+                    .foregroundColor(Color("OrangeRed"))
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .background(
+            Color.white
+                .shadow(color: .black.opacity(0.08), radius: 6, y: -2)
+                .ignoresSafeArea(edges: .bottom)
+        )
     }
 }
 

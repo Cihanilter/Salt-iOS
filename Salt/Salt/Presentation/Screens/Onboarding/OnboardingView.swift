@@ -316,16 +316,9 @@ struct OnboardingFlowView: View {
     /// Social proof: a user review
     private var introPage: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 6) {
-                Text("We've helped thousands of cooks")
-                    .font(.custom("Playfair9pt-SemiBold", size: 26))
-                Text("be more organized")
-                    .font(.custom("Playfair9pt-SemiBold", size: 26))
-                    .foregroundColor(Color("Orange"))
-                Text("in the kitchen")
-                    .font(.custom("Playfair9pt-SemiBold", size: 26))
-            }
-            .multilineTextAlignment(.center)
+            Text("Thousands of cooks \(Text("love").foregroundStyle(Color("Orange"))) using Salt")
+                .font(.custom("Playfair9pt-Regular", size: 28))
+                .multilineTextAlignment(.center)
             .padding(.horizontal, 24)
             .padding(.top, 28)
 
@@ -611,16 +604,11 @@ private extension String {
 
 private struct OnboardingLogo: View {
     var body: some View {
-        HStack(spacing: 8) {
-            Image("saltAppIcon")
-                .resizable()
-                .frame(width: 26, height: 26)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-            Text("Salt")
-                .font(.custom("Playfair9pt-SemiBold", size: 22))
-                .foregroundColor(Color("Orange"))
-        }
-        .accessibilityHidden(true)
+        Image("saltAppIcon")
+            .resizable()
+            .frame(width: 32, height: 32)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .accessibilityHidden(true)
     }
 }
 
@@ -680,7 +668,7 @@ private struct ReviewSlider: View {
         // Restarts after every change, so a swipe gets the full time before it moves on
         .task(id: index) {
             guard !reduceMotion, reviews.count > 1 else { return }
-            try? await Task.sleep(for: .seconds(4))
+            try? await Task.sleep(for: .seconds(7))
             guard !Task.isCancelled else { return }
             withAnimation(.easeInOut(duration: 0.4)) {
                 index = (index + 1) % reviews.count
