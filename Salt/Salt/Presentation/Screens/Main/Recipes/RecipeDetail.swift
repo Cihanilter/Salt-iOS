@@ -150,9 +150,6 @@ struct RecipeDetailView: View {
     /// The recipe once `onSave` succeeds; when set, offers to add it to a collection
     var savedRecipeId: (() -> UUID?)? = nil
 
-    /// Replaces the back arrow's dismiss, e.g. in the import tutorial
-    var onBack: (() -> Void)? = nil
-
     // Callbacks for saved state
     var onAddMoreRecipes: (() -> Void)? = nil
     var onGoToMyRecipes: (() -> Void)? = nil
@@ -191,8 +188,7 @@ struct RecipeDetailView: View {
         onSave: (() async -> Bool)? = nil,
         savedRecipeId: (() -> UUID?)? = nil,
         onAddMoreRecipes: (() -> Void)? = nil,
-        onGoToMyRecipes: (() -> Void)? = nil,
-        onBack: (() -> Void)? = nil
+        onGoToMyRecipes: (() -> Void)? = nil
     ) {
         self._recipe = State(initialValue: recipe)
         self._recipeId = State(initialValue: recipeId)
@@ -204,7 +200,6 @@ struct RecipeDetailView: View {
         self.savedRecipeId = savedRecipeId
         self.onAddMoreRecipes = onAddMoreRecipes
         self.onGoToMyRecipes = onGoToMyRecipes
-        self.onBack = onBack
     }
 
     /// Reviewing a created/imported recipe that hasn't been saved yet
@@ -284,7 +279,7 @@ struct RecipeDetailView: View {
                         images: recipe.images,
                         pendingImages: pendingPhotoImages,
                         currentIndex: $currentImageIndex,
-                        onBack: { if let onBack { onBack() } else { dismiss() } },
+                        onBack: { dismiss() },
                         isBookmarked: isBookmarked,
                         onBookmarkTap: recipeId.map { id in
                             {

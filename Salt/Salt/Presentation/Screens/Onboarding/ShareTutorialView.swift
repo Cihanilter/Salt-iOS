@@ -171,13 +171,6 @@ struct ShareTutorialView: View {
             case .imported:
                 TutorialImportedView(recipe: recipe, context: context, primaryTitle: primaryTitle, showsPasteLink: context == .explore && !hasNextSource, onPrimary: finishPrimary, onPasteLink: {
                     finish(.pasteLink)
-                }, onClose: {
-                    // Back arrow on the recipe: leave without opening another app
-                    if hasNextSource {
-                        finishPrimary()
-                    } else {
-                        finish(.completed)
-                    }
                 })
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -305,7 +298,7 @@ struct TutorialSampleRecipe {
     let ingredients: [String]
     let totalTimeMinutes: Int?
     let servings: Int?
-    /// For the real recipe screen at the end
+    /// Time and ingredient count as the recipe screen shows them
     let detail: RecipeDetail
 
     /// Quick Chicken Ramen Bowl: short, recognizable, few ingredients
@@ -338,9 +331,7 @@ struct TutorialSampleRecipe {
                 )
             )
         }
-        var detail = recipe.toRecipeDetail()
-        // Nutrition is a Premium card; the tutorial shouldn't lead to the paywall
-        detail.nutrition = nil
+        let detail = recipe.toRecipeDetail()
         return TutorialSampleRecipe(
             title: recipe.title,
             imageUrl: recipe.imageUrl.flatMap(URL.init(string:)),
@@ -1077,74 +1068,88 @@ private struct TutorialImportedView: View {
     let showsPasteLink: Bool
     let onPrimary: () -> Void
     let onPasteLink: () -> Void
-    let onClose: () -> Void
-
-    @State private var showsBanner = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        // The real recipe screen, so it looks exactly like a recipe in Salt
-        RecipeDetailView(recipe: recipe.detail, onBack: onClose)
-            .safeAreaInset(edge: .bottom) { buttons }
-            .overlay(alignment: .top) {
-                if showsBanner {
-                    successBanner
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
-            }
-            .onAppear {
-                withAnimation(reduceMotion ? nil : .spring(duration: 0.5).delay(0.3)) {
-                    showsBanner = true
-                }
-            }
-    }
-
-    private var successBanner: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 22))
-                .foregroundColor(Color("Orange"))
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Recipe imported! \u{1F389}")
-                    .font(.custom("OpenSans-SemiBold", size: 15))
-                    .foregroundColor(.black)
-                Text("Saved to My Recipes")
-                    .font(.custom("OpenSans-Regular", size: 13))
+        VStack(spacing: 0) {
+            VStack(spacing: 6) {
+                Text("Recipe imported\nsuccessfully! \u{1F389}")
+                    .font(.custom("Playfair9pt-SemiBold", size: 28))
+                    .multilineTextAlignment(.center)
+                Text("Ingredients and steps, saved in one tap.\nNo more screenshots.")
+                    .font(.custom("OpenSans-Regular", size: 14))
                     .foregroundColor(Color("GraniteGray"))
+                    .multilineTextAlignment(.center)
             }
+            .padding(.top, 24)
+            .padding(.horizontal, 24)
+
+            recipeSnippet
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+
+            Spacer(minLength: 16)
+
+            VStack(spacing: 12) {
+                Button(action: onPrimary) {
+                    Text(primaryTitle)
+                        .font(.custom("OpenSans-SemiBold", size: 16))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(RoundedRectangle(cornerRadius: 16).fill(Color("Orange")))
+                }
+                if showsPasteLink {
+                    Button("Paste a link instead", action: onPasteLink)
+                        .font(.custom("OpenSans-Regular", size: 15))
+                        .foregroundColor(Color("OrangeRed"))
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
-        .background(Capsule().fill(Color.white))
-        .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
-        .padding(.top, 8)
-        .accessibilityElement(children: .combine)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.white.ignoresSafeArea())
     }
 
-    private var buttons: some View {
-        VStack(spacing: 10) {
-            Button(action: onPrimary) {
-                Text(primaryTitle)
-                    .font(.custom("OpenSans-SemiBold", size: 16))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(RoundedRectangle(cornerRadius: 16).fill(Color("Orange")))
+    /// A small version of Salt's recipe screen: photo, the cream title card over it,
+    /// and the first ingredients
+    private var recipeSnippet: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            TutorialRecipePhoto(url: recipe.imageUrl)
+                .frame(height: 160)
+                .frame(maxWidth: .infinity)
+                .clipped()
+
+            // Same card as the recipe screen, overlapping the photo
+            RecipeInfoCard(title: recipe.detail.title, duration: recipe.detail.duration, ingredientsCount: recipe.detail.ingredientsCount)
+                .scaleEffect(0.92)
+                .padding(.top, -44)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Ingredients")
+                    .font(.custom("Playfair9pt-SemiBold", size: 20))
+                    .padding(.bottom, 2)
+
+                ForEach(recipe.ingredients.prefix(3), id: \.self) { ingredient in
+                    Text(ingredient)
+                        .font(.custom("OpenSans-Regular", size: 15))
+                        .lineLimit(1)
+                }
+                if recipe.ingredients.count > 3 {
+                    Text("+ \(recipe.ingredients.count - 3) more")
+                        .font(.custom("OpenSans-Regular", size: 13))
+                        .foregroundColor(Color("GraniteGray"))
+                }
             }
-            if showsPasteLink {
-                Button("Paste a link instead", action: onPasteLink)
-                    .font(.custom("OpenSans-Regular", size: 15))
-                    .foregroundColor(Color("OrangeRed"))
-            }
+            .padding(.horizontal, 18)
+            .padding(.top, 14)
+            .padding(.bottom, 18)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 12)
-        .padding(.bottom, 8)
-        .background(
-            Color.white
-                .shadow(color: .black.opacity(0.08), radius: 6, y: -2)
-                .ignoresSafeArea(edges: .bottom)
-        )
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color("GrayButtonBorderColor"), lineWidth: 1))
+        .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
+        .accessibilityElement(children: .combine)
     }
 }
 
