@@ -676,7 +676,7 @@ struct RecipeDetailView: View {
                                 hasBeenSaved = true
                                 showSavedHeader = true
                             }
-                            if let id = savedRecipeId?(), SaveToCollectionPrompt.shouldShow {
+                            if let id = savedRecipeId?() {
                                 // Lets "Saved to My Recipes" show for a moment first
                                 Task {
                                     try? await Task.sleep(for: .seconds(1.5))

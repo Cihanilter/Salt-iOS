@@ -37,6 +37,11 @@ struct OnboardingReview: Identifiable {
             quote: "Love how easy cooking has become with this app. All of my recipes on Instagram and TikTok are now in Salt.",
             name: "john88j",
             avatarImage: nil
+        ),
+        OnboardingReview(
+            quote: "I am so thankful that I finally found a way to organize my recipes.",
+            name: "sophia81",
+            avatarImage: nil
         )
     ]
 

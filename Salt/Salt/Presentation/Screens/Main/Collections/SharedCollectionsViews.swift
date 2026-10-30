@@ -244,9 +244,10 @@ struct CollectionMembersView: View {
             }
         }
         .sheet(item: $invite.shareItem) { item in
-            ActivityView(items: [item.message, item.url])
+            ActivityView(items: [item.message, item.url], onComplete: invite.shareFinished)
                 .presentationDetents([.medium, .large])
         }
+        .collectionToast($invite.sentMessage)
         .alert("Remove \(memberToRemove?.displayName ?? "")?", isPresented: Binding(
             get: { memberToRemove != nil },
             set: { if !$0 { memberToRemove = nil } }
@@ -367,6 +368,16 @@ final class CollectionInviteState: ObservableObject {
     @Published var isCreating = false
     @Published var shareItem: ShareItem?
     @Published var errorMessage: String?
+    /// "Invite sent" once the share sheet went through, for a toast
+    @Published var sentMessage: String?
+
+    /// From the share sheet: confirms the invite went out (or the link was copied)
+    func shareFinished(_ activityType: UIActivity.ActivityType?, completed: Bool) {
+        guard completed else { return }
+        withAnimation {
+            sentMessage = activityType == .copyToPasteboard ? "Invite link copied" : "Invite sent"
+        }
+    }
 
     func create(for collectionId: UUID, reset: Bool) async {
         guard !isCreating else { return }
