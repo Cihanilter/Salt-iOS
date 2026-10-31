@@ -420,16 +420,22 @@ class RecipeService {
             cuisines: nil,
             dishTypes: nil,
             notes: nil,
-            sourceUrl: recipe.sourceUrl,
+            sourceUrl: recipe.isFromPhoto ? nil : recipe.sourceUrl,
             sourceName: recipe.sourceName,
             photos: finalPhotos
         )
 
-        return try await createRecipe(userRecipe)
+        // Without a link the source can't be told from the URL, but a photo import still counts as an import
+        return try await createRecipe(userRecipe, source: recipe.isFromPhoto ? RecipeService.photoImportSource : nil)
     }
 
-    /// Save RecipeDetail as user recipe (used when recipe was edited in preview)
-    func saveRecipeDetail(_ recipeDetail: RecipeDetail, sourceUrl: String? = nil) async throws -> UserRecipe {
+    /// `source` value for recipes imported from photos; starts with "imported_" so the
+    /// recipe_imports trigger counts it toward the free import limit
+    static let photoImportSource = "imported_photo"
+
+    /// Save RecipeDetail as user recipe (used when recipe was edited in preview).
+    /// `source` overrides the value derived from the source URL, as in `createRecipe`.
+    func saveRecipeDetail(_ recipeDetail: RecipeDetail, sourceUrl: String? = nil, source: String? = nil) async throws -> UserRecipe {
         guard let userId = try? await supabase.auth.session.user.id else {
             throw RecipeServiceError.notAuthenticated
         }
@@ -490,7 +496,7 @@ class RecipeService {
             photos: finalImages.isEmpty ? nil : finalImages
         )
 
-        return try await createRecipe(userRecipe)
+        return try await createRecipe(userRecipe, source: source)
     }
 }
 

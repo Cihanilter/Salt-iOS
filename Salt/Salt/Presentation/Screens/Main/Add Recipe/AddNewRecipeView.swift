@@ -139,6 +139,20 @@ struct ImportRecipeView: View {
     @ObservedObject private var shareImportRouter = ShareImportRouter.shared
     /// Last link received from the Share Extension, so analytics can tell shared links from pasted ones
     @State private var sharedLink: String?
+    @State private var showingPhotoOptions = false
+    @State private var showingCamera = false
+    @State private var showingPhotoPicker = false
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    @State private var capturedImage: UIImage?
+    /// Photos being imported; kept while the paywall is shown so the import can continue after upgrading
+    @State private var importPhotos: [UIImage] = []
+
+    /// A recipe can span a few pages (e.g. ingredients on one, steps on the next)
+    private static let maxImportPhotos = 3
+
+    private var isImportingPhoto: Bool {
+        viewModel.isLoading && !importPhotos.isEmpty
+    }
 
     // Callback to switch to My Recipes tab
     var switchToMyRecipes: (() -> Void)?
@@ -199,7 +213,7 @@ struct ImportRecipeView: View {
                                 ProgressView()
                                     .tint(.white)
                             }
-                            Text(viewModel.isLoading ? "Importing..." : "Import the Recipe")
+                            Text(viewModel.isLoading && !isImportingPhoto ? "Importing..." : "Import the Recipe")
                                 .font(.custom("OpenSans-SemiBold", size: 18))
                                 .foregroundColor(.white)
                         }
@@ -213,6 +227,44 @@ struct ImportRecipeView: View {
                 }
                 .padding(.top, 16)
 
+                // Import from a photo of a cookbook page, recipe card or screenshot
+                VStack(spacing: 8) {
+                    Text("or")
+                        .font(.custom("OpenSans-Regular", size: 14))
+                        .foregroundColor(Color("DarkSilver"))
+
+                    Button(action: {
+                        isLinkFieldFocused = false
+                        showingPhotoOptions = true
+                    }) {
+                        HStack(spacing: 8) {
+                            if isImportingPhoto {
+                                ProgressView()
+                                    .tint(Color("Orange"))
+                            } else {
+                                Image(systemName: "camera")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            Text(isImportingPhoto ? "Reading your photo..." : "Import from a Photo")
+                                .font(.custom("OpenSans-SemiBold", size: 18))
+                        }
+                        .foregroundColor(Color("Orange"))
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 14)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color("Orange"), lineWidth: 1.5)
+                        )
+                    }
+                    .disabled(viewModel.isLoading)
+
+                    Text("Snap a cookbook page, a recipe card or a screenshot. Up to \(Self.maxImportPhotos) photos for one recipe.")
+                        .font(.custom("OpenSans-Regular", size: 12))
+                        .foregroundColor(Color("DarkSilver"))
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+
                 // Shortcut for social media: share straight to Salt via the Share Extension
                 ShareImportDemoView()
                     .padding(.top, 12)
@@ -221,6 +273,51 @@ struct ImportRecipeView: View {
             .padding(.bottom, 24)
         }
         .scrollDismissesKeyboard(.interactively)
+        .confirmationDialog("Import from a Photo", isPresented: $showingPhotoOptions, titleVisibility: .visible) {
+            if CameraView.isAvailable {
+                Button("Take Photo") {
+                    showingCamera = true
+                }
+            }
+            Button("Choose from Library") {
+                showingPhotoPicker = true
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .fullScreenCover(isPresented: $showingCamera) {
+            CameraView(image: $capturedImage)
+                .ignoresSafeArea()
+        }
+        .photosPicker(
+            isPresented: $showingPhotoPicker,
+            selection: $selectedPhotoItems,
+            maxSelectionCount: Self.maxImportPhotos,
+            selectionBehavior: .ordered,
+            matching: .images
+        )
+        .onChange(of: capturedImage) { _, image in
+            guard let image else { return }
+            capturedImage = nil
+            importPhotos = [image]
+            Task { await startPhotoImport() }
+        }
+        .onChange(of: selectedPhotoItems) { _, items in
+            guard !items.isEmpty else { return }
+            Task {
+                // Kept in the order they were picked, so pages are read in order
+                var photos: [UIImage] = []
+                for item in items {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data) {
+                        photos.append(image)
+                    }
+                }
+                selectedPhotoItems = []
+                guard !photos.isEmpty else { return }
+                importPhotos = photos
+                await startPhotoImport()
+            }
+        }
         .alert("You've used your free imports", isPresented: $showingImportLimitAlert) {
             Button("Start Free Trial") {
                 showingPaywall = true
@@ -251,7 +348,9 @@ struct ImportRecipeView: View {
                     mode: .preview,
                     previewNotice: recipe.isFromVideoAudio
                         ? "This recipe wasn't in the post's caption, so we put it together from what's said in the video. Some ingredients, amounts or steps may be missing. Please check it before saving; you can fix anything with Edit in the menu."
-                        : nil,
+                        : recipe.isFromPhoto
+                            ? "We read this recipe from your photo. Please check the amounts and steps before saving; you can fix anything with Edit in the menu."
+                            : nil,
                     onSave: {
                         // Get ALL data from shared storage - no closure parameters!
                         let savedData = PendingSaveDataStorage.shared.retrieve()
@@ -304,6 +403,8 @@ struct ImportRecipeView: View {
         isLinkFieldFocused = false
 
         let entry = recipeLink == sharedLink ? "share_extension" : "pasted"
+        // A link import replaces any photo import blocked by the paywall
+        importPhotos = []
 
         // Free users who've used all their imports are told so, then offered the paywall.
         // The link stays in the field so the import can continue after upgrading.
@@ -319,6 +420,24 @@ struct ImportRecipeView: View {
         }
     }
 
+    /// Imports `importPhotos`, with the same free import limit as links
+    private func startPhotoImport() async {
+        guard !importPhotos.isEmpty else { return }
+
+        // The photos are kept so the import can continue after upgrading
+        guard await SubscriptionManager.shared.canImportRecipe() else {
+            Analytics.log(.importLimitReached, ["entry": "photo"])
+            showingImportLimitAlert = true
+            return
+        }
+
+        await viewModel.importRecipe(fromPhotos: importPhotos)
+        importPhotos = []
+        if viewModel.importedRecipe != nil {
+            navigateToPreview = true
+        }
+    }
+
     /// Closes the paywall and resumes the blocked import once the user has Premium.
     private func continueImportAfterUpgrade(_ customerInfo: CustomerInfo) {
         let subscriptionManager = SubscriptionManager.shared
@@ -327,7 +446,11 @@ struct ImportRecipeView: View {
         guard subscriptionManager.isPremium else { return }
 
         showingPaywall = false
-        Task { await startImport() }
+        if importPhotos.isEmpty {
+            Task { await startImport() }
+        } else {
+            Task { await startPhotoImport() }
+        }
     }
 
     /// Runs the same import flow as pasting the link, for links shared via the Share Extension.

@@ -79,6 +79,50 @@ class RecipeImportViewModel: ObservableObject {
         isLoading = false
     }
 
+    /// Import a recipe from photos of a cookbook page, recipe card or screenshot
+    func importRecipe(fromPhotos photos: [UIImage]) async {
+        guard !photos.isEmpty else { return }
+
+        isLoading = true
+        errorMessage = nil
+        importedRecipe = nil
+        savedSuccessfully = false
+
+        importEntry = "photo"
+        Analytics.log(.importStarted, ["source": "photo", "entry": "photo", "photo_count": photos.count])
+        let startedAt = Date()
+
+        do {
+            let recipe = try await importService.importRecipe(fromPhotos: photos)
+            importedRecipe = recipe
+            showingPreview = true
+            print("✅ Imported recipe from photo: \(recipe.title)")
+        } catch let error as RecipeImportError {
+            errorMessage = error.errorDescription
+            print("❌ Photo import error: \(error.errorDescription ?? "Unknown")")
+        } catch {
+            // Text recognition failed (e.g. an unreadable image)
+            errorMessage = RecipeImportError.noTextInPhoto.errorDescription
+            print("❌ Photo import error: \(error)")
+        }
+
+        if let errorMessage {
+            Analytics.log(.importFailed, [
+                "source": "photo",
+                "entry": "photo",
+                "error": errorMessage,
+                "duration_seconds": Int(Date().timeIntervalSince(startedAt))
+            ])
+        }
+
+        isLoading = false
+    }
+
+    /// Analytics source of the current import
+    private var importedSource: String {
+        importedRecipe?.isFromPhoto == true ? "photo" : Analytics.importSource(for: importedRecipe?.sourceUrl)
+    }
+
     /// Save imported recipe to user's collection (original method)
     func saveRecipe() async -> Bool {
         guard let recipe = importedRecipe else { return false }
@@ -87,7 +131,7 @@ class RecipeImportViewModel: ObservableObject {
             savedRecipeId = try await RecipeService.shared.saveImportedRecipe(recipe).id
             print("✅ Saved recipe: \(recipe.title)")
             Analytics.log(.recipeImported, [
-                "source": Analytics.importSource(for: recipe.sourceUrl),
+                "source": importedSource,
                 "entry": importEntry
             ])
             savedSuccessfully = true
@@ -126,14 +170,19 @@ class RecipeImportViewModel: ObservableObject {
                 instructions: recipeDetail.instructions,
                 notes: recipeDetail.notes,
                 images: imageUrls,
-                sourceUrl: recipeDetail.sourceUrl ?? importedRecipe?.sourceUrl,
+                sourceUrl: recipeDetail.sourceUrl ?? (importedRecipe?.isFromPhoto == true ? nil : importedRecipe?.sourceUrl),
                 sourceName: recipeDetail.sourceName ?? importedRecipe?.sourceName
             )
 
-            savedRecipeId = try await RecipeService.shared.saveRecipeDetail(finalRecipeDetail, sourceUrl: importedRecipe?.sourceUrl).id
+            let isFromPhoto = importedRecipe?.isFromPhoto == true
+            savedRecipeId = try await RecipeService.shared.saveRecipeDetail(
+                finalRecipeDetail,
+                sourceUrl: isFromPhoto ? nil : importedRecipe?.sourceUrl,
+                source: isFromPhoto ? RecipeService.photoImportSource : nil
+            ).id
             print("✅ Saved edited recipe: \(recipeDetail.title)")
             Analytics.log(.recipeImported, [
-                "source": Analytics.importSource(for: importedRecipe?.sourceUrl),
+                "source": importedSource,
                 "entry": importEntry,
                 "photos_added": validPhotos.count
             ])

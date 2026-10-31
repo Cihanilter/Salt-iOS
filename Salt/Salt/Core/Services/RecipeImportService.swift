@@ -4,6 +4,8 @@
 //
 
 import Foundation
+import UIKit
+import Vision
 
 // MARK: - Imported Recipe Model
 
@@ -22,6 +24,8 @@ struct ImportedRecipe {
     let author: String?
     /// The caption had no recipe, so it was put together from what's said in the video
     var isFromVideoAudio: Bool = false
+    /// Read from photos (e.g. a cookbook page), so there's no source link
+    var isFromPhoto: Bool = false
 
     // Convert to Recipe for saving
     func toRecipe() -> Recipe {
@@ -88,7 +92,7 @@ struct ImportedRecipe {
             instructions: instructions,
             notes: "",
             images: imageUrl.map { [$0] } ?? [],
-            sourceUrl: sourceUrl,
+            sourceUrl: isFromPhoto ? nil : sourceUrl,
             sourceName: sourceName
         )
     }
@@ -101,6 +105,8 @@ enum RecipeImportError: LocalizedError {
     case networkError(Error)
     case noRecipeFound
     case parsingError(String)
+    case noTextInPhoto
+    case noRecipeInPhoto
 
     var errorDescription: String? {
         switch self {
@@ -112,6 +118,10 @@ enum RecipeImportError: LocalizedError {
             return "No recipe found on this page. Make sure the link points to a recipe."
         case .parsingError(let message):
             return "Failed to parse recipe: \(message)"
+        case .noTextInPhoto:
+            return "We couldn't read any recipe text in this photo. Try a sharper, well-lit photo of the whole recipe."
+        case .noRecipeInPhoto:
+            return "No recipe found in this photo. Make sure the ingredients and steps are in the picture."
         }
     }
 }
@@ -254,6 +264,53 @@ class RecipeImportService {
             author: nil,
             isFromVideoAudio: data["importSource"] as? String == "audio"
         )
+    }
+
+    // MARK: - Photo Import
+
+    /// Imports a recipe from photos (a cookbook page, a handwritten card, a screenshot).
+    /// The text is read on the device, then the AI turns it into a recipe. Pass the photos in
+    /// page order when a recipe spans more than one (e.g. ingredients on one, steps on the next).
+    func importRecipe(fromPhotos photos: [UIImage]) async throws -> ImportedRecipe {
+        var pages: [String] = []
+        for photo in photos {
+            let text = try await recognizeText(in: photo)
+            if !text.isEmpty { pages.append(text) }
+        }
+        let text = pages.joined(separator: "\n\n")
+
+        // A few words aren't enough for a recipe (e.g. a photo of a dish, or a blurry page)
+        guard text.count > 80 else { throw RecipeImportError.noTextInPhoto }
+
+        // The web page endpoint takes any recipe text; "photo" stands in for the page URL it requires
+        let body: [String: Any] = [
+            "url": "photo",
+            "title": "",
+            "text": String(text.prefix(40000))
+        ]
+        do {
+            var recipe = try await importFromBackend(apiUrlString: webImportApiUrl, body: body, timeout: 90, sourceUrl: "")
+            recipe.isFromPhoto = true
+            return recipe
+        } catch RecipeImportError.noRecipeFound {
+            throw RecipeImportError.noRecipeInPhoto
+        }
+    }
+
+    /// The photo's text, one recognized line per line, top to bottom
+    private func recognizeText(in photo: UIImage) async throws -> String {
+        guard let cgImage = photo.cgImage else { return "" }
+
+        var request = RecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = true
+        // Cookbooks in any language the device can read
+        request.automaticallyDetectsLanguage = true
+
+        let observations = try await request.perform(on: cgImage, orientation: CGImagePropertyOrientation(photo.imageOrientation))
+        return observations
+            .compactMap { $0.topCandidates(1).first?.string }
+            .joined(separator: "\n")
     }
 
     /// Import from regular website using Schema.org parsing
@@ -1240,5 +1297,24 @@ class RecipeImportService {
         }
 
         return result
+    }
+}
+
+// MARK: - Photo Orientation
+
+private extension CGImagePropertyOrientation {
+    /// Vision reads the raw pixels, so it needs to be told how the photo was taken
+    init(_ orientation: UIImage.Orientation) {
+        switch orientation {
+        case .up: self = .up
+        case .upMirrored: self = .upMirrored
+        case .down: self = .down
+        case .downMirrored: self = .downMirrored
+        case .left: self = .left
+        case .leftMirrored: self = .leftMirrored
+        case .right: self = .right
+        case .rightMirrored: self = .rightMirrored
+        @unknown default: self = .up
+        }
     }
 }
