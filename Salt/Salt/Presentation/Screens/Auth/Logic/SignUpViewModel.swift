@@ -54,6 +54,10 @@ final class SignUpViewModel: ObservableObject {
 
     init() {
         configureInputProperties()
+        // Name given in onboarding ("What should we call you?")
+        if let name = UserDefaults.standard.string(forKey: OnboardingStorage.nameKey), !name.isEmpty {
+            fullName.inputText = name
+        }
     }
 
     func handleFullName() {
@@ -189,8 +193,8 @@ final class SignUpViewModel: ObservableObject {
         isLoading = true
 
         do {
-            try await authManager.signInWithGoogle()
-            Analytics.log(.signedIn, ["method": "google", "screen": "sign_up"])
+            let isNewUser = try await authManager.signInWithGoogle()
+            Analytics.log(isNewUser ? .signedUp : .signedIn, ["method": "google", "screen": "sign_up"])
         } catch let error as AuthError {
             handleAuthError(error)
         } catch {
@@ -207,8 +211,8 @@ final class SignUpViewModel: ObservableObject {
         do {
             let helper = AppleSignInHelper()
             let credential = try await helper.signIn()
-            try await authManager.signInWithApple(credential: credential)
-            Analytics.log(.signedIn, ["method": "apple", "screen": "sign_up"])
+            let isNewUser = try await authManager.signInWithApple(credential: credential)
+            Analytics.log(isNewUser ? .signedUp : .signedIn, ["method": "apple", "screen": "sign_up"])
         } catch let error as AuthError {
             handleAuthError(error)
         } catch {

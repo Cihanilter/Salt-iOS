@@ -144,7 +144,7 @@ struct SignUpView: View {
                         .padding(.horizontal, geo.size.width * 0.12 / 2)
                         .padding(.top, 14)
                         .onTapGesture {
-                            router.navigateBack()
+                            router.replace(with: .login)
                         }
                         Spacer()
                     }
@@ -169,9 +169,9 @@ struct SignUpView: View {
             title: Text("Sign Up"),
             message: Text(viewModel.alertMessage ?? ""),
             dismissButton: .default(Text("OK")) {
-                // If signup was successful, navigate back to login
+                // If signup was successful, go to login to sign in after verifying the email
                 if viewModel.showSuccessMessage {
-                    router.navigateToRoot()
+                    router.replace(with: .login)
                 }
             }
         )

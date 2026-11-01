@@ -182,6 +182,8 @@ struct CollectionCover: View {
                 }
             }
             .clipped()
+            // Clipping doesn't limit taps; keep the hidden overflow from taking nearby taps
+            .contentShape(Rectangle())
     }
 }
 
@@ -223,7 +225,7 @@ private struct CollectionToast: ViewModifier {
     }
 }
 
-private extension View {
+extension View {
     func collectionToast(_ message: Binding<String?>) -> some View {
         modifier(CollectionToast(message: message))
     }
@@ -385,9 +387,10 @@ struct CollectionDetailView: View {
             }
         }
         .sheet(item: $invite.shareItem) { item in
-            ActivityView(items: [item.message, item.url])
+            ActivityView(items: [item.message, item.url], onComplete: invite.shareFinished)
                 .presentationDetents([.medium, .large])
         }
+        .collectionToast($invite.sentMessage)
         .alert("Leave \u{201C}\(collection?.name ?? "")\u{201D}?", isPresented: $showingLeaveAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Leave", role: .destructive) {

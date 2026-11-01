@@ -18,7 +18,21 @@ enum Analytics {
         case signedIn = "signed_in"
         case authFailed = "auth_failed"
 
+        // Onboarding (before sign-up)
+        case onboardingStarted = "onboarding_started"
+        case onboardingQuestionAnswered = "onboarding_question_answered"
+        case onboardingCompleted = "onboarding_completed"
+
+        // Import tutorial (onboarding and Explore banner)
+        case importTutorialStarted = "import_tutorial_started"
+        case importTutorialCompleted = "import_tutorial_completed"
+        case importTutorialSkipped = "import_tutorial_skipped"
+        case importBannerTapped = "import_banner_tapped"
+        case importBannerOptionSelected = "import_banner_option_selected"
+        case importBannerDismissed = "import_banner_dismissed"
+
         // Add Recipe
+        case shareLinkReceived = "share_link_received"
         case importStarted = "import_started"
         case importFailed = "import_failed"
         case recipeImported = "recipe_imported"
@@ -45,6 +59,9 @@ enum Analytics {
         case collectionLeft = "collection_left"
         case collectionMemberRemoved = "collection_member_removed"
         case recipeCopiedFromCollection = "recipe_copied_from_collection"
+        /// "Add to a collection?" after saving a recipe; `step` is pick, name or invite
+        case collectionPromptShown = "collection_prompt_shown"
+        case collectionPromptSkipped = "collection_prompt_skipped"
 
         // Sharing
         case recipeShared = "recipe_shared"
@@ -64,8 +81,18 @@ enum Analytics {
         case purchasesRestored = "purchases_restored"
     }
 
+    /// When the app process started, set in `configure()`
+    private static var launchedAt = Date()
+
+    /// True for a few seconds after the app process starts, so events can tell
+    /// a cold launch (e.g. opened from the Share Extension) from an app already running
+    static var isColdLaunch: Bool {
+        Date().timeIntervalSince(launchedAt) < 10
+    }
+
     /// Call once at launch
     static func configure() {
+        launchedAt = Date()
         guard AnalyticsConfig.isConfigured else { return }
 
         let config = PostHogConfig(projectToken: AnalyticsConfig.postHogAPIKey, host: AnalyticsConfig.postHogHost)
@@ -83,14 +110,19 @@ enum Analytics {
         PostHogSDK.shared.setup(config)
     }
 
-    /// Ties events to the signed-in Supabase user, or starts a new anonymous user on sign out
+    /// Ties events to the signed-in Supabase user. Anonymous events from before sign-in
+    /// (like Application Installed) are merged into that user.
+    /// A nil id does nothing: it's also nil at launch before the session loads, and resetting
+    /// then would orphan the install event. Sign out calls `reset()` instead.
     static func setUser(id userId: String?) {
+        guard AnalyticsConfig.isConfigured, let userId else { return }
+        PostHogSDK.shared.identify(userId)
+    }
+
+    /// Starts a new anonymous user. Call only on an explicit sign out or account deletion.
+    static func reset() {
         guard AnalyticsConfig.isConfigured else { return }
-        if let userId {
-            PostHogSDK.shared.identify(userId)
-        } else {
-            PostHogSDK.shared.reset()
-        }
+        PostHogSDK.shared.reset()
     }
 
     /// Keeps the Premium status on the user's profile, for comparing free and Premium users
@@ -99,9 +131,10 @@ enum Analytics {
         PostHogSDK.shared.capture("$set", userProperties: ["is_premium": isPremium])
     }
 
-    static func log(_ event: Event, _ properties: [String: Any] = [:]) {
+    /// `userProperties` are also saved on the user's profile (e.g. onboarding answers)
+    static func log(_ event: Event, _ properties: [String: Any] = [:], userProperties: [String: Any]? = nil) {
         guard AnalyticsConfig.isConfigured else { return }
-        PostHogSDK.shared.capture(event.rawValue, properties: properties)
+        PostHogSDK.shared.capture(event.rawValue, properties: properties, userProperties: userProperties)
     }
 
     /// Screen view, for user paths and funnels

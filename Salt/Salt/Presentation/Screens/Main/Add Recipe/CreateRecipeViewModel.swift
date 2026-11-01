@@ -72,6 +72,8 @@ class CreateRecipeViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showingPreview = false
     @Published var savedSuccessfully = false
+    /// The last saved recipe, for the "Add to a collection?" prompt
+    private(set) var savedRecipeId: UUID?
 
     // MARK: - Private Properties
 
@@ -294,7 +296,7 @@ class CreateRecipeViewModel: ObservableObject {
                 )
             }
 
-            _ = try await recipeService.createRecipe(recipe)
+            savedRecipeId = try await recipeService.createRecipe(recipe).id
             Analytics.log(.recipeCreated, ["photos": recipe.photos?.count ?? 0])
             savedSuccessfully = true
             clearForm()
@@ -343,7 +345,7 @@ class CreateRecipeViewModel: ObservableObject {
                 sourceName: recipeDetail.sourceName
             )
 
-            _ = try await RecipeService.shared.saveRecipeDetail(finalRecipeDetail)
+            savedRecipeId = try await RecipeService.shared.saveRecipeDetail(finalRecipeDetail).id
             Analytics.log(.recipeCreated, ["photos": imageUrls.count])
             savedSuccessfully = true
             clearForm()

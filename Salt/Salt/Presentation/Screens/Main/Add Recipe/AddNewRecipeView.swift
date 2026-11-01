@@ -11,8 +11,16 @@ struct AddNewRecipeView: View {
     @State private var recipeLink = ""
     @ObservedObject private var shareImportRouter = ShareImportRouter.shared
 
+    /// Set from another tab to open Create or Import; cleared once applied
+    @Binding var requestedTab: AddRecipeTab?
+
     // Callback to switch to My Recipes tab
     var switchToMyRecipes: (() -> Void)?
+
+    init(requestedTab: Binding<AddRecipeTab?> = .constant(nil), switchToMyRecipes: (() -> Void)? = nil) {
+        _requestedTab = requestedTab
+        self.switchToMyRecipes = switchToMyRecipes
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
@@ -44,6 +52,12 @@ struct AddNewRecipeView: View {
             if url != nil {
                 selectedTab = .import
             }
+        }
+        .onChange(of: requestedTab, initial: true) { _, tab in
+            // e.g. Create manually on the Explore banner
+            guard let tab else { return }
+            selectedTab = tab
+            requestedTab = nil
         }
     }
 }
@@ -123,6 +137,8 @@ struct ImportRecipeView: View {
     @State private var showingImportLimitAlert = false
     @FocusState private var isLinkFieldFocused: Bool
     @ObservedObject private var shareImportRouter = ShareImportRouter.shared
+    /// Last link received from the Share Extension, so analytics can tell shared links from pasted ones
+    @State private var sharedLink: String?
 
     // Callback to switch to My Recipes tab
     var switchToMyRecipes: (() -> Void)?
@@ -161,7 +177,7 @@ struct ImportRecipeView: View {
                 )
 
                 // Description
-                Text("Paste the link, and we'll pull in the recipe for you to review and save.")
+                Text("Paste a link from Instagram, YouTube or your favorite food blog. Salt will instantly transform it into a clean, ready-to-cook recipe.")
                     .font(.custom("OpenSans-Regular", size: 14))
                     .foregroundColor(Color("DarkSilver"))
 
@@ -244,6 +260,7 @@ struct ImportRecipeView: View {
                         }
                         return await viewModel.saveRecipe(from: recipeDetail, photos: savedData.photos)
                     },
+                    savedRecipeId: { viewModel.savedRecipeId },
                     onAddMoreRecipes: {
                         // Clear and go back
                         recipeLink = ""
@@ -286,15 +303,17 @@ struct ImportRecipeView: View {
         // put its text back after the link is cleared on save
         isLinkFieldFocused = false
 
+        let entry = recipeLink == sharedLink ? "share_extension" : "pasted"
+
         // Free users who've used all their imports are told so, then offered the paywall.
         // The link stays in the field so the import can continue after upgrading.
         guard await SubscriptionManager.shared.canImportRecipe() else {
-            Analytics.log(.importLimitReached)
+            Analytics.log(.importLimitReached, ["entry": entry])
             showingImportLimitAlert = true
             return
         }
 
-        await viewModel.importRecipe(from: recipeLink)
+        await viewModel.importRecipe(from: recipeLink, entry: entry)
         if viewModel.importedRecipe != nil {
             navigateToPreview = true
         }
@@ -320,6 +339,7 @@ struct ImportRecipeView: View {
         viewModel.clearImport()
         PendingSaveDataStorage.shared.clear()
         recipeLink = sharedUrl
+        sharedLink = sharedUrl
 
         Task { await startImport() }
     }
@@ -728,6 +748,7 @@ struct CreateRecipeView: View {
                     }
                     return await viewModel.saveRecipe(from: recipeDetail, photos: savedData.photos)
                 },
+                savedRecipeId: { viewModel.savedRecipeId },
                 onAddMoreRecipes: {
                     // Pop to root - reset state and dismiss
                     viewModel.reset()

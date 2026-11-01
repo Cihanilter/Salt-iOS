@@ -31,6 +31,10 @@ struct ExploreRecipesView: View {
 
     // Trigger to scroll to top and reset (from tab bar tap)
     var scrollToTopTrigger: UUID = UUID()
+    /// Opens the Add Recipe tab (from the import tutorial banner)
+    var switchToAddRecipe: () -> Void = {}
+    /// Opens the Add Recipe tab on Create (from the import tutorial banner)
+    var openCreateRecipe: () -> Void = {}
     @State private var contentID = UUID()
 
     // Popular searches (fixed list, in the app's language)
@@ -225,6 +229,11 @@ struct ExploreRecipesView: View {
     private var exploreContent: some View {
         ScrollView(showsIndicators: false) {
             LazyVStack(alignment: .leading, spacing: 10) {
+                // Helps new users get to their first import; scrolls with the recipes.
+                // Empty once they've imported or dismissed it.
+                ImportTutorialBanner(switchToAddRecipe: switchToAddRecipe, openCreateRecipe: openCreateRecipe)
+                    .padding(.horizontal, 18)
+
                 // Cuisine sections
                 ForEach(viewModel.cuisineSections) { section in
                     RecipeSection(
@@ -738,6 +747,8 @@ struct GridRecipeCard: View {
                     }
                     .frame(minWidth: 0, maxWidth: .infinity, minHeight: 140, maxHeight: 140)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
+                    // Keep taps inside the visible image (see RecipeCard)
+                    .contentShape(RoundedRectangle(cornerRadius: 10))
                     .overlay(alignment: .top) {
                         LinearGradient(
                             colors: [Color("Nero").opacity(0.5), Color("DimGray").opacity(0)],
@@ -949,6 +960,9 @@ struct RecipeCard: View {
                     }
                     .frame(width: 134, height: 200)
                     .clipShape(RoundedRectangle(cornerRadius: 25))
+                    // Clipping only hides the overflow of a filled image; without this its hidden
+                    // part still takes taps meant for the card (and bookmark) next to it
+                    .contentShape(RoundedRectangle(cornerRadius: 25))
                     .overlay(alignment: .top) {
                         LinearGradient(
                             colors: [Color("Nero").opacity(0.5), Color("DimGray").opacity(0)],

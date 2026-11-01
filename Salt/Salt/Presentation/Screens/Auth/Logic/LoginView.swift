@@ -146,7 +146,7 @@ struct LoginView: View {
                         .padding(.horizontal, geo.size.width * 0.12 / 2)
                         .padding(.top, 14)
                         .onTapGesture {
-                            router.navigate(to: .signUp)
+                            router.replace(with: .signUp)
                         }
                         Spacer()
                     }

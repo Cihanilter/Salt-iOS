@@ -91,8 +91,8 @@ final class LoginViewModel: ObservableObject {
         isLoading = true
 
         do {
-            try await authManager.signInWithGoogle()
-            Analytics.log(.signedIn, ["method": "google", "screen": "login"])
+            let isNewUser = try await authManager.signInWithGoogle()
+            Analytics.log(isNewUser ? .signedUp : .signedIn, ["method": "google", "screen": "login"])
         } catch let error as AuthError {
             handleAuthError(error)
         } catch {
@@ -109,8 +109,8 @@ final class LoginViewModel: ObservableObject {
         do {
             let helper = AppleSignInHelper()
             let credential = try await helper.signIn()
-            try await authManager.signInWithApple(credential: credential)
-            Analytics.log(.signedIn, ["method": "apple", "screen": "login"])
+            let isNewUser = try await authManager.signInWithApple(credential: credential)
+            Analytics.log(isNewUser ? .signedUp : .signedIn, ["method": "apple", "screen": "login"])
         } catch let error as AuthError {
             handleAuthError(error)
         } catch {
