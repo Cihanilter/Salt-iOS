@@ -396,7 +396,7 @@ private struct ImportOptionsSheet: View {
         .contentShape(Rectangle())
     }
 
-    private func optionRow<Icon: View>(title: String, subtitle: String, @ViewBuilder icon: () -> Icon) -> some View {
+    private func optionRow<Icon: View>(title: LocalizedStringResource, subtitle: LocalizedStringResource, @ViewBuilder icon: () -> Icon) -> some View {
         HStack(spacing: 14) {
             icon()
                 .frame(width: 48, height: 48)

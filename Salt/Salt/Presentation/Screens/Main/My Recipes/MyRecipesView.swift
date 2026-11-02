@@ -280,8 +280,29 @@ struct MyRecipesTabPicker: View {
     @Binding var selection: MyRecipesTab
     @Namespace private var selectionNamespace
 
+    private static let width: CGFloat = 348
+    private static let fontName = "Playfair9pt-Regular"
+    /// Space on each side of a tab's name
+    private static let titlePadding: CGFloat = 8
+
+    /// The design's 22pt, or the largest smaller size at which all three names fit.
+    /// Translations can be much longer ("İçe Aktarılanlar"); every tab uses the same
+    /// size so the control looks even.
+    private var titleFontSize: CGFloat {
+        let available = Self.width - 8  // inside the control's padding
+        for size in stride(from: CGFloat(22), through: 14, by: -1) {
+            guard let font = UIFont(name: Self.fontName, size: size) else { return 22 }
+            let needed = MyRecipesTab.allCases.reduce(CGFloat(0)) { total, tab in
+                total + (tab.title as NSString).size(withAttributes: [.font: font]).width + Self.titlePadding * 2
+            }
+            if needed <= available { return size }
+        }
+        return 14
+    }
+
     var body: some View {
-        HStack(spacing: 0) {
+        let fontSize = titleFontSize
+        TabSegmentsLayout {
             ForEach(MyRecipesTab.allCases) { tab in
                 Button(action: {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -289,9 +310,10 @@ struct MyRecipesTabPicker: View {
                     }
                 }) {
                     Text(tab.title)
-                        .font(.custom("Playfair9pt-Regular", size: 22))
+                        .font(.custom(Self.fontName, size: fontSize))
                         .lineLimit(1)
                         .foregroundColor(.black)
+                        .padding(.horizontal, Self.titlePadding)
                         .frame(maxWidth: .infinity)
                         .frame(height: 36)
                         .background {
@@ -307,10 +329,43 @@ struct MyRecipesTabPicker: View {
             }
         }
         .padding(4)
-        .frame(width: 348, height: 44)
+        .frame(width: Self.width, height: 44)
         .background(Color(red: 1.0, green: 0.941, blue: 0.855)) // #FFF0DA
         .cornerRadius(16)
         .frame(maxWidth: .infinity)
+    }
+}
+
+/// Tabs side by side in equal widths, as designed. If a name doesn't fit in an equal share
+/// ("İçe Aktarılanlar"), each tab instead gets its name's width plus an equal share of the
+/// space left over, so the long name takes the room a short one ("Tümü") doesn't need.
+private struct TabSegmentsLayout: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        return CGSize(
+            width: proposal.width ?? sizes.reduce(0) { $0 + $1.width },
+            height: proposal.height ?? sizes.map(\.height).max() ?? 0
+        )
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let count = CGFloat(max(subviews.count, 1))
+        let equalShare = bounds.width / count
+        var widths = subviews.map { $0.sizeThatFits(.unspecified).width }
+        if widths.allSatisfy({ $0 <= equalShare }) {
+            widths = widths.map { _ in equalShare }
+        } else {
+            let extra = max(0, bounds.width - widths.reduce(0, +)) / count
+            widths = widths.map { $0 + extra }
+        }
+        var x = bounds.minX
+        for (subview, width) in zip(subviews, widths) {
+            subview.place(
+                at: CGPoint(x: x, y: bounds.minY),
+                proposal: ProposedViewSize(width: width, height: bounds.height)
+            )
+            x += width
+        }
     }
 }
 

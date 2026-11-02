@@ -375,7 +375,7 @@ final class CollectionInviteState: ObservableObject {
     func shareFinished(_ activityType: UIActivity.ActivityType?, completed: Bool) {
         guard completed else { return }
         withAnimation {
-            sentMessage = activityType == .copyToPasteboard ? "Invite link copied" : "Invite sent"
+            sentMessage = activityType == .copyToPasteboard ? String(localized: "Invite link copied") : String(localized: "Invite sent")
         }
     }
 

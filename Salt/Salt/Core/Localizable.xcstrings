@@ -21,6 +21,16 @@
         }
       }
     },
+    "“%@”" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "“%@”"
+          }
+        }
+      }
+    },
     "(Optional)" : {
       "localizations" : {
         "tr" : {
@@ -80,6 +90,26 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "%1$@ +%2$lld"
+          }
+        }
+      }
+    },
+    "%@ 🍜 Recipe in caption!" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%@ 🍜 Tarif açıklamada!"
+          }
+        }
+      }
+    },
+    "%@ example" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%@ örneği"
           }
         }
       }
@@ -260,6 +290,26 @@
         }
       }
     },
+    "+ %lld more" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "+ %lld malzeme daha"
+          }
+        }
+      }
+    },
+    "1 recipe" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "1 tarif"
+          }
+        }
+      }
+    },
     "1 serving" : {
       "localizations" : {
         "tr" : {
@@ -276,6 +326,26 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "2"
+          }
+        }
+      }
+    },
+    "4.8 (126 reviews)" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "4,8 (126 değerlendirme)"
+          }
+        }
+      }
+    },
+    "5 stars" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "5 yıldız"
           }
         }
       }
@@ -440,6 +510,27 @@
         }
       }
     },
+    "Add to a collection?" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Koleksiyona eklensin mi?"
+          }
+        }
+      }
+    },
+    "Add to Bookmarks" : {
+      "comment" : "Mock of the Safari menu in the import tutorial; use the label Safari shows in this language",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Yer İşaretlerine Ekle"
+          }
+        }
+      }
+    },
     "Add to Collection" : {
       "localizations" : {
         "tr" : {
@@ -450,12 +541,66 @@
         }
       }
     },
+    "Add to Favorites" : {
+      "comment" : "Mock of the Safari menu in the import tutorial; use the label Safari shows in this language",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Favorilere Ekle"
+          }
+        }
+      }
+    },
+    "Add to Home Screen" : {
+      "comment" : "Mock of the Safari menu in the import tutorial; use the label Safari shows in this language",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Ana Ekrana Ekle"
+          }
+        }
+      }
+    },
+    "Add to Reading List" : {
+      "comment" : "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Okuma Listesine Ekle"
+          }
+        }
+      }
+    },
+    "Add to story" : {
+      "comment" : "Mock of the social app's own share button in the import tutorial; use the label that app shows in this language",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Hikayene ekle"
+          }
+        }
+      }
+    },
     "Add your favorite cuisines to personalize your experience" : {
       "localizations" : {
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Deneyiminizi kişiselleştirmek için favori mutfaklarınızı ekleyin"
+          }
+        }
+      }
+    },
+    "Add your first recipe" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "İlk tarifinizi ekleyin"
           }
         }
       }
@@ -492,6 +637,7 @@
       }
     },
     "AirDrop" : {
+      "comment" : "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language",
       "localizations" : {
         "tr" : {
           "stringUnit" : {
@@ -508,6 +654,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Tümü"
+          }
+        }
+      }
+    },
+    "All your recipes\nin one place" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tüm tarifleriniz\ntek bir yerde"
           }
         }
       }
@@ -563,6 +719,16 @@
         }
       }
     },
+    "Any recipe blog or website" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Herhangi bir tarif blogu veya web sitesi"
+          }
+        }
+      }
+    },
     "Any time" : {
       "localizations" : {
         "tr" : {
@@ -579,6 +745,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Siz bağlantıyı sıfırlayana veya kapatana kadar bağlantıya sahip olan herkes katılabilir."
+          }
+        }
+      }
+    },
+    "Apps" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Uygulamalar"
           }
         }
       }
@@ -620,6 +796,26 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Asya"
+          }
+        }
+      }
+    },
+    "Awesome 🎉" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Harika 🎉"
+          }
+        }
+      }
+    },
+    "Back" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Geri"
           }
         }
       }
@@ -928,6 +1124,16 @@
         }
       }
     },
+    "Continue" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Devam Et"
+          }
+        }
+      }
+    },
     "Continue with Apple" : {
       "localizations" : {
         "tr" : {
@@ -968,6 +1174,16 @@
         }
       }
     },
+    "Cook together" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Birlikte yemek yapın"
+          }
+        }
+      }
+    },
     "Cookies" : {
       "comment" : "Recipe category",
       "localizations" : {
@@ -989,12 +1205,54 @@
         }
       }
     },
+    "Copy" : {
+      "comment" : "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kopyala"
+          }
+        }
+      }
+    },
+    "Copy link" : {
+      "comment" : "Mock of the social app's own share button in the import tutorial; use the label that app shows in this language",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bağlantıyı kopyala"
+          }
+        }
+      }
+    },
     "Copy saved to My Recipes" : {
       "localizations" : {
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Kopya Tariflerim’e kaydedildi"
+          }
+        }
+      }
+    },
+    "Couldn't add the recipe. Please try again." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tarif eklenemedi. Lütfen tekrar deneyin."
+          }
+        }
+      }
+    },
+    "Couldn't create the collection. Please try again." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Koleksiyon oluşturulamadı. Lütfen tekrar deneyin."
           }
         }
       }
@@ -1099,6 +1357,16 @@
         }
       }
     },
+    "Couldn't update. Please try again." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Güncellenemedi. Lütfen tekrar deneyin."
+          }
+        }
+      }
+    },
     "Cover" : {
       "localizations" : {
         "tr" : {
@@ -1135,6 +1403,36 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Hesap Oluştur"
+          }
+        }
+      }
+    },
+    "Create an account" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Hesap oluşturun"
+          }
+        }
+      }
+    },
+    "Create and add" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Oluştur ve ekle"
+          }
+        }
+      }
+    },
+    "Create manually" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Elle oluştur"
           }
         }
       }
@@ -1277,6 +1575,46 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Tatlılar"
+          }
+        }
+      }
+    },
+    "DINNER · QUICK MEALS" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "AKŞAM YEMEĞİ · PRATİK YEMEKLER"
+          }
+        }
+      }
+    },
+    "Dinner in 10" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "10 Dakikada Yemek"
+          }
+        }
+      }
+    },
+    "dinnerin10" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "dinnerin10"
+          }
+        }
+      }
+    },
+    "Dismiss" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kapat"
           }
         }
       }
@@ -1672,6 +2010,28 @@
         }
       }
     },
+    "Favorites" : {
+      "comment" : "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Favoriler"
+          }
+        }
+      }
+    },
+    "Find on Page" : {
+      "comment" : "Mock of the Safari menu in the import tutorial; use the label Safari shows in this language",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Sayfada Bul"
+          }
+        }
+      }
+    },
     "Finding substitutes for this recipe…" : {
       "localizations" : {
         "tr" : {
@@ -1723,6 +2083,36 @@
         }
       }
     },
+    "From a website" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Web sitesinden"
+          }
+        }
+      }
+    },
+    "From social media" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Sosyal medyadan"
+          }
+        }
+      }
+    },
+    "From social media, websites, or your own" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Sosyal medyadan, web sitelerinden ya da sıfırdan"
+          }
+        }
+      }
+    },
     "Full Name" : {
       "localizations" : {
         "tr" : {
@@ -1740,6 +2130,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Alman"
+          }
+        }
+      }
+    },
+    "Get started" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Başla"
           }
         }
       }
@@ -1770,6 +2170,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Besin değerleri hesaplanıyor… Tariflerim’de görebilirsiniz."
+          }
+        }
+      }
+    },
+    "Give it a name. You can change it later." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bir ad verin. Daha sonra değiştirebilirsiniz."
           }
         }
       }
@@ -1846,12 +2256,45 @@
         }
       }
     },
+    "Holiday Favorites" : {
+      "comment" : "Starter collection name for new users",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bayram Favorileri"
+          }
+        }
+      }
+    },
     "I agree to the " : {
       "localizations" : {
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Okudum ve kabul ediyorum: "
+          }
+        }
+      }
+    },
+    "I am so thankful that I finally found a way to organize my recipes." : {
+      "comment" : "A real user review, shown translated on the welcome screen. Keep it faithful to the original.",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Sonunda tariflerimi düzenlemenin bir yolunu bulduğum için çok minnettarım."
+          }
+        }
+      }
+    },
+    "I used to have recipes scattered across my social media, screenshots and notes. Salt has been a lifesaver for getting everything into one place." : {
+      "comment" : "A real user review, shown translated on the welcome screen. Keep it faithful to the original.",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Eskiden tariflerim sosyal medyaya, ekran görüntülerine ve notlara dağılmış durumdaydı. Her şeyi tek bir yerde toplamak için Salt adeta hayat kurtarıcı oldu."
           }
         }
       }
@@ -1926,6 +2369,16 @@
         }
       }
     },
+    "Import your first recipe" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "İlk tarifinizi içe aktarın"
+          }
+        }
+      }
+    },
     "Import, create or save recipes first,\nthen add them here" : {
       "localizations" : {
         "tr" : {
@@ -1942,6 +2395,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Sosyal medyadan mı içe aktarıyorsunuz?"
+          }
+        }
+      }
+    },
+    "Importing your recipe..." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tarifiniz içe aktarılıyor..."
           }
         }
       }
@@ -2008,6 +2471,37 @@
         }
       }
     },
+    "Ingredients and steps, saved in one tap.\nNo more screenshots." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Malzemeler ve adımlar tek dokunuşla kaydedilir.\nEkran görüntüsüne son."
+          }
+        }
+      }
+    },
+    "Instagram" : {
+      "comment" : "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Instagram"
+          }
+        }
+      }
+    },
+    "Instagram, TikTok, Facebook, YouTube Shorts" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Instagram, TikTok, Facebook, YouTube Shorts"
+          }
+        }
+      }
+    },
     "instead of %@" : {
       "localizations" : {
         "tr" : {
@@ -2058,12 +2552,52 @@
         }
       }
     },
+    "Invite link copied" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Davet bağlantısı kopyalandı"
+          }
+        }
+      }
+    },
     "Invite People" : {
       "localizations" : {
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Kişi Davet Et"
+          }
+        }
+      }
+    },
+    "Invite sent" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Davet gönderildi"
+          }
+        }
+      }
+    },
+    "Invite someone" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Birini davet et"
+          }
+        }
+      }
+    },
+    "Invite your partner, friends, or family to ‘%@’.\n\nThey can see, add and remove recipes, making it your shared cookbook." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Eşinizi, arkadaşlarınızı veya ailenizi “%@” koleksiyonuna davet edin.\n\nTarifleri görebilir, ekleyip çıkarabilirler; böylece ortak yemek kitabınız olur."
           }
         }
       }
@@ -2172,6 +2706,16 @@
         }
       }
     },
+    "Jump to Recipe" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tarife Geç"
+          }
+        }
+      }
+    },
     "Keep screen awake" : {
       "localizations" : {
         "tr" : {
@@ -2274,7 +2818,39 @@
         }
       }
     },
+    "Log in" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Giriş yap"
+          }
+        }
+      }
+    },
+    "love" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "severek"
+          }
+        }
+      }
+    },
+    "Love how easy cooking has become with this app. All of my recipes on Instagram and TikTok are now in Salt." : {
+      "comment" : "A real user review, shown translated on the welcome screen. Keep it faithful to the original.",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bu uygulamayla yemek yapmanın bu kadar kolaylaşmasına bayılıyorum. Instagram ve TikTok’taki tüm tariflerim artık Salt’ta."
+          }
+        }
+      }
+    },
     "Mail" : {
+      "comment" : "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language",
       "localizations" : {
         "tr" : {
           "stringUnit" : {
@@ -2301,6 +2877,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Yönet"
+          }
+        }
+      }
+    },
+    "Maybe later" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Belki sonra"
           }
         }
       }
@@ -2358,6 +2944,7 @@
       }
     },
     "Messages" : {
+      "comment" : "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language\nMock of the social app's own share button in the import tutorial; use the label that app shows in this language",
       "localizations" : {
         "tr" : {
           "stringUnit" : {
@@ -2409,12 +2996,34 @@
         }
       }
     },
+    "More" : {
+      "comment" : "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language\nMock of the social app's own share button in the import tutorial; use the label that app shows in this language",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Diğer"
+          }
+        }
+      }
+    },
     "More ideas for this recipe" : {
       "localizations" : {
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Bu tarif için daha fazla fikir"
+          }
+        }
+      }
+    },
+    "More options" : {
+      "comment" : "Mock of the social app's own share button in the import tutorial; use the label that app shows in this language",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Diğer seçenekler"
           }
         }
       }
@@ -2517,6 +3126,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Yeni Şifre"
+          }
+        }
+      }
+    },
+    "Next: recipe websites" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Sıradaki: tarif siteleri"
           }
         }
       }
@@ -2643,12 +3262,33 @@
         }
       }
     },
+    "Not now" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Şimdi değil"
+          }
+        }
+      }
+    },
     "Not Now" : {
       "localizations" : {
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Şimdi Değil"
+          }
+        }
+      }
+    },
+    "Notes" : {
+      "comment" : "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Notlar"
           }
         }
       }
@@ -2749,6 +3389,16 @@
         }
       }
     },
+    "Other options" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Diğer seçenekler"
+          }
+        }
+      }
+    },
     "Owner" : {
       "localizations" : {
         "tr" : {
@@ -2820,7 +3470,28 @@
         }
       }
     },
+    "Paste a link from Instagram, YouTube or your favorite food blog. Salt will instantly transform it into a clean, ready-to-cook recipe." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Instagram, YouTube veya en sevdiğiniz yemek blogundan bir bağlantı yapıştırın. Salt onu anında sade ve pişirmeye hazır bir tarife dönüştürür."
+          }
+        }
+      }
+    },
+    "Paste a link instead" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bunun yerine bağlantı yapıştır"
+          }
+        }
+      }
+    },
     "Paste the link, and we'll pull in the recipe for you to review and save." : {
+      "extractionState" : "stale",
       "localizations" : {
         "tr" : {
           "stringUnit" : {
@@ -2850,6 +3521,16 @@
         }
       }
     },
+    "Pick where it's from and we'll show you how." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tarifin nereden geldiğini seçin, size nasıl yapılacağını gösterelim."
+          }
+        }
+      }
+    },
     "Pizza" : {
       "comment" : "Popular search",
       "localizations" : {
@@ -2863,6 +3544,7 @@
     },
     "Planned" : {
       "comment" : "Starter collection name for new users",
+      "extractionState" : "stale",
       "localizations" : {
         "tr" : {
           "stringUnit" : {
@@ -2992,6 +3674,17 @@
         }
       }
     },
+    "Post from dinnerin10" : {
+      "comment" : "Mock of the iOS share sheet header for a social post; dinnerin10 is a fake username, keep it",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "dinnerin10 gönderisi"
+          }
+        }
+      }
+    },
     "Potato" : {
       "comment" : "Ingredient",
       "localizations" : {
@@ -3029,6 +3722,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Hazırlık süresi"
+          }
+        }
+      }
+    },
+    "Preparing features just for you..." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Size özel özellikler hazırlanıyor…"
           }
         }
       }
@@ -3095,6 +3798,16 @@
         }
       }
     },
+    "Recipe imported\nsuccessfully! 🎉" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tarif başarıyla\niçe aktarıldı! 🎉"
+          }
+        }
+      }
+    },
     "Recipe not found" : {
       "localizations" : {
         "tr" : {
@@ -3111,6 +3824,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Tarif paylaşımı şu anda kullanılamıyor"
+          }
+        }
+      }
+    },
+    "Recipe websites" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tarif siteleri"
           }
         }
       }
@@ -3165,6 +3888,17 @@
         }
       }
     },
+    "Reminders" : {
+      "comment" : "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Anımsatıcılar"
+          }
+        }
+      }
+    },
     "Remove" : {
       "localizations" : {
         "tr" : {
@@ -3215,6 +3949,16 @@
         }
       }
     },
+    "Remove from Saved" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kaydedilenlerden Çıkar"
+          }
+        }
+      }
+    },
     "Remove ingredient" : {
       "localizations" : {
         "tr" : {
@@ -3251,6 +3995,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "%@ koleksiyonundan çıkarıldı"
+          }
+        }
+      }
+    },
+    "Removed from Saved" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kaydedilenlerden çıkarıldı"
           }
         }
       }
@@ -3399,6 +4153,16 @@
         }
       }
     },
+    "Salt can import recipes from %@." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Salt, %@ üzerinden tarifleri içe aktarabilir."
+          }
+        }
+      }
+    },
     "Salt Premium" : {
       "localizations" : {
         "tr" : {
@@ -3501,6 +4265,17 @@
         }
       }
     },
+    "Save to Files" : {
+      "comment" : "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Dosyalar’a Kaydet"
+          }
+        }
+      }
+    },
     "Saved" : {
       "comment" : "My Recipes tab: bookmarked recipes",
       "localizations" : {
@@ -3529,6 +4304,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Deniz Ürünleri"
+          }
+        }
+      }
+    },
+    "Search" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Ara"
           }
         }
       }
@@ -3669,6 +4454,16 @@
         }
       }
     },
+    "Select all that apply" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Uygun olanların tümünü seçin"
+          }
+        }
+      }
+    },
     "Send Reset Link" : {
       "localizations" : {
         "tr" : {
@@ -3710,6 +4505,7 @@
       }
     },
     "Share" : {
+      "comment" : "Mock of the Safari menu in the import tutorial; use the label Safari shows in this language\nMock of the social app's own share button in the import tutorial; use the label that app shows in this language",
       "localizations" : {
         "tr" : {
           "stringUnit" : {
@@ -3720,6 +4516,7 @@
       }
     },
     "Share to..." : {
+      "comment" : "Mock of the social app's own share button in the import tutorial; use the label that app shows in this language",
       "localizations" : {
         "tr" : {
           "stringUnit" : {
@@ -3745,6 +4542,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Adınızın altında görünen kısa bir tanıtım cümlesi"
+          }
+        }
+      }
+    },
+    "Show me how" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Nasıl yapıldığını göster"
           }
         }
       }
@@ -3817,6 +4624,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Kaydol"
+          }
+        }
+      }
+    },
+    "Skip" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Geç"
           }
         }
       }
@@ -3929,6 +4746,16 @@
         }
       }
     },
+    "Start" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Başla"
+          }
+        }
+      }
+    },
     "Start Free Trial" : {
       "localizations" : {
         "tr" : {
@@ -3975,6 +4802,46 @@
         }
       }
     },
+    "Step 1 of 4" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Adım 1 / 4"
+          }
+        }
+      }
+    },
+    "Step 2 of 4" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Adım 2 / 4"
+          }
+        }
+      }
+    },
+    "Step 3 of 4" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Adım 3 / 4"
+          }
+        }
+      }
+    },
+    "Step 4 of 4" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Adım 4 / 4"
+          }
+        }
+      }
+    },
     "Sugar" : {
       "comment" : "Nutrition label",
       "localizations" : {
@@ -3982,6 +4849,17 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Şeker"
+          }
+        }
+      }
+    },
+    "Suggestions" : {
+      "comment" : "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Öneriler"
           }
         }
       }
@@ -4026,12 +4904,67 @@
         }
       }
     },
+    "TAP %@" : {
+      "comment" : "Coach mark in the import tutorial, all caps",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "DOKUN: %@"
+          }
+        }
+      }
+    },
+    "TAP •••" : {
+      "comment" : "Coach mark in the import tutorial, all caps",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "DOKUN: •••"
+          }
+        }
+      }
+    },
+    "TAP MORE" : {
+      "comment" : "Coach mark in the import tutorial, all caps",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "DİĞER’E DOKUN"
+          }
+        }
+      }
+    },
     "Tap Salt" : {
       "localizations" : {
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Salt’a dokunun"
+          }
+        }
+      }
+    },
+    "TAP SALT" : {
+      "comment" : "Coach mark in the import tutorial, all caps",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "SALT’A DOKUN"
+          }
+        }
+      }
+    },
+    "TAP SHARE" : {
+      "comment" : "Coach mark in the import tutorial, all caps",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "PAYLAŞ’A DOKUN"
           }
         }
       }
@@ -4157,6 +5090,16 @@
         }
       }
     },
+    "This helps us to personalize your experience." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bu, deneyiminizi kişiselleştirmemize yardımcı olur."
+          }
+        }
+      }
+    },
     "This invite link isn't valid anymore. Ask for a new one." : {
       "localizations" : {
         "tr" : {
@@ -4183,6 +5126,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Bu tarif gönderinin açıklamasında yoktu, bu yüzden videoda anlatılanlardan derledik. Bazı malzemeler, miktarlar veya adımlar eksik olabilir. Lütfen kaydetmeden önce kontrol edin; menüdeki Düzenle ile her şeyi düzeltebilirsiniz."
+          }
+        }
+      }
+    },
+    "Thousands of cooks %@ using Salt" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Binlerce aşçı Salt’ı %@ kullanıyor"
           }
         }
       }
@@ -4299,6 +5252,16 @@
         }
       }
     },
+    "Try it on %@" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "%@ ile dene"
+          }
+        }
+      }
+    },
     "Try removing a filter" : {
       "localizations" : {
         "tr" : {
@@ -4356,6 +5319,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Davet bağlantısı kapatılsın mı?"
+          }
+        }
+      }
+    },
+    "Type in your own recipe" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Kendi tarifinizi yazın"
           }
         }
       }
@@ -4545,12 +5518,63 @@
         }
       }
     },
+    "We're setting everything\nup for you" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Her şeyi sizin için\nhazırlıyoruz"
+          }
+        }
+      }
+    },
+    "websites" : {
+      "comment" : "Last item in \"Salt can import recipes from Instagram, TikTok and websites\"",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "web siteleri"
+          }
+        }
+      }
+    },
     "Welcome Back" : {
       "localizations" : {
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Tekrar Hoş Geldiniz"
+          }
+        }
+      }
+    },
+    "What should we call you?" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Size nasıl hitap edelim?"
+          }
+        }
+      }
+    },
+    "Where do you usually store your recipes?" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tariflerinizi genellikle nerede saklıyorsunuz?"
+          }
+        }
+      }
+    },
+    "Which app is the recipe on?" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Tarif hangi uygulamada?"
           }
         }
       }
@@ -4631,6 +5655,16 @@
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Değişiklikleriniz Tariflerim’e kendi kopyanız olarak kaydedilir. Orijinal tarif etkilenmez."
+          }
+        }
+      }
+    },
+    "Your information is secure. We don't sell your personal information." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bilgileriniz güvende. Kişisel bilgilerinizi satmıyoruz."
           }
         }
       }

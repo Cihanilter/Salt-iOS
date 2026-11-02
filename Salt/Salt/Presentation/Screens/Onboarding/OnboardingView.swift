@@ -29,17 +29,17 @@ struct OnboardingReview: Identifiable {
 
     static let featured = [
         OnboardingReview(
-            quote: "I used to have recipes scattered across my social media, screenshots and notes. Salt has been a lifesaver for getting everything into one place.",
+            quote: String(localized: "I used to have recipes scattered across my social media, screenshots and notes. Salt has been a lifesaver for getting everything into one place.", comment: "A real user review, shown translated on the welcome screen. Keep it faithful to the original."),
             name: "steph291",
             avatarImage: nil
         ),
         OnboardingReview(
-            quote: "Love how easy cooking has become with this app. All of my recipes on Instagram and TikTok are now in Salt.",
+            quote: String(localized: "Love how easy cooking has become with this app. All of my recipes on Instagram and TikTok are now in Salt.", comment: "A real user review, shown translated on the welcome screen. Keep it faithful to the original."),
             name: "john88j",
             avatarImage: nil
         ),
         OnboardingReview(
-            quote: "I am so thankful that I finally found a way to organize my recipes.",
+            quote: String(localized: "I am so thankful that I finally found a way to organize my recipes.", comment: "A real user review, shown translated on the welcome screen. Keep it faithful to the original."),
             name: "sophia81",
             avatarImage: nil
         )
@@ -170,7 +170,7 @@ private enum RecipeSource: String, CaseIterable, Identifiable {
         case .tiktok: "TikTok"
         case .facebook: "Facebook"
         case .youtubeShorts: "YouTube Shorts"
-        case .websites: "Recipe websites"
+        case .websites: String(localized: "Recipe websites")
         }
     }
 
@@ -396,15 +396,15 @@ struct OnboardingFlowView: View {
     }
 
     /// Names the apps the user picked, plus websites
-    private var showHowMessage: String {
+    private var showHowMessage: LocalizedStringResource {
         var names = RecipeSource.allCases.filter { $0 != .websites && sources.contains($0) }.map(\.name)
         if names.isEmpty {
             names = RecipeSource.allCases.filter { $0 != .websites }.map(\.name)
         }
         if sources.contains(.websites) {
-            names.append("websites")
+            names.append(String(localized: "websites", comment: "Last item in \"Salt can import recipes from Instagram, TikTok and websites\""))
         }
-        return "Salt can import recipes from \(names.formatted(.list(type: .and)))."
+        return "Salt can import recipes from \(names.formatted(.list(type: .and)))."  // list joined in the app's language
     }
 
     private var settingUpPage: some View {
@@ -579,7 +579,7 @@ struct OnboardingAccountView: View {
         }
     }
 
-    private func accountButton(_ title: String, icon: Image?, action: @escaping () -> Void) -> some View {
+    private func accountButton(_ title: LocalizedStringResource, icon: Image?, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 10) {
                 if let icon {
@@ -618,8 +618,8 @@ private struct OnboardingLogo: View {
 }
 
 private struct OnboardingTitle: View {
-    let title: String
-    let subtitle: String?
+    let title: LocalizedStringResource
+    let subtitle: LocalizedStringResource?
 
     var body: some View {
         VStack(spacing: 8) {
@@ -647,17 +647,26 @@ private struct ReviewSlider: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            TabView(selection: $index) {
-                ForEach(Array(reviews.enumerated()), id: \.element.id) { offset, review in
-                    ReviewCard(review: review)
-                        .padding(.horizontal, 20)
-                        // Room for the card's shadow
-                        .padding(.vertical, 10)
-                        .tag(offset)
+            // Invisible copies of every card set the height: the slider is as tall as the
+            // longest review (translations can run several lines longer), and never shorter
+            // than before, so no card is cut off
+            ZStack {
+                ForEach(reviews) { review in
+                    slide(review)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 228)
+            .hidden()
+            .frame(maxWidth: .infinity, minHeight: 228)
+            .overlay {
+                TabView(selection: $index) {
+                    ForEach(Array(reviews.enumerated()), id: \.element.id) { offset, review in
+                        slide(review)
+                            .tag(offset)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+            }
 
             // Page dots in the app's colors (the system ones are white)
             HStack(spacing: 8) {
@@ -679,6 +688,13 @@ private struct ReviewSlider: View {
                 index = (index + 1) % reviews.count
             }
         }
+    }
+
+    private func slide(_ review: OnboardingReview) -> some View {
+        ReviewCard(review: review)
+            .padding(.horizontal, 20)
+            // Room for the card's shadow
+            .padding(.vertical, 10)
     }
 }
 
@@ -798,7 +814,7 @@ private struct SourceOptionRow: View {
 }
 
 struct OnboardingPrimaryButton: View {
-    let title: String
+    let title: LocalizedStringResource
     var isEnabled = true
     let action: () -> Void
 

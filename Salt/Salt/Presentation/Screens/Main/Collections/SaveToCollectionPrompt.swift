@@ -262,7 +262,7 @@ struct SaveToCollectionPrompt: View {
 
     // MARK: - Building Blocks
 
-    private func header(title: String, subtitle: String? = nil) -> some View {
+    private func header(title: LocalizedStringResource, subtitle: LocalizedStringResource? = nil) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.custom("Playfair9pt-SemiBold", size: 24))
@@ -276,7 +276,7 @@ struct SaveToCollectionPrompt: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func primaryButton(_ title: String, isLoading: Bool, isEnabled: Bool, action: @escaping () -> Void) -> some View {
+    private func primaryButton(_ title: LocalizedStringResource, isLoading: Bool, isEnabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 8) {
                 if isLoading {
@@ -295,7 +295,7 @@ struct SaveToCollectionPrompt: View {
         .disabled(!isEnabled || isLoading)
     }
 
-    private func secondaryButton(_ title: String, action: @escaping () -> Void) -> some View {
+    private func secondaryButton(_ title: LocalizedStringResource, action: @escaping () -> Void) -> some View {
         Button(title, action: action)
             .font(.custom("OpenSans-Regular", size: 15))
             .foregroundColor(Color("GraniteGray"))
@@ -337,7 +337,7 @@ struct SaveToCollectionPrompt: View {
                 try? await Task.sleep(for: .seconds(1))
                 dismiss()
             } catch {
-                errorMessage = "Couldn't add the recipe. Please try again."
+                errorMessage = String(localized: "Couldn't add the recipe. Please try again.")
             }
             busyId = nil
         }
@@ -353,7 +353,7 @@ struct SaveToCollectionPrompt: View {
                 try await manager.addRecipe(ref, to: collection.id, source: "save_prompt")
                 goTo(.invite(collectionId: collection.id, name: collection.name))
             } catch {
-                errorMessage = "Couldn't create the collection. Please try again."
+                errorMessage = String(localized: "Couldn't create the collection. Please try again.")
             }
             isCreating = false
         }

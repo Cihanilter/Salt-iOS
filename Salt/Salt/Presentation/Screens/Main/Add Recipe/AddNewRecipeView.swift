@@ -592,6 +592,8 @@ struct CreateRecipeView: View {
                                 .font(.custom("Playfair9pt-Regular", size: 20))
                             Text("servings")
                                 .font(.custom("Playfair9pt-Regular", size: 18))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
                         }
                         
                         Button(action: {
@@ -615,6 +617,9 @@ struct CreateRecipeView: View {
                         HStack(spacing: 4) {
                             Text("Prep")
                                 .font(.custom("Playfair9pt-Regular", size: 20))
+                                // One line; longer translations ("Pişirme", "Hazırlık") shrink to fit the row
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
                             Image("timerIcon")
                                 .resizable()
                                 .renderingMode(.template)
@@ -639,6 +644,8 @@ struct CreateRecipeView: View {
                         HStack(spacing: 4) {
                             Text("Cook")
                                 .font(.custom("Playfair9pt-Regular", size: 20))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
                             Image("timerIcon")
                                 .resizable()
                                 .renderingMode(.template)
