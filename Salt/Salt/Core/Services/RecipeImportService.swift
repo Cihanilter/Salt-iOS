@@ -96,22 +96,90 @@ struct ImportedRecipe {
 
 // MARK: - Import Error
 
+/// The social platform a link is from, named the way people call its posts
+struct SocialPlatform {
+    let name: String  // "Instagram"
+    let postNoun: String  // "post" or "video"
+
+    /// e.g. "Instagram post", "TikTok video"
+    var postName: String { "\(name) \(postNoun)" }
+
+    init?(url: String) {
+        let url = url.lowercased()
+        switch true {
+        case url.contains("instagram.com"), url.contains("instagr.am"): (name, postNoun) = ("Instagram", "post")
+        case url.contains("tiktok.com"): (name, postNoun) = ("TikTok", "video")
+        case url.contains("youtube.com"), url.contains("youtu.be"): (name, postNoun) = ("YouTube", "video")
+        case url.contains("facebook.com"), url.contains("fb.watch"): (name, postNoun) = ("Facebook", "post")
+        case url.contains("twitter.com"), url.contains("x.com"): (name, postNoun) = ("X", "post")
+        default: return nil
+        }
+    }
+}
+
+/// Why an import failed, worded for the person importing: what happened and what they can do
 enum RecipeImportError: LocalizedError {
     case invalidUrl
-    case networkError(Error)
-    case noRecipeFound
-    case parsingError(String)
+    case offline
+    case timedOut
+    /// Our backend or its AI provider is down or overloaded
+    case serviceBusy
+    /// The post couldn't be read (private, deleted, or not a link to a post)
+    case postUnavailable(SocialPlatform)
+    /// The web page couldn't be loaded (site down, blocked, or a broken link)
+    case pageUnavailable
+    /// The post or page loaded but has no recipe in it; nil platform for a web page
+    case noRecipeFound(SocialPlatform?)
+    case failed
 
     var errorDescription: String? {
         switch self {
         case .invalidUrl:
-            return "Invalid URL. Please check the link and try again."
-        case .networkError(let error):
-            return "Network error: \(error.localizedDescription)"
-        case .noRecipeFound:
-            return "No recipe found on this page. Make sure the link points to a recipe."
-        case .parsingError(let message):
-            return "Failed to parse recipe: \(message)"
+            return "That doesn't look like a link. Copy the full link (it starts with https://) and paste it here."
+        case .offline:
+            return "You're offline. Check your internet connection and try again."
+        case .timedOut:
+            return "This is taking longer than expected. Please try again in a moment."
+        case .serviceBusy:
+            return "Salt is busy right now. Please try again in a minute."
+        case .postUnavailable(let platform):
+            return "We couldn't open this \(platform.postName). It may be private or deleted. Check that it opens in \(platform.name), then try again."
+        case .pageUnavailable:
+            return "We couldn't open this page. Check that the link opens in Safari, then try again."
+        case .noRecipeFound(let platform?):
+            return "We couldn't find a recipe in this \(platform.postName). If the recipe is only shown in pictures or on screen, you can add it yourself in the Create tab."
+        case .noRecipeFound(nil):
+            return "We couldn't find a recipe on this page. Make sure the link opens a single recipe, not a list of recipes or the site's home page."
+        case .failed:
+            return "Something went wrong while importing this recipe. Please try again."
+        }
+    }
+
+    /// Short name for analytics, e.g. "post_unavailable"
+    var code: String {
+        switch self {
+        case .invalidUrl: return "invalid_url"
+        case .offline: return "offline"
+        case .timedOut: return "timed_out"
+        case .serviceBusy: return "service_busy"
+        case .postUnavailable: return "post_unavailable"
+        case .pageUnavailable: return "page_unavailable"
+        case .noRecipeFound: return "no_recipe"
+        case .failed: return "failed"
+        }
+    }
+
+    /// A connection error (URLError) as an import error; anything else is .failed
+    static func from(_ error: Error) -> RecipeImportError {
+        if let importError = error as? RecipeImportError { return importError }
+        guard let urlError = error as? URLError else { return .failed }
+        switch urlError.code {
+        case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed, .internationalRoamingOff:
+            return .offline
+        case .timedOut:
+            return .timedOut
+        default:
+            return .failed
         }
     }
 }
@@ -136,44 +204,30 @@ class RecipeImportService {
             throw RecipeImportError.invalidUrl
         }
 
-        // Check if it's a social media URL
-        if isSocialMediaUrl(urlString) {
-            return try await importFromSocialMedia(urlString)
+        // Social media posts are read by the backend
+        if let platform = SocialPlatform(url: urlString) {
+            return try await importFromSocialMedia(urlString, platform: platform)
         }
 
         // Regular website - use Schema.org parsing
         return try await importFromWebsite(url: url, urlString: urlString)
     }
 
-    /// Check if URL is from a social media platform
-    private func isSocialMediaUrl(_ urlString: String) -> Bool {
-        let socialDomains = [
-            "tiktok.com", "vm.tiktok.com",
-            "instagram.com", "instagr.am",
-            "youtube.com", "youtu.be",
-            "facebook.com", "fb.watch",
-            "twitter.com", "x.com"
-        ]
-
-        let urlLower = urlString.lowercased()
-        return socialDomains.contains { urlLower.contains($0) }
-    }
-
     /// Import from social media using backend API
-    private func importFromSocialMedia(_ urlString: String) async throws -> ImportedRecipe {
+    private func importFromSocialMedia(_ urlString: String, platform: SocialPlatform) async throws -> ImportedRecipe {
         let body: [String: Any] = [
             "url": urlString,
             "saveToDatabase": false
         ]
         // Listening to the video's audio (when the caption has no recipe) takes longer than the default 60s
-        return try await importFromBackend(apiUrlString: socialImportApiUrl, body: body, timeout: 180, sourceUrl: urlString)
+        return try await importFromBackend(apiUrlString: socialImportApiUrl, body: body, timeout: 180, sourceUrl: urlString, platform: platform)
     }
 
     /// Sends the page's visible text to the backend, which has the AI find the recipe in it
     private func importFromPageText(html: String, urlString: String) async throws -> ImportedRecipe {
         let text = extractVisibleText(from: html)
         // Too little text to hold a recipe (e.g. a page that's built by JavaScript)
-        guard text.count > 200 else { throw RecipeImportError.noRecipeFound }
+        guard text.count > 200 else { throw RecipeImportError.noRecipeFound(nil) }
 
         var body: [String: Any] = [
             "url": urlString,
@@ -183,13 +237,14 @@ class RecipeImportService {
         if let imageUrl = extractOpenGraphImage(from: html, pageUrl: urlString) {
             body["imageUrl"] = imageUrl
         }
-        return try await importFromBackend(apiUrlString: webImportApiUrl, body: body, timeout: 90, sourceUrl: urlString)
+        return try await importFromBackend(apiUrlString: webImportApiUrl, body: body, timeout: 90, sourceUrl: urlString, platform: nil)
     }
 
-    /// POSTs to a Salt backend import endpoint; both return `{ success, isRecipe, recipe }`
-    private func importFromBackend(apiUrlString: String, body: [String: Any], timeout: TimeInterval, sourceUrl: String) async throws -> ImportedRecipe {
+    /// POSTs to a Salt backend import endpoint; both return `{ success, isRecipe, recipe }`,
+    /// or `{ success: false, errorCode }` on failure. platform: nil for a web page.
+    private func importFromBackend(apiUrlString: String, body: [String: Any], timeout: TimeInterval, sourceUrl: String, platform: SocialPlatform?) async throws -> ImportedRecipe {
         guard let apiUrl = URL(string: apiUrlString) else {
-            throw RecipeImportError.parsingError("Invalid API URL")
+            throw RecipeImportError.failed
         }
 
         var request = URLRequest(url: apiUrl)
@@ -198,43 +253,37 @@ class RecipeImportService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
+        let data: Data
+        let response: URLResponse
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw RecipeImportError.networkError(NSError(domain: "HTTP", code: 0))
-            }
-
-            if httpResponse.statusCode != 200 {
-                if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let error = errorJson["error"] as? String {
-                    throw RecipeImportError.parsingError(error)
-                }
-                throw RecipeImportError.networkError(NSError(domain: "HTTP", code: httpResponse.statusCode))
-            }
-
-            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                throw RecipeImportError.parsingError("Invalid API response")
-            }
-
-            guard let success = json["success"] as? Bool, success else {
-                if let isRecipe = json["isRecipe"] as? Bool, !isRecipe {
-                    throw RecipeImportError.noRecipeFound
-                }
-                throw RecipeImportError.parsingError(json["error"] as? String ?? "Import failed")
-            }
-
-            guard let recipeData = json["recipe"] as? [String: Any] else {
-                throw RecipeImportError.noRecipeFound
-            }
-
-            return parseApiRecipe(from: recipeData, sourceUrl: sourceUrl)
-
-        } catch let error as RecipeImportError {
-            throw error
+            (data, response) = try await URLSession.shared.data(for: request)
         } catch {
-            throw RecipeImportError.networkError(error)
+            throw RecipeImportError.from(error)
         }
+
+        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+
+        if statusCode == 200, json?["success"] as? Bool == true, let recipeData = json?["recipe"] as? [String: Any] {
+            return parseApiRecipe(from: recipeData, sourceUrl: sourceUrl)
+        }
+
+        if json?["isRecipe"] as? Bool == false {
+            throw RecipeImportError.noRecipeFound(platform)
+        }
+
+        switch json?["errorCode"] as? String {
+        case "no_recipe": throw RecipeImportError.noRecipeFound(platform)
+        case "post_unavailable":
+            // Only social imports read a post; a web page that fails here is just a failure
+            throw platform.map(RecipeImportError.postUnavailable) ?? RecipeImportError.failed
+        case "timed_out": throw RecipeImportError.timedOut
+        case "service_busy": throw RecipeImportError.serviceBusy
+        default: break
+        }
+
+        // No JSON at all: the server itself is down or restarting (e.g. Railway's 502 page during a deploy)
+        throw json == nil && statusCode >= 500 ? RecipeImportError.serviceBusy : RecipeImportError.failed
     }
 
     /// Parse recipe from API response
@@ -261,15 +310,22 @@ class RecipeImportService {
         // Fetch HTML
         let html: String
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await URLSession.shared.data(from: url)
+            // e.g. 404 for a broken link, 403 for a site that blocks apps
+            if let statusCode = (response as? HTTPURLResponse)?.statusCode, statusCode >= 400 {
+                throw RecipeImportError.pageUnavailable
+            }
             guard let htmlString = String(data: data, encoding: .utf8) else {
-                throw RecipeImportError.parsingError("Failed to decode HTML")
+                throw RecipeImportError.pageUnavailable
             }
             html = htmlString
-        } catch let error as RecipeImportError {
-            throw error
         } catch {
-            throw RecipeImportError.networkError(error)
+            let importError = RecipeImportError.from(error)
+            // A site that can't be reached (offline and timeouts keep their own message)
+            if case .failed = importError, error is URLError {
+                throw RecipeImportError.pageUnavailable
+            }
+            throw importError
         }
 
         // Extract JSON-LD scripts

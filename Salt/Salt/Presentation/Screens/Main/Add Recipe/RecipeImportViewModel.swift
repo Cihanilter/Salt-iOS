@@ -59,19 +59,15 @@ class RecipeImportViewModel: ObservableObject {
             importedRecipe = recipe
             showingPreview = true
             print("✅ Imported recipe: \(recipe.title)")
-        } catch let error as RecipeImportError {
-            errorMessage = error.errorDescription
-            print("❌ Import error: \(error.errorDescription ?? "Unknown")")
         } catch {
-            errorMessage = "Failed to import recipe: \(error.localizedDescription)"
             print("❌ Import error: \(error)")
-        }
-
-        if let errorMessage {
+            let importError = RecipeImportError.from(error)
+            errorMessage = importError.errorDescription
             Analytics.log(.importFailed, [
                 "source": source,
                 "entry": entry,
-                "error": errorMessage,
+                "error": importError.code,
+                "url": finalUrl,
                 "duration_seconds": Int(Date().timeIntervalSince(startedAt))
             ])
         }
