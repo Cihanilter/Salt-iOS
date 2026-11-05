@@ -420,18 +420,14 @@ class RecipeService {
             cuisines: nil,
             dishTypes: nil,
             notes: nil,
-            sourceUrl: recipe.isFromPhoto ? nil : recipe.sourceUrl,
+            sourceUrl: recipe.origin.hasLink ? recipe.sourceUrl : nil,
             sourceName: recipe.sourceName,
             photos: finalPhotos
         )
 
-        // Without a link the source can't be told from the URL, but a photo import still counts as an import
-        return try await createRecipe(userRecipe, source: recipe.isFromPhoto ? RecipeService.photoImportSource : nil)
+        // Without a link the source can't be told from the URL, but a photo or note import still counts as an import
+        return try await createRecipe(userRecipe, source: recipe.origin.recipeSource)
     }
-
-    /// `source` value for recipes imported from photos; starts with "imported_" so the
-    /// recipe_imports trigger counts it toward the free import limit
-    static let photoImportSource = "imported_photo"
 
     /// Save RecipeDetail as user recipe (used when recipe was edited in preview).
     /// `source` overrides the value derived from the source URL, as in `createRecipe`.

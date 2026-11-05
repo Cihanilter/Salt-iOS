@@ -59,19 +59,15 @@ class RecipeImportViewModel: ObservableObject {
             importedRecipe = recipe
             showingPreview = true
             print("✅ Imported recipe: \(recipe.title)")
-        } catch let error as RecipeImportError {
-            errorMessage = error.errorDescription
-            print("❌ Import error: \(error.errorDescription ?? "Unknown")")
         } catch {
-            errorMessage = "Failed to import recipe: \(error.localizedDescription)"
             print("❌ Import error: \(error)")
-        }
-
-        if let errorMessage {
+            let importError = RecipeImportError.from(error)
+            errorMessage = importError.errorDescription
             Analytics.log(.importFailed, [
                 "source": source,
                 "entry": entry,
-                "error": errorMessage,
+                "error": importError.code,
+                "url": finalUrl,
                 "duration_seconds": Int(Date().timeIntervalSince(startedAt))
             ])
         }
@@ -79,38 +75,54 @@ class RecipeImportViewModel: ObservableObject {
         isLoading = false
     }
 
-    /// Import a recipe from photos of a cookbook page, recipe card or screenshot
-    func importRecipe(fromPhotos photos: [UIImage]) async {
+    /// Import a recipe from photos or screenshots (a cookbook page, a recipe card, an Instagram
+    /// caption or a recipe site). `entry` says how they got here ("photo" or "share_extension").
+    func importRecipe(fromPhotos photos: [UIImage], entry: String = "photo") async {
         guard !photos.isEmpty else { return }
+        await importWithoutLink(origin: .photo, entry: entry, extra: ["photo_count": photos.count]) {
+            try await self.importService.importRecipe(fromPhotos: photos)
+        }
+    }
 
+    /// Import a recipe from text pasted in or shared from the Notes app.
+    /// `entry` says how it got here ("pasted" or "share_extension").
+    func importRecipe(fromText text: String, entry: String = "pasted") async {
+        await importWithoutLink(origin: .note, entry: entry, extra: ["text_length": text.count]) {
+            try await self.importService.importRecipe(fromText: text)
+        }
+    }
+
+    /// Shared flow for photo and note imports, with the same state and analytics as link imports
+    private func importWithoutLink(
+        origin: ImportOrigin,
+        entry: String,
+        extra: [String: Any],
+        load: () async throws -> ImportedRecipe
+    ) async {
         isLoading = true
         errorMessage = nil
         importedRecipe = nil
         savedSuccessfully = false
 
-        importEntry = "photo"
-        Analytics.log(.importStarted, ["source": "photo", "entry": "photo", "photo_count": photos.count])
+        importEntry = entry
+        let source = origin.rawValue
+        let startedProperties: [String: Any] = ["source": source, "entry": entry]
+        Analytics.log(.importStarted, startedProperties.merging(extra) { $1 })
         let startedAt = Date()
 
         do {
-            let recipe = try await importService.importRecipe(fromPhotos: photos)
+            let recipe = try await load()
             importedRecipe = recipe
             showingPreview = true
-            print("✅ Imported recipe from photo: \(recipe.title)")
-        } catch let error as RecipeImportError {
-            errorMessage = error.errorDescription
-            print("❌ Photo import error: \(error.errorDescription ?? "Unknown")")
+            print("✅ Imported recipe from \(source): \(recipe.title)")
         } catch {
-            // Text recognition failed (e.g. an unreadable image)
-            errorMessage = RecipeImportError.noTextInPhoto.errorDescription
-            print("❌ Photo import error: \(error)")
-        }
-
-        if let errorMessage {
+            print("❌ \(source) import error: \(error)")
+            let importError = RecipeImportError.from(error)
+            errorMessage = importError.errorDescription
             Analytics.log(.importFailed, [
-                "source": "photo",
-                "entry": "photo",
-                "error": errorMessage,
+                "source": source,
+                "entry": entry,
+                "error": importError.code,
                 "duration_seconds": Int(Date().timeIntervalSince(startedAt))
             ])
         }
@@ -118,9 +130,17 @@ class RecipeImportViewModel: ObservableObject {
         isLoading = false
     }
 
+    /// The imported recipe's link; nil for photo and note imports
+    private var linkSourceUrl: String? {
+        importedRecipe?.origin.hasLink == true ? importedRecipe?.sourceUrl : nil
+    }
+
     /// Analytics source of the current import
     private var importedSource: String {
-        importedRecipe?.isFromPhoto == true ? "photo" : Analytics.importSource(for: importedRecipe?.sourceUrl)
+        guard let importedRecipe, !importedRecipe.origin.hasLink else {
+            return Analytics.importSource(for: importedRecipe?.sourceUrl)
+        }
+        return importedRecipe.origin.rawValue
     }
 
     /// Save imported recipe to user's collection (original method)
@@ -170,15 +190,14 @@ class RecipeImportViewModel: ObservableObject {
                 instructions: recipeDetail.instructions,
                 notes: recipeDetail.notes,
                 images: imageUrls,
-                sourceUrl: recipeDetail.sourceUrl ?? (importedRecipe?.isFromPhoto == true ? nil : importedRecipe?.sourceUrl),
+                sourceUrl: recipeDetail.sourceUrl ?? linkSourceUrl,
                 sourceName: recipeDetail.sourceName ?? importedRecipe?.sourceName
             )
 
-            let isFromPhoto = importedRecipe?.isFromPhoto == true
             savedRecipeId = try await RecipeService.shared.saveRecipeDetail(
                 finalRecipeDetail,
-                sourceUrl: isFromPhoto ? nil : importedRecipe?.sourceUrl,
-                source: isFromPhoto ? RecipeService.photoImportSource : nil
+                sourceUrl: linkSourceUrl,
+                source: importedRecipe?.origin.recipeSource
             ).id
             print("✅ Saved edited recipe: \(recipeDetail.title)")
             Analytics.log(.recipeImported, [
