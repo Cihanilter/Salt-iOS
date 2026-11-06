@@ -13,6 +13,9 @@ import SwiftUI
 enum OnboardingStorage {
     /// Name from "What should we call you?", pre-filled on the email sign-up form
     static let nameKey = "onboardingName"
+    /// Set once the import tutorial has been shown in onboarding, so a web buyer who went
+    /// through Get started before logging in doesn't get it again (see WebBuyerWelcome)
+    static let tutorialSeenKey = "onboardingTutorialSeen"
 }
 
 // MARK: - Review
@@ -251,6 +254,7 @@ struct OnboardingFlowView: View {
             goForward()
         }) {
             ShareTutorialView(context: .onboarding, sources: tutorialSources) { outcome in
+                UserDefaults.standard.set(true, forKey: OnboardingStorage.tutorialSeenKey)
                 tutorialOutcome = outcome
                 showingTutorial = false
             }
@@ -607,7 +611,7 @@ private extension String {
     var trimmed: String { trimmingCharacters(in: .whitespacesAndNewlines) }
 }
 
-private struct OnboardingLogo: View {
+struct OnboardingLogo: View {
     var body: some View {
         Image("saltAppIcon")
             .resizable()
@@ -617,7 +621,7 @@ private struct OnboardingLogo: View {
     }
 }
 
-private struct OnboardingTitle: View {
+struct OnboardingTitle: View {
     let title: String
     let subtitle: String?
 
@@ -819,7 +823,7 @@ struct OnboardingPrimaryButton: View {
 }
 
 /// Recipe photo surrounded by the logos of the apps Salt imports from
-private struct ImportSourcesIllustration: View {
+struct ImportSourcesIllustration: View {
     private let recipe = TutorialSampleRecipe.current
 
     var body: some View {

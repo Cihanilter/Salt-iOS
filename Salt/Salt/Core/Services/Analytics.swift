@@ -31,6 +31,10 @@ enum Analytics {
         case importBannerOptionSelected = "import_banner_option_selected"
         case importBannerDismissed = "import_banner_dismissed"
 
+        // Web funnel buyers: welcome after their first login in the app
+        case webWelcomeShown = "web_welcome_shown"
+        case webWelcomeSkipped = "web_welcome_skipped"
+
         // Add Recipe
         case shareLinkReceived = "share_link_received"
         case importStarted = "import_started"

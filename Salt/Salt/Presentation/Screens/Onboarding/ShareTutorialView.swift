@@ -5,7 +5,7 @@
 //  Interactive walkthrough of importing a recipe: the user taps Share > Share to... >
 //  More > Salt on a mock social post (or ••• > Share > More > Salt on a recipe website
 //  in Safari) and sees the recipe land in Salt.
-//  Used at the end of onboarding and from the Explore banner.
+//  Used at the end of onboarding, from the Explore banner, and after a web buyer's first login.
 //
 
 import SwiftUI
@@ -15,6 +15,11 @@ struct ShareTutorialView: View {
     enum Context: String {
         case onboarding
         case explore
+        /// After a web funnel buyer's first login (WebBuyerWelcomeView)
+        case webWelcome = "web_welcome"
+
+        /// Ends with "Try it on Instagram" and Paste a link instead of Continue
+        var endsWithRealImport: Bool { self != .onboarding }
     }
 
     /// How the tutorial ended
@@ -132,7 +137,7 @@ struct ShareTutorialView: View {
 
     private var primaryTitle: String {
         if hasNextSource { return "Next: recipe websites" }
-        guard context == .explore else { return "Continue" }
+        guard context.endsWithRealImport else { return "Continue" }
         return "Try it on \(source.name)"
     }
 
@@ -169,7 +174,7 @@ struct ShareTutorialView: View {
                 TutorialImportingView()
                     .transition(.opacity)
             case .imported:
-                TutorialImportedView(recipe: recipe, context: context, primaryTitle: primaryTitle, showsPasteLink: context == .explore && !hasNextSource, onPrimary: finishPrimary, onPasteLink: {
+                TutorialImportedView(recipe: recipe, context: context, primaryTitle: primaryTitle, showsPasteLink: context.endsWithRealImport && !hasNextSource, onPrimary: finishPrimary, onPasteLink: {
                     finish(.pasteLink)
                 })
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -265,7 +270,7 @@ struct ShareTutorialView: View {
             advance(to: .post)
             return
         }
-        if context == .explore {
+        if context.endsWithRealImport {
             // The real thing: open the app to share a recipe from it.
             // Without the app installed, its website (sharing from Safari works too).
             let source = source

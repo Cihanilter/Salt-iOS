@@ -20,6 +20,8 @@ struct MainTabView: View {
     @State private var launchPaywallTrigger: LaunchPaywall.Trigger?
     /// Salt was opened to do something (a shared link, recipe or invite); no paywall in the way
     @State private var openedFromLink = false
+    /// Welcome and import tutorial after a web funnel buyer's first login (WebBuyerWelcome)
+    @State private var showingWebWelcome = false
     @Environment(\.scenePhase) private var scenePhase
 
     /// Collection invite opened from a link; closing the screen clears the link
@@ -152,6 +154,7 @@ struct MainTabView: View {
         }
         .task {
             await showLaunchPaywallIfNeeded()
+            await showWebWelcomeIfNeeded()
         }
         // iOS often keeps Salt suspended for days, so coming back counts as a launch too
         .onChange(of: scenePhase) { _, phase in
@@ -181,6 +184,18 @@ struct MainTabView: View {
                         Analytics.log(.purchasesRestored, ["source": "launch", "trigger": trigger.rawValue])
                         closeLaunchPaywallIfPremium(customerInfo)
                     }
+            }
+        }
+        // Its own background view: one view can only present one full-screen cover
+        .background {
+            Color.clear.fullScreenCover(isPresented: $showingWebWelcome) {
+                WebBuyerWelcomeView(firstName: firstName) { outcome in
+                    showingWebWelcome = false
+                    if outcome == .pasteLink {
+                        addRecipeTabRequest = .import
+                        selectedTab = 1
+                    }
+                }
             }
         }
         .onChange(of: selectedTab, initial: true) { _, tab in
@@ -225,6 +240,25 @@ extension MainTabView {
               !openedFromLink, authManager.currentUser?.id == user.id else { return }
         LaunchPaywall.markShown(for: user)
         launchPaywallTrigger = trigger
+    }
+
+    /// Once, after a web funnel buyer logs in. After the launch paywall check, which Premium
+    /// buyers skip, so the two never show together
+    private func showWebWelcomeIfNeeded() async {
+        guard let user = authManager.currentUser, launchPaywallTrigger == nil, !openedFromLink,
+              await WebBuyerWelcome.shouldShow(for: user),
+              !openedFromLink, launchPaywallTrigger == nil, authManager.currentUser?.id == user.id else { return }
+        WebBuyerWelcome.markShown(for: user)
+        Analytics.log(.webWelcomeShown)
+        showingWebWelcome = true
+    }
+
+    /// First word of the account name; nil when there isn't a real one
+    private var firstName: String? {
+        guard let name = authManager.currentUser?.fullName.split(separator: " ").first.map(String.init),
+              // "Google User" is the placeholder when Google gives no name (AuthService)
+              !name.isEmpty, name != "Google" else { return nil }
+        return name
     }
 
     /// A restore without an active subscription leaves the paywall open
