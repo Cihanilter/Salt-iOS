@@ -17,6 +17,8 @@ enum AuthRoute: Hashable {
 
 final class AuthRouter: ObservableObject {
     @Published var path = NavigationPath()
+    /// Filled in on Log in, e.g. after signing up with an email that already has an account
+    var loginEmail: String?
 
     func navigate(to route: AuthRoute) {
         path.append(route)

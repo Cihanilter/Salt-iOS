@@ -46,6 +46,12 @@ final class SupabaseAuthService: AuthService {
                 data: ["full_name": .string(fullName)]
             )
 
+            // With Confirm email on, Supabase doesn't say the email is taken: it returns a
+            // made-up user without identities (and sends no email), so ask them to log in instead
+            if authResponse.user.identities?.isEmpty == true {
+                throw AuthError.emailAlreadyInUse
+            }
+
             let userId = authResponse.user.id.uuidString
 
             // Profile will be created automatically by database trigger after email confirmation

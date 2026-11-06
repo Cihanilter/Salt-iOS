@@ -556,6 +556,10 @@ struct OnboardingAccountView: View {
             .padding(.horizontal, 20)
             .padding(.top, 28)
 
+            webBuyerHint
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+
             Spacer()
 
             Label("Your information is secure. We don't sell your personal information.", systemImage: "lock.fill")
@@ -581,6 +585,25 @@ struct OnboardingAccountView: View {
         } message: {
             Text(viewModel.alertMessage ?? "")
         }
+    }
+
+    /// Web funnel buyers already have an account with Premium; a new one wouldn't have it
+    private var webBuyerHint: some View {
+        Button {
+            Analytics.log(.webBuyerLoginHintTapped)
+            router.replace(with: .login)
+        } label: {
+            (Text("Bought Premium on our website? ")
+                + Text("Log in").foregroundColor(Color("Orange")).fontWeight(.semibold)
+                + Text(" with that email instead of creating a new account."))
+                .font(.custom("OpenSans-Regular", size: 14))
+                .foregroundColor(Color("GrayText"))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(14)
+                .background(RoundedRectangle(cornerRadius: 14).fill(Color("Orange").opacity(0.08)))
+        }
+        .buttonStyle(.plain)
     }
 
     private func accountButton(_ title: String, icon: Image?, action: @escaping () -> Void) -> some View {
