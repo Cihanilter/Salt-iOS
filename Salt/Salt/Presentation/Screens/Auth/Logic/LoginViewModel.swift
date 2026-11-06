@@ -28,8 +28,11 @@ final class LoginViewModel: ObservableObject {
 
     private let authManager = AuthManager.shared
 
-    init() {
+    init(email: String? = nil) {
         configureInputProperties()
+        if let email {
+            self.email.inputText = email
+        }
     }
 
     func handleEmail() {

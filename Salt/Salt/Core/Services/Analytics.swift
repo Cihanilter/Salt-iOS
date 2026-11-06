@@ -31,6 +31,14 @@ enum Analytics {
         case importBannerOptionSelected = "import_banner_option_selected"
         case importBannerDismissed = "import_banner_dismissed"
 
+        // Web funnel buyers: welcome after their first login in the app
+        case webWelcomeShown = "web_welcome_shown"
+        case webWelcomeSkipped = "web_welcome_skipped"
+        /// Download Salt link on the funnel's success page opened the app
+        case webBuyerLinkOpened = "web_buyer_link_opened"
+        /// Tapped "Bought Premium on our website?" on Create an account
+        case webBuyerLoginHintTapped = "web_buyer_login_hint_tapped"
+
         // Add Recipe
         case shareLinkReceived = "share_link_received"
         case importStarted = "import_started"

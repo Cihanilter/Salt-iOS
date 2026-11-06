@@ -39,6 +39,8 @@ final class SignUpViewModel: ObservableObject {
     @Published var alertMessage: String?
     @Published var showAlert: Bool = false
     @Published var showSuccessMessage: Bool = false
+    /// The email already has an account; the alert offers Log in with it
+    @Published var existingAccountEmail: String?
 
     private let authManager = AuthManager.shared
 
@@ -235,7 +237,8 @@ final class SignUpViewModel: ObservableObject {
             updated.errorText = error.errorDescription
             password = updated
         case .emailAlreadyInUse:
-            showAlertMessage(error.errorDescription ?? "Email already in use")
+            existingAccountEmail = email.inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+            showAlertMessage("\(existingAccountEmail ?? "This email") already has a Salt account. Log in to use it. If you bought Premium on our website, it’s on that account.")
         default:
             showAlertMessage(error.errorDescription ?? "An error occurred")
         }

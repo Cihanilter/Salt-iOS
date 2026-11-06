@@ -13,6 +13,9 @@ import SwiftUI
 enum OnboardingStorage {
     /// Name from "What should we call you?", pre-filled on the email sign-up form
     static let nameKey = "onboardingName"
+    /// Set once the import tutorial has been shown in onboarding, so a web buyer who went
+    /// through Get started before logging in doesn't get it again (see WebBuyerWelcome)
+    static let tutorialSeenKey = "onboardingTutorialSeen"
 }
 
 // MARK: - Review
@@ -251,6 +254,7 @@ struct OnboardingFlowView: View {
             goForward()
         }) {
             ShareTutorialView(context: .onboarding, sources: tutorialSources) { outcome in
+                UserDefaults.standard.set(true, forKey: OnboardingStorage.tutorialSeenKey)
                 tutorialOutcome = outcome
                 showingTutorial = false
             }
@@ -552,6 +556,10 @@ struct OnboardingAccountView: View {
             .padding(.horizontal, 20)
             .padding(.top, 28)
 
+            webBuyerHint
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+
             Spacer()
 
             Label("Your information is secure. We don't sell your personal information.", systemImage: "lock.fill")
@@ -577,6 +585,25 @@ struct OnboardingAccountView: View {
         } message: {
             Text(viewModel.alertMessage ?? "")
         }
+    }
+
+    /// Web funnel buyers already have an account with Premium; a new one wouldn't have it
+    private var webBuyerHint: some View {
+        Button {
+            Analytics.log(.webBuyerLoginHintTapped)
+            router.replace(with: .login)
+        } label: {
+            (Text("Bought Premium on our website? ")
+                + Text("Log in").foregroundColor(Color("Orange")).fontWeight(.semibold)
+                + Text(" with that email instead of creating a new account."))
+                .font(.custom("OpenSans-Regular", size: 14))
+                .foregroundColor(Color("GrayText"))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(14)
+                .background(RoundedRectangle(cornerRadius: 14).fill(Color("Orange").opacity(0.08)))
+        }
+        .buttonStyle(.plain)
     }
 
     private func accountButton(_ title: String, icon: Image?, action: @escaping () -> Void) -> some View {
@@ -607,7 +634,7 @@ private extension String {
     var trimmed: String { trimmingCharacters(in: .whitespacesAndNewlines) }
 }
 
-private struct OnboardingLogo: View {
+struct OnboardingLogo: View {
     var body: some View {
         Image("saltAppIcon")
             .resizable()
@@ -617,7 +644,7 @@ private struct OnboardingLogo: View {
     }
 }
 
-private struct OnboardingTitle: View {
+struct OnboardingTitle: View {
     let title: String
     let subtitle: String?
 
@@ -819,7 +846,7 @@ struct OnboardingPrimaryButton: View {
 }
 
 /// Recipe photo surrounded by the logos of the apps Salt imports from
-private struct ImportSourcesIllustration: View {
+struct ImportSourcesIllustration: View {
     private let recipe = TutorialSampleRecipe.current
 
     var body: some View {

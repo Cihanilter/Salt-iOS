@@ -2,8 +2,8 @@
 //  AppsFlyerManager.swift
 //  Salt
 //
-//  Starts the AppsFlyer SDK and passes recipe share links it resolves (OneLink),
-//  including deferred ones after a fresh install, to SharedRecipeRouter.
+//  Starts the AppsFlyer SDK and passes the OneLinks it resolves, including deferred ones
+//  after a fresh install, to SharedRecipeRouter, CollectionInviteRouter and WebBuyerLinkRouter.
 //
 
 import Foundation
@@ -124,6 +124,12 @@ extension AppsFlyerManager: AppsFlyerDeepLinkDelegate {
             if let error = result.error {
                 print("⚠️ AppsFlyer deep link failed: \(error)")
             }
+            return
+        }
+
+        // Web funnel buyers: no code, just open Log in
+        if deepLink.deeplinkValue == WebBuyerLinkRouter.deepLinkValue {
+            Task { @MainActor in WebBuyerLinkRouter.shared.receive() }
             return
         }
 

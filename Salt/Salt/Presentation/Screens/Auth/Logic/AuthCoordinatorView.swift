@@ -7,6 +7,7 @@ import SwiftUI
 
 struct AuthCoordinatorView: View {
     @StateObject private var router = AuthRouter()
+    @ObservedObject private var webBuyerLink = WebBuyerLinkRouter.shared
 
     var body: some View {
         NavigationStack(path: $router.path) {
@@ -21,7 +22,7 @@ struct AuthCoordinatorView: View {
                         OnboardingAccountView(router: router)
                             .navigationBarHidden(true)
                     case .login:
-                        LoginView(viewModel: LoginViewModel(), router: router)
+                        LoginView(viewModel: LoginViewModel(email: router.loginEmail), router: router)
                             .navigationBarHidden(true)
                             .overlay(alignment: .topLeading) { backButton }
                     case .signUp:
@@ -33,6 +34,15 @@ struct AuthCoordinatorView: View {
                             .navigationBarHidden(true)
                     }
                 }
+        }
+        // Opened from the web funnel's Download Salt link: their account exists, so Log in.
+        // Only from Welcome; someone already on another screen isn't moved
+        .onChange(of: webBuyerLink.opensLogin, initial: true) { _, opensLogin in
+            guard opensLogin else { return }
+            webBuyerLink.clear()
+            if router.path.isEmpty {
+                router.replace(with: .login)
+            }
         }
     }
 

@@ -165,7 +165,21 @@ struct SignUpView: View {
         }
     }
     .alert(isPresented: $viewModel.showAlert) {
-        Alert(
+        if let email = viewModel.existingAccountEmail {
+            return Alert(
+                title: Text("You already have an account"),
+                message: Text(viewModel.alertMessage ?? ""),
+                primaryButton: .default(Text("Log in")) {
+                    viewModel.existingAccountEmail = nil
+                    router.loginEmail = email
+                    router.replace(with: .login)
+                },
+                secondaryButton: .cancel {
+                    viewModel.existingAccountEmail = nil
+                }
+            )
+        }
+        return Alert(
             title: Text("Sign Up"),
             message: Text(viewModel.alertMessage ?? ""),
             dismissButton: .default(Text("OK")) {

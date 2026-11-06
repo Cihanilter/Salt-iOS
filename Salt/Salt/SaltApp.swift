@@ -28,9 +28,10 @@ struct SaltApp: App {
                     // AppsFlyer sorts out universal links (OneLink) and URL schemes itself
                     AppsFlyerManager.shared.handle(url)
 
-                    // Recipe share links and collection invites (universal links can arrive here as well as in onContinueUserActivity)
+                    // Recipe share links, collection invites and web buyer links (universal links can arrive here as well as in onContinueUserActivity)
                     if url.scheme == "https" {
                         _ = SharedRecipeRouter.shared.handle(url) || CollectionInviteRouter.shared.handle(url)
+                            || WebBuyerLinkRouter.shared.handle(url)
                         return
                     }
 
@@ -65,10 +66,11 @@ struct SaltApp: App {
                     }
                 }
                 .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
-                    // Recipe share links and collection invites (OneLink universal links)
+                    // Recipe share links, collection invites and web buyer links (OneLink universal links)
                     AppsFlyerManager.shared.handle(activity)
                     if let url = activity.webpageURL {
                         _ = SharedRecipeRouter.shared.handle(url) || CollectionInviteRouter.shared.handle(url)
+                            || WebBuyerLinkRouter.shared.handle(url)
                     }
                 }
                 .sheet(isPresented: $showSetNewPassword) {
