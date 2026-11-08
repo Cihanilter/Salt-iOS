@@ -7,7 +7,8 @@ import RevenueCatUI
 // MARK: - Add New Recipe View
 
 struct AddNewRecipeView: View {
-    @State private var selectedTab: AddRecipeTab = .import
+    /// Create (write a recipe from scratch) is pushed on top of the Import screen
+    @State private var showingCreate = false
     @State private var recipeLink = ""
     @ObservedObject private var shareImportRouter = ShareImportRouter.shared
 
@@ -30,33 +31,37 @@ struct AddNewRecipeView: View {
                 .padding(.horizontal)
                 .padding(.top, 16)
 
-            // Tab Switcher
-            TabSwitcher(selectedTab: $selectedTab)
-                .padding(.horizontal)
-
-            // Content
-            if selectedTab == .create {
-                CreateRecipeView(switchToMyRecipes: switchToMyRecipes)
-            } else {
-                ImportRecipeView(recipeLink: $recipeLink, switchToMyRecipes: switchToMyRecipes)
-            }
+            ImportRecipeView(
+                recipeLink: $recipeLink,
+                switchToMyRecipes: switchToMyRecipes,
+                switchToCreate: { showingCreate = true }
+            )
         }
         .background(Color(.systemBackground))
+        .navigationDestination(isPresented: $showingCreate) {
+            CreateRecipeView(switchToMyRecipes: {
+                showingCreate = false
+                switchToMyRecipes?()
+            })
+            .navigationTitle("Create Recipe")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
+        }
         .onAppear {
-            if shareImportRouter.pendingUrl != nil {
-                selectedTab = .import
+            if shareImportRouter.pendingImport != nil {
+                showingCreate = false
             }
         }
-        .onChange(of: shareImportRouter.pendingUrl) { _, url in
-            // Shared link arrived - show the Import tab so it can pick it up
-            if url != nil {
-                selectedTab = .import
+        .onChange(of: shareImportRouter.pendingImport) { _, sharedImport in
+            // Shared link, photos or text arrived - back to Import so it can pick it up
+            if sharedImport != nil {
+                showingCreate = false
             }
         }
         .onChange(of: requestedTab, initial: true) { _, tab in
             // e.g. Create manually on the Explore banner
             guard let tab else { return }
-            selectedTab = tab
+            showingCreate = tab == .create
             requestedTab = nil
         }
     }
@@ -67,64 +72,6 @@ struct AddNewRecipeView: View {
 enum AddRecipeTab {
     case create
     case `import`
-}
-
-// MARK: - Tab Switcher
-
-struct TabSwitcher: View {
-    @Binding var selectedTab: AddRecipeTab
-    
-    var body: some View {
-        ZStack {
-            // Background
-            Color("LightGrayishPink")
-            
-            // White selector
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.white)
-                .frame(width: 156, height: 36)
-                .offset(x: selectedTab == .create ? -82 : 82)
-                .animation(.easeInOut(duration: 0.2), value: selectedTab)
-            
-            // Buttons
-            HStack(spacing: 0) {
-                // Create Tab
-                Button(action: { selectedTab = .create }) {
-                    HStack(spacing: 4) {
-                        Text("Create")
-                            .font(.custom("Playfair9pt-Regular", size: 22))
-                            .foregroundColor(Color.black)
-                        
-                        Image("createIcon")
-                            .resizable()
-                            .renderingMode(.template)
-                            .frame(width: 20, height: 20)
-                            .foregroundColor(Color("GraniteGray"))
-                    }
-                    .frame(width: 164, height: 44)
-                }
-                
-                // Import Tab
-                Button(action: { selectedTab = .import }) {
-                    HStack(spacing: 4) {
-                        Text("Import")
-                            .font(.custom("Playfair9pt-Regular", size: 22))
-                            .foregroundColor(Color.black)
-                        
-                        Image("importIcon")
-                            .resizable()
-                            .renderingMode(.template)
-                            .frame(width: 22, height: 22)
-                            .foregroundColor(Color("GraniteGray"))
-                    }
-                    .frame(width: 164, height: 44)
-                }
-            }
-        }
-        .frame(width: 328, height: 44)
-        .cornerRadius(16)
-        .frame(maxWidth: .infinity)
-    }
 }
 
 // MARK: - Import Recipe View
@@ -139,9 +86,46 @@ struct ImportRecipeView: View {
     @ObservedObject private var shareImportRouter = ShareImportRouter.shared
     /// Last link received from the Share Extension, so analytics can tell shared links from pasted ones
     @State private var sharedLink: String?
+    @State private var showingPhotoOptions = false
+    @State private var showingCamera = false
+    @State private var showingPhotoPicker = false
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    @State private var capturedImage: UIImage?
+    @State private var showingPasteText = false
+    @State private var showingShareTip = false
+    /// Chosen in the photo source sheet; opened once the sheet is dismissed
+    @State private var pickedPhotoSource: PhotoSource?
+    /// The running import, so the loading screen can cancel it
+    @State private var importTask: Task<Void, Never>?
+    @State private var showingImportProgress = false
+    @State private var importProgressKind: ImportProgressKind = .link
+    @State private var pastedText = ""
+    /// Photo or text import being run; kept while the paywall is shown so the import can continue after upgrading
+    @State private var pendingImport: PendingImport?
+
+    /// A recipe can span a few pages or screenshots (e.g. ingredients on one, steps on the next)
+    private static let maxImportPhotos = 5
+
+    /// An import without a link, and how it started (for analytics)
+    private enum PendingImport {
+        case photos([UIImage], entry: String)
+        case text(String, entry: String)
+    }
+
+    private var isImportingPhoto: Bool {
+        guard viewModel.isLoading, case .photos = pendingImport else { return false }
+        return true
+    }
+
+    private var isImportingText: Bool {
+        guard viewModel.isLoading, case .text = pendingImport else { return false }
+        return true
+    }
 
     // Callback to switch to My Recipes tab
     var switchToMyRecipes: (() -> Void)?
+    // Callback to switch to the Create tab, for writing a recipe from scratch
+    var switchToCreate: (() -> Void)?
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -177,7 +161,7 @@ struct ImportRecipeView: View {
                 )
 
                 // Description
-                Text("Paste a link from Instagram, YouTube or your favorite food blog. Salt will instantly transform it into a clean, ready-to-cook recipe.")
+                Text("Paste a link from Instagram, TikTok, YouTube or your favorite food blog.")
                     .font(.custom("OpenSans-Regular", size: 14))
                     .foregroundColor(Color("DarkSilver"))
 
@@ -192,14 +176,14 @@ struct ImportRecipeView: View {
                 HStack {
                     Spacer()
                     Button(action: {
-                        Task { await startImport() }
+                        runImport { await startImport() }
                     }) {
                         HStack(spacing: 8) {
-                            if viewModel.isLoading {
+                            if viewModel.isLoading && pendingImport == nil {
                                 ProgressView()
                                     .tint(.white)
                             }
-                            Text(viewModel.isLoading ? "Importing..." : "Import the Recipe")
+                            Text(viewModel.isLoading && pendingImport == nil ? "Importing..." : "Import the Recipe")
                                 .font(.custom("OpenSans-SemiBold", size: 18))
                                 .foregroundColor(.white)
                         }
@@ -213,14 +197,161 @@ struct ImportRecipeView: View {
                 }
                 .padding(.top, 16)
 
-                // Shortcut for social media: share straight to Salt via the Share Extension
-                ShareImportDemoView()
-                    .padding(.top, 12)
+                // Other ways to add a recipe
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Or add it another way")
+                        .font(.custom("Playfair9pt-Regular", size: 18))
+
+                    VStack(spacing: 0) {
+                        ImportOptionRow(
+                            systemImage: "camera",
+                            title: "Photo or Screenshot",
+                            subtitle: "A cookbook page, a recipe card, or screenshots of a caption or recipe site",
+                            isLoading: isImportingPhoto
+                        ) {
+                            isLinkFieldFocused = false
+                            showingPhotoOptions = true
+                        }
+
+                        Divider().padding(.leading, 60)
+
+                        ImportOptionRow(
+                            systemImage: "note.text",
+                            title: "From Notes",
+                            subtitle: "Paste a recipe copied from Notes or anywhere else",
+                            isLoading: isImportingText
+                        ) {
+                            isLinkFieldFocused = false
+                            showingPasteText = true
+                        }
+
+                        Divider().padding(.leading, 60)
+
+                        ImportOptionRow(
+                            systemImage: "square.and.pencil",
+                            title: "From Scratch",
+                            subtitle: "Write down your own recipe",
+                            isLoading: false
+                        ) {
+                            isLinkFieldFocused = false
+                            switchToCreate?()
+                        }
+                    }
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color("LightGrayishPink"), lineWidth: 1)
+                    )
+                    .disabled(viewModel.isLoading)
+                }
+                .padding(.top, 12)
+
+                // Shortcut for social media, collapsed to a row; the walkthrough opens as a popup
+                Button(action: { showingShareTip = true }) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "lightbulb.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(Color("Orange"))
+                            .frame(width: 30, height: 30)
+                            .background(Circle().fill(Color("Orange").opacity(0.12)))
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Importing from social media?")
+                                .font(.custom("OpenSans-SemiBold", size: 14))
+                                .foregroundColor(.black)
+                            Text("See how to share straight to Salt")
+                                .font(.custom("OpenSans-Regular", size: 12))
+                                .foregroundColor(Color("GraniteGray"))
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(Color("DarkSilver"))
+                    }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color("PeachCream").opacity(0.7))
+                    )
+                }
+                .padding(.top, 4)
             }
             .padding(.horizontal)
             .padding(.bottom, 24)
         }
         .scrollDismissesKeyboard(.interactively)
+        .sheet(isPresented: $showingPhotoOptions, onDismiss: {
+            // The camera or library opens once this sheet is gone; two sheets can't show at once
+            switch pickedPhotoSource {
+            case .camera: showingCamera = true
+            case .library: showingPhotoPicker = true
+            case nil: break
+            }
+            pickedPhotoSource = nil
+        }) {
+            PhotoSourceSheet(maxPhotos: Self.maxImportPhotos) { source in
+                pickedPhotoSource = source
+                showingPhotoOptions = false
+            }
+            .presentationDetents([.height(CameraView.isAvailable ? 330 : 250)])
+            .presentationDragIndicator(.visible)
+        }
+        .fullScreenCover(isPresented: $showingCamera) {
+            CameraView(image: $capturedImage)
+                .ignoresSafeArea()
+        }
+        .photosPicker(
+            isPresented: $showingPhotoPicker,
+            selection: $selectedPhotoItems,
+            maxSelectionCount: Self.maxImportPhotos,
+            selectionBehavior: .ordered,
+            matching: .images
+        )
+        .fullScreenCover(isPresented: $showingImportProgress, onDismiss: {
+            // Pushed only once the loading screen is gone, so the two transitions don't clash
+            if viewModel.importedRecipe != nil {
+                navigateToPreview = true
+            }
+        }) {
+            ImportProgressView(kind: importProgressKind, onCancel: cancelImport)
+        }
+        .sheet(isPresented: $showingShareTip) {
+            ShareImportDemoView(isLarge: true)
+                .padding()
+                .presentationDetents([.height(500)])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showingPasteText) {
+            PasteRecipeTextView(text: $pastedText) {
+                showingPasteText = false
+                pendingImport = .text(pastedText, entry: "pasted")
+                runImport { await startPendingImport() }
+            }
+        }
+        .onChange(of: capturedImage) { _, image in
+            guard let image else { return }
+            capturedImage = nil
+            pendingImport = .photos([image], entry: "camera")
+            runImport { await startPendingImport() }
+        }
+        .onChange(of: selectedPhotoItems) { _, items in
+            guard !items.isEmpty else { return }
+            runImport {
+                // Kept in the order they were picked, so pages are read in order
+                var photos: [UIImage] = []
+                for item in items {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data) {
+                        photos.append(image)
+                    }
+                }
+                selectedPhotoItems = []
+                guard !photos.isEmpty else { return }
+                pendingImport = .photos(photos, entry: "photo_library")
+                await startPendingImport()
+            }
+        }
         .alert("You've used your free imports", isPresented: $showingImportLimitAlert) {
             Button("Start Free Trial") {
                 showingPaywall = true
@@ -251,7 +382,9 @@ struct ImportRecipeView: View {
                     mode: .preview,
                     previewNotice: recipe.isFromVideoAudio
                         ? "This recipe wasn't in the post's caption, so we put it together from what's said in the video. Some ingredients, amounts or steps may be missing. Please check it before saving; you can fix anything with Edit in the menu."
-                        : nil,
+                        : recipe.origin == .photo
+                            ? "We read this recipe from your photo. Please check the amounts and steps before saving; you can fix anything with Edit in the menu."
+                            : nil,
                     onSave: {
                         // Get ALL data from shared storage - no closure parameters!
                         let savedData = PendingSaveDataStorage.shared.retrieve()
@@ -264,12 +397,14 @@ struct ImportRecipeView: View {
                     onAddMoreRecipes: {
                         // Clear and go back
                         recipeLink = ""
+                        pastedText = ""
                         viewModel.clearImport()
                         PendingSaveDataStorage.shared.clear()
                         navigateToPreview = false
                     },
                     onGoToMyRecipes: {
                         recipeLink = ""
+                        pastedText = ""
                         viewModel.clearImport()
                         PendingSaveDataStorage.shared.clear()
                         navigateToPreview = false
@@ -280,14 +415,15 @@ struct ImportRecipeView: View {
         }
         .onChange(of: viewModel.savedSuccessfully) { _, saved in
             if saved {
-                // Clear the link after recipe is successfully saved
+                // Clear the link or text after recipe is successfully saved
                 recipeLink = ""
+                pastedText = ""
             }
         }
         .onAppear {
             importSharedLinkIfNeeded()
         }
-        .onChange(of: shareImportRouter.pendingUrl) { _, _ in
+        .onChange(of: shareImportRouter.pendingImport) { _, _ in
             importSharedLinkIfNeeded()
         }
         .onChange(of: viewModel.isLoading) { _, isLoading in
@@ -305,6 +441,16 @@ struct ImportRecipeView: View {
 
         let entry = recipeLink == sharedLink ? "share_extension" : "pasted"
 
+        // A whole recipe pasted into the link field is imported as text
+        if RecipeImportService.firstWebUrl(in: recipeLink) == nil, recipeLink.count > 100 {
+            pendingImport = .text(recipeLink, entry: entry)
+            await startPendingImport()
+            return
+        }
+
+        // A link import replaces any photo or text import blocked by the paywall
+        pendingImport = nil
+
         // Free users who've used all their imports are told so, then offered the paywall.
         // The link stays in the field so the import can continue after upgrading.
         guard await SubscriptionManager.shared.canImportRecipe() else {
@@ -313,10 +459,56 @@ struct ImportRecipeView: View {
             return
         }
 
+        importProgressKind = .link
+        showingImportProgress = true
         await viewModel.importRecipe(from: recipeLink, entry: entry)
-        if viewModel.importedRecipe != nil {
-            navigateToPreview = true
+        // Closing the loading screen opens the preview (see its onDismiss)
+        showingImportProgress = false
+    }
+
+    /// Imports `pendingImport` (photos or text), with the same free import limit as links
+    private func startPendingImport() async {
+        guard let pendingImport else { return }
+
+        // The photos or text are kept so the import can continue after upgrading
+        guard await SubscriptionManager.shared.canImportRecipe() else {
+            switch pendingImport {
+            case .photos(_, let entry), .text(_, let entry):
+                Analytics.log(.importLimitReached, ["entry": entry])
+            }
+            showingImportLimitAlert = true
+            return
         }
+
+        switch pendingImport {
+        case .photos(let photos, _): importProgressKind = .photos(photos)
+        case .text: importProgressKind = .note
+        }
+        showingImportProgress = true
+
+        switch pendingImport {
+        case .photos(let photos, let entry):
+            await viewModel.importRecipe(fromPhotos: photos, entry: entry)
+        case .text(let text, let entry):
+            await viewModel.importRecipe(fromText: text, entry: entry)
+        }
+        self.pendingImport = nil
+        // Closing the loading screen opens the preview (see its onDismiss)
+        showingImportProgress = false
+    }
+
+    /// Runs an import as a task the loading screen can cancel
+    private func runImport(_ work: @escaping @MainActor () async -> Void) {
+        importTask?.cancel()
+        importTask = Task { await work() }
+    }
+
+    /// Cancel on the loading screen: stops the import and stays on the Import screen
+    private func cancelImport() {
+        importTask?.cancel()
+        importTask = nil
+        pendingImport = nil
+        showingImportProgress = false
     }
 
     /// Closes the paywall and resumes the blocked import once the user has Premium.
@@ -327,21 +519,180 @@ struct ImportRecipeView: View {
         guard subscriptionManager.isPremium else { return }
 
         showingPaywall = false
-        Task { await startImport() }
+        if pendingImport == nil {
+            runImport { await startImport() }
+        } else {
+            runImport { await startPendingImport() }
+        }
     }
 
-    /// Runs the same import flow as pasting the link, for links shared via the Share Extension.
+    /// Runs the same import flow as pasting a link, choosing photos or pasting text,
+    /// for what was shared via the Share Extension.
     private func importSharedLinkIfNeeded() {
-        guard !viewModel.isLoading, let sharedUrl = shareImportRouter.consume() else { return }
+        guard !viewModel.isLoading, let sharedImport = shareImportRouter.consume() else { return }
 
         // Leave any preview currently shown so the new recipe replaces it
         navigateToPreview = false
         viewModel.clearImport()
         PendingSaveDataStorage.shared.clear()
-        recipeLink = sharedUrl
-        sharedLink = sharedUrl
 
-        Task { await startImport() }
+        switch sharedImport {
+        case .link(let sharedUrl):
+            recipeLink = sharedUrl
+            sharedLink = sharedUrl
+            runImport { await startImport() }
+        case .photos(let photos):
+            pendingImport = .photos(photos, entry: "share_extension")
+            runImport { await startPendingImport() }
+        case .text(let text):
+            pendingImport = .text(text, entry: "share_extension")
+            runImport { await startPendingImport() }
+        }
+    }
+}
+
+// MARK: - Photo Source Sheet
+
+enum PhotoSource {
+    case camera
+    case library
+}
+
+/// Where to get the recipe photos from: the camera or the photo library
+private struct PhotoSourceSheet: View {
+    let maxPhotos: Int
+    let onPick: (PhotoSource) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Import from a Photo")
+                    .font(.custom("Playfair9pt-SemiBold", size: 22))
+                Text("Up to \(maxPhotos) photos or screenshots for one recipe. Pick them in order, e.g. ingredients first, then the steps.")
+                    .font(.custom("OpenSans-Regular", size: 13))
+                    .foregroundColor(Color("GraniteGray"))
+            }
+
+            VStack(spacing: 0) {
+                if CameraView.isAvailable {
+                    ImportOptionRow(
+                        systemImage: "camera",
+                        title: "Take a Photo",
+                        subtitle: "Snap a cookbook page or a recipe card",
+                        isLoading: false
+                    ) { onPick(.camera) }
+
+                    Divider().padding(.leading, 60)
+                }
+
+                ImportOptionRow(
+                    systemImage: "photo.on.rectangle",
+                    title: "Choose from Library",
+                    subtitle: "Screenshots of a caption or recipe site, or saved photos",
+                    isLoading: false
+                ) { onPick(.library) }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color("LightGrayishPink"), lineWidth: 1)
+            )
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal)
+        .padding(.top, 28)
+    }
+}
+
+// MARK: - Import Option Row
+
+/// One of the other ways to add a recipe, e.g. from a photo or from Notes
+private struct ImportOptionRow: View {
+    let systemImage: String
+    let title: String
+    let subtitle: String
+    let isLoading: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Group {
+                    if isLoading {
+                        ProgressView()
+                            .tint(Color("Orange"))
+                    } else {
+                        Image(systemName: systemImage)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(Color("Orange"))
+                    }
+                }
+                .frame(width: 36, height: 36)
+                .background(Circle().fill(Color("Orange").opacity(0.12)))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(isLoading ? "Reading your recipe..." : title)
+                        .font(.custom("OpenSans-SemiBold", size: 15))
+                        .foregroundColor(.black)
+                    Text(subtitle)
+                        .font(.custom("OpenSans-Regular", size: 12))
+                        .foregroundColor(Color("GraniteGray"))
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Color("DarkSilver"))
+            }
+            .padding(12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Paste Recipe Text
+
+/// A recipe pasted in as text, e.g. copied from the Notes app
+private struct PasteRecipeTextView: View {
+    @Binding var text: String
+    let onImport: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Paste the whole recipe from Notes or anywhere else, with its ingredients and steps.")
+                    .font(.custom("OpenSans-Regular", size: 14))
+                    .foregroundColor(Color("DarkSilver"))
+
+                TextEditor(text: $text)
+                    .font(.custom("OpenSans-Regular", size: 14))
+                    .tint(Color("OrangeRed"))
+                    .focused($isFocused)
+                    .padding(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color("DarkSilver"), lineWidth: 1)
+                    )
+            }
+            .padding()
+            .navigationTitle("Import from Notes")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Import", action: onImport)
+                        .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .onAppear { isFocused = true }
+        }
     }
 }
 

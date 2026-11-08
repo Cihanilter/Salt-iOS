@@ -130,18 +130,20 @@ struct MainTabView: View {
         }
         .accentColor(Color("OrangeRed"))
         .onAppear {
+            // Photos or text shared while Salt couldn't be opened
+            shareImportRouter.checkInbox()
             // Link shared before the tabs existed (cold launch or while logged out)
-            if shareImportRouter.pendingUrl != nil {
+            if shareImportRouter.pendingImport != nil {
                 selectedTab = 1
             }
-            if shareImportRouter.pendingUrl != nil || sharedRecipeRouter.pendingCode != nil
+            if shareImportRouter.pendingImport != nil || sharedRecipeRouter.pendingCode != nil
                 || collectionInviteRouter.pendingCode != nil {
                 openedFromLink = true
             }
         }
-        .onChange(of: shareImportRouter.pendingUrl) { _, url in
-            // Link shared from the Share Extension - go to Add Recipe to import it
-            if url != nil {
+        .onChange(of: shareImportRouter.pendingImport) { _, sharedImport in
+            // Link, photos or text shared from the Share Extension - go to Add Recipe to import it
+            if sharedImport != nil {
                 selectedTab = 1
                 openedFromLink = true
             }
@@ -162,8 +164,12 @@ struct MainTabView: View {
             case .background:
                 // A new visit starts; a link that opens Salt sets this again
                 openedFromLink = false
-            case .active where launchPaywallTrigger == nil:
-                Task { await showLaunchPaywallIfNeeded() }
+            case .active:
+                // Photos or text shared while Salt couldn't be opened
+                shareImportRouter.checkInbox()
+                if launchPaywallTrigger == nil {
+                    Task { await showLaunchPaywallIfNeeded() }
+                }
             default:
                 break
             }

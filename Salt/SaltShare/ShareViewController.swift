@@ -2,9 +2,12 @@
 //  ShareViewController.swift
 //  SaltShare
 //
-//  Receives a shared link (Safari, Instagram, TikTok, ...) and hands it to the
-//  Salt app via the `salt://import?url=...` deep link, where the regular
-//  import flow takes over.
+//  Receives a shared link (Safari, Instagram, TikTok, ...), screenshots and photos,
+//  or a recipe written out as text (e.g. a note from the Notes app) and hands it to
+//  the Salt app, where the regular import flow takes over:
+//  - links: `salt://import?url=...`
+//  - photos and text: saved to the App Group's SharedImports folder, then
+//    `salt://import?shared=<id>` (too big for a link)
 //
 
 import UIKit
@@ -38,13 +41,23 @@ class ShareViewController: UIViewController {
 
     @MainActor
     private func handleSharedContent() async {
-        guard let sharedUrl = await extractSharedUrl() else {
-            showMessage("No link found. Share a recipe link to import it into Salt.")
-            return
-        }
-
-        guard let deepLink = makeImportDeepLink(for: sharedUrl) else {
-            showMessage("This link can't be imported.")
+        let sharedUrl = await extractSharedUrl()
+        let deepLink: URL
+        if let sharedImport = await saveSharedPhotosOrText(hasLink: sharedUrl != nil) {
+            deepLink = sharedImport
+        } else if let sharedUrl {
+            // A shared note (not a copy of it) is a link to iCloud, which Salt can't open
+            if sharedUrl.host?.contains("icloud.com") == true, sharedUrl.path.contains("notes") {
+                showMessage("To import a note, choose \"Send Copy\" in the Notes share menu, then pick Salt.")
+                return
+            }
+            guard let linkImport = makeImportDeepLink(for: sharedUrl) else {
+                showMessage("This link can't be imported.")
+                return
+            }
+            deepLink = linkImport
+        } else {
+            showMessage("No recipe found. Share a recipe link, a screenshot or a note with the recipe to import it into Salt.")
             return
         }
 
@@ -53,10 +66,121 @@ class ShareViewController: UIViewController {
             try? await Task.sleep(nanoseconds: 300_000_000)
             extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
         } else {
-            // Fallback: the system refused to open the app, let the user paste it manually
-            UIPasteboard.general.string = sharedUrl.absoluteString
-            showMessage("Link copied. Open Salt and paste it in Add Recipe → Import.")
+            // Fallback: the system refused to open the app. Photos and text wait in the
+            // App Group for the next launch; a link is copied so it can be pasted.
+            if let url = URLComponents(url: deepLink, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "url" })?.value {
+                UIPasteboard.general.string = url
+                showMessage("Link copied. Open Salt and paste it in Add Recipe → Import.")
+            } else {
+                showMessage("Saved. Open Salt to finish importing.")
+            }
         }
+    }
+
+    // MARK: - Photos & Text
+
+    /// Most photos for one recipe, as in the app's photo picker
+    private static let maxPhotos = 5
+    private static let appGroup = "group.com.salt.recipes"
+
+    /// Saves shared photos/screenshots, or text that's a written-out recipe, for the app to
+    /// import, and returns the deep link to open. nil when there are none (e.g. a shared link).
+    /// hasLink: a link was shared too; then images are only its preview (e.g. from Pinterest)
+    /// and the link is imported instead.
+    ///
+    /// Folder format, read by `SharedImportInbox` in the app:
+    /// `<App Group>/SharedImports/<id>/` holding either `1.jpg`, `2.jpg`, ... (in order) or `text.txt`
+    private func saveSharedPhotosOrText(hasLink: Bool) async -> URL? {
+        let items = extensionContext?.inputItems as? [NSExtensionItem] ?? []
+        let providers = items.flatMap { $0.attachments ?? [] }
+
+        let imageProviders = providers.filter { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) }
+        if !imageProviders.isEmpty, !hasLink {
+            var photos: [Data] = []
+            for provider in imageProviders.prefix(Self.maxPhotos) {
+                if let data = await loadImageData(from: provider) {
+                    photos.append(data)
+                }
+            }
+            guard !photos.isEmpty else { return nil }
+            return saveToAppGroup { folder in
+                for (index, data) in photos.enumerated() {
+                    try data.write(to: folder.appendingPathComponent("\(index + 1).jpg"))
+                }
+            }
+        }
+
+        let text = await sharedText()
+        guard isRecipeText(text) else { return nil }
+        return saveToAppGroup { folder in
+            try text.write(to: folder.appendingPathComponent("text.txt"), atomically: true, encoding: .utf8)
+        }
+    }
+
+    /// The image's file data. Apps share images as a file, data or a UIImage
+    /// (e.g. the screenshot editor); file data is kept as is so big photos aren't decoded here.
+    private func loadImageData(from provider: NSItemProvider) async -> Data? {
+        guard let item = try? await provider.loadItem(forTypeIdentifier: UTType.image.identifier) else { return nil }
+        switch item {
+        case let url as URL: return try? Data(contentsOf: url)
+        case let data as Data: return data
+        case let image as UIImage: return image.jpegData(compressionQuality: 0.9)
+        default: return nil
+        }
+    }
+
+    /// All shared text: text attachments, or the text attached to the extension item
+    private func sharedText() async -> String {
+        let items = extensionContext?.inputItems as? [NSExtensionItem] ?? []
+        let providers = items.flatMap { $0.attachments ?? [] }
+
+        var texts: [String] = []
+        for provider in providers where provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
+            switch try? await provider.loadItem(forTypeIdentifier: UTType.plainText.identifier) {
+            case let text as String: texts.append(text)
+            case let data as Data: String(data: data, encoding: .utf8).map { texts.append($0) }
+            case let url as URL where url.isFileURL: (try? String(contentsOf: url, encoding: .utf8)).map { texts.append($0) }
+            default: break
+            }
+        }
+        if texts.isEmpty {
+            texts = items.compactMap { $0.attributedContentText?.string }
+        }
+        return texts.joined(separator: "\n")
+    }
+
+    /// Whether the text is a written-out recipe rather than a link with a few words around it
+    /// (e.g. TikTok's "Check out this video! https://..."): a few lines and more than a caption's worth of text.
+    private func isRecipeText(_ text: String) -> Bool {
+        var remaining = text
+        if let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) {
+            let range = NSRange(text.startIndex..., in: text)
+            for match in detector.matches(in: text, range: range).reversed() {
+                if let linkRange = Range(match.range, in: remaining) {
+                    remaining.removeSubrange(linkRange)
+                }
+            }
+        }
+        let lines = remaining.split(whereSeparator: \.isNewline).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        return remaining.trimmingCharacters(in: .whitespacesAndNewlines).count > 150 && lines.count >= 4
+    }
+
+    /// Creates a new folder in the App Group, lets `write` fill it, and returns `salt://import?shared=<id>`
+    private func saveToAppGroup(_ write: (URL) throws -> Void) -> URL? {
+        guard let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: Self.appGroup) else {
+            return nil
+        }
+        let id = UUID().uuidString
+        let folder = container.appendingPathComponent("SharedImports/\(id)", isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try write(folder)
+        } catch {
+            try? FileManager.default.removeItem(at: folder)
+            return nil
+        }
+        return URL(string: "salt://import?shared=\(id)")
     }
 
     /// Finds the first web URL in the shared items. Apps like TikTok and Instagram

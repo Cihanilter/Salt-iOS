@@ -420,16 +420,18 @@ class RecipeService {
             cuisines: nil,
             dishTypes: nil,
             notes: nil,
-            sourceUrl: recipe.sourceUrl,
+            sourceUrl: recipe.origin.hasLink ? recipe.sourceUrl : nil,
             sourceName: recipe.sourceName,
             photos: finalPhotos
         )
 
-        return try await createRecipe(userRecipe)
+        // Without a link the source can't be told from the URL, but a photo or note import still counts as an import
+        return try await createRecipe(userRecipe, source: recipe.origin.recipeSource)
     }
 
-    /// Save RecipeDetail as user recipe (used when recipe was edited in preview)
-    func saveRecipeDetail(_ recipeDetail: RecipeDetail, sourceUrl: String? = nil) async throws -> UserRecipe {
+    /// Save RecipeDetail as user recipe (used when recipe was edited in preview).
+    /// `source` overrides the value derived from the source URL, as in `createRecipe`.
+    func saveRecipeDetail(_ recipeDetail: RecipeDetail, sourceUrl: String? = nil, source: String? = nil) async throws -> UserRecipe {
         guard let userId = try? await supabase.auth.session.user.id else {
             throw RecipeServiceError.notAuthenticated
         }
@@ -490,7 +492,7 @@ class RecipeService {
             photos: finalImages.isEmpty ? nil : finalImages
         )
 
-        return try await createRecipe(userRecipe)
+        return try await createRecipe(userRecipe, source: source)
     }
 }
 

@@ -4,6 +4,8 @@
 //
 
 import Foundation
+import UIKit
+import Vision
 
 // MARK: - Imported Recipe Model
 
@@ -22,6 +24,8 @@ struct ImportedRecipe {
     let author: String?
     /// The caption had no recipe, so it was put together from what's said in the video
     var isFromVideoAudio: Bool = false
+    /// Where the recipe came from; photos and notes have no source link
+    var origin: ImportOrigin = .link
 
     // Convert to Recipe for saving
     func toRecipe() -> Recipe {
@@ -88,9 +92,30 @@ struct ImportedRecipe {
             instructions: instructions,
             notes: "",
             images: imageUrl.map { [$0] } ?? [],
-            sourceUrl: sourceUrl,
+            sourceUrl: origin.hasLink ? sourceUrl : nil,
             sourceName: sourceName
         )
+    }
+}
+
+/// What a recipe was imported from
+enum ImportOrigin: String {
+    case link
+    /// Photos or screenshots, e.g. a cookbook page or an Instagram caption
+    case photo
+    /// Text pasted in or shared from the Notes app
+    case note
+
+    var hasLink: Bool { self == .link }
+
+    /// `source` saved with the recipe when there's no link to derive it from. Starts with
+    /// "imported_" so the recipe_imports trigger counts it toward the free import limit.
+    var recipeSource: String? {
+        switch self {
+        case .link: return nil
+        case .photo: return "imported_photo"
+        case .note: return "imported_note"
+        }
     }
 }
 
@@ -130,6 +155,12 @@ enum RecipeImportError: LocalizedError {
     case pageUnavailable
     /// The post or page loaded but has no recipe in it; nil platform for a web page
     case noRecipeFound(SocialPlatform?)
+    /// No readable text in the photos (e.g. a photo of a dish, or a blurry page)
+    case noTextInPhoto
+    /// The photos have text, but no recipe in it
+    case noRecipeInPhoto
+    /// The pasted or shared text has no recipe in it
+    case noRecipeInText
     case failed
 
     var errorDescription: String? {
@@ -150,6 +181,12 @@ enum RecipeImportError: LocalizedError {
             return "We couldn't find a recipe in this \(platform.postName). If the recipe is only shown in pictures or on screen, you can add it yourself in the Create tab."
         case .noRecipeFound(nil):
             return "We couldn't find a recipe on this page. Make sure the link opens a single recipe, not a list of recipes or the site's home page."
+        case .noTextInPhoto:
+            return "We couldn't read a recipe in this photo. Try a sharper, well-lit photo of the whole recipe, or a screenshot of the full caption (tap \"more\" first)."
+        case .noRecipeInPhoto:
+            return "We couldn't find a recipe in this photo. Make sure the ingredients and steps are in the picture. A long recipe may need a few screenshots."
+        case .noRecipeInText:
+            return "We couldn't find a recipe in this text. Make sure it includes the ingredients and steps."
         case .failed:
             return "Something went wrong while importing this recipe. Please try again."
         }
@@ -164,7 +201,8 @@ enum RecipeImportError: LocalizedError {
         case .serviceBusy: return "service_busy"
         case .postUnavailable: return "post_unavailable"
         case .pageUnavailable: return "page_unavailable"
-        case .noRecipeFound: return "no_recipe"
+        case .noRecipeFound, .noRecipeInPhoto, .noRecipeInText: return "no_recipe"
+        case .noTextInPhoto: return "no_text_in_photo"
         case .failed: return "failed"
         }
     }
@@ -193,6 +231,11 @@ class RecipeImportService {
     private let socialImportApiUrl = "https://salt-backend-production.up.railway.app/api/import-social-recipe"
     // AI fallback for recipe pages without Schema.org markup (the recipe is only in the page text)
     private let webImportApiUrl = "https://salt-backend-production.up.railway.app/api/import-web-recipe"
+    // Recipes from photos, screenshots and notes (text without a link)
+    private let textImportApiUrl = "https://salt-backend-production.up.railway.app/api/import-text-recipe"
+
+    /// Most text sent to the AI; recipes are well under this
+    private static let maxTextLength = 40000
 
     private init() {}
 
@@ -232,7 +275,7 @@ class RecipeImportService {
         var body: [String: Any] = [
             "url": urlString,
             "title": extractPageTitle(from: html) ?? "",
-            "text": String(text.prefix(40000))
+            "text": String(text.prefix(Self.maxTextLength))
         ]
         if let imageUrl = extractOpenGraphImage(from: html, pageUrl: urlString) {
             body["imageUrl"] = imageUrl
@@ -303,6 +346,88 @@ class RecipeImportService {
             author: nil,
             isFromVideoAudio: data["importSource"] as? String == "audio"
         )
+    }
+
+    // MARK: - Photo & Text Import
+
+    /// Imports a recipe from photos or screenshots: a cookbook page, a handwritten card, a
+    /// screenshot of an Instagram caption or a recipe site. The text is read on the device,
+    /// then the AI turns it into a recipe. Pass them in order when a recipe spans more than
+    /// one (e.g. ingredients on one, steps on the next, or screenshots taken while scrolling).
+    func importRecipe(fromPhotos photos: [UIImage]) async throws -> ImportedRecipe {
+        var pages: [String] = []
+        for photo in photos {
+            let text: String
+            do {
+                text = try await recognizeText(in: photo)
+            } catch {
+                // An image Vision can't read
+                throw RecipeImportError.noTextInPhoto
+            }
+            if !text.isEmpty { pages.append(text) }
+        }
+        // The marker lets the AI tell where one screenshot ends, to drop lines repeated by the next
+        let text = pages.joined(separator: "\n--- next image ---\n")
+
+        // A few words aren't enough for a recipe (e.g. a photo of a dish, or a blurry page)
+        guard text.count > 80 else { throw RecipeImportError.noTextInPhoto }
+
+        do {
+            return try await importFromText(text, origin: .photo)
+        } catch RecipeImportError.noRecipeFound {
+            throw RecipeImportError.noRecipeInPhoto
+        }
+    }
+
+    /// Imports a recipe from text pasted in or shared from the Notes app
+    func importRecipe(fromText text: String) async throws -> ImportedRecipe {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Too short to hold ingredients and steps
+        guard text.count > 40 else { throw RecipeImportError.noRecipeInText }
+
+        do {
+            return try await importFromText(text, origin: .note)
+        } catch RecipeImportError.noRecipeFound {
+            throw RecipeImportError.noRecipeInText
+        }
+    }
+
+    /// The first web link in the text, if any (e.g. "example.com/recipe" or "https://...")
+    static func firstWebUrl(in text: String) -> URL? {
+        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else {
+            return nil
+        }
+        let range = NSRange(text.startIndex..., in: text)
+        return detector.matches(in: text, range: range)
+            .compactMap(\.url)
+            .first { $0.scheme == "http" || $0.scheme == "https" }
+    }
+
+    /// Sends text without a link to the backend, which has the AI find the recipe in it
+    private func importFromText(_ text: String, origin: ImportOrigin) async throws -> ImportedRecipe {
+        let body: [String: Any] = [
+            "kind": origin.rawValue,
+            "text": String(text.prefix(Self.maxTextLength))
+        ]
+        var recipe = try await importFromBackend(apiUrlString: textImportApiUrl, body: body, timeout: 90, sourceUrl: "", platform: nil)
+        recipe.origin = origin
+        return recipe
+    }
+
+    /// The photo's text, one recognized line per line, in reading order
+    private func recognizeText(in photo: UIImage) async throws -> String {
+        guard let cgImage = photo.cgImage else { return "" }
+
+        var request = RecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = true
+        // Cookbooks and captions in any language the device can read
+        request.automaticallyDetectsLanguage = true
+
+        let observations = try await request.perform(on: cgImage, orientation: CGImagePropertyOrientation(photo.imageOrientation))
+        return observations
+            .compactMap { $0.topCandidates(1).first?.string }
+            .joined(separator: "\n")
     }
 
     /// Import from regular website using Schema.org parsing
@@ -1296,5 +1421,24 @@ class RecipeImportService {
         }
 
         return result
+    }
+}
+
+// MARK: - Photo Orientation
+
+private extension CGImagePropertyOrientation {
+    /// Vision reads the raw pixels, so it needs to be told how the photo was taken
+    init(_ orientation: UIImage.Orientation) {
+        switch orientation {
+        case .up: self = .up
+        case .upMirrored: self = .upMirrored
+        case .down: self = .down
+        case .downMirrored: self = .downMirrored
+        case .left: self = .left
+        case .leftMirrored: self = .leftMirrored
+        case .right: self = .right
+        case .rightMirrored: self = .rightMirrored
+        @unknown default: self = .up
+        }
     }
 }
