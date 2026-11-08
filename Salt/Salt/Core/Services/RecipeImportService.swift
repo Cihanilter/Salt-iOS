@@ -178,7 +178,7 @@ enum RecipeImportError: LocalizedError {
         case .pageUnavailable:
             return "We couldn't open this page. Check that the link opens in Safari, then try again."
         case .noRecipeFound(let platform?):
-            return "We couldn't find a recipe in this \(platform.postName). If the recipe is only shown in pictures or on screen, you can add it yourself in the Create tab."
+            return "We couldn't find a recipe in this \(platform.postName). If the recipe is only shown in pictures or on screen, take screenshots of it and import them with Photo or Screenshot."
         case .noRecipeFound(nil):
             return "We couldn't find a recipe on this page. Make sure the link opens a single recipe, not a list of recipes or the site's home page."
         case .noTextInPhoto:

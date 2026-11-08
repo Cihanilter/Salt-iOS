@@ -124,7 +124,7 @@ struct ImportRecipeView: View {
 
     // Callback to switch to My Recipes tab
     var switchToMyRecipes: (() -> Void)?
-    // Callback to switch to the Create tab, for writing a recipe from scratch
+    // Opens Create, for writing a recipe from scratch
     var switchToCreate: (() -> Void)?
 
     var body: some View {
