@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import NaturalLanguage
 
 /// Ingredients are stored as plain text, in a few formats:
 ///   - "Lean ground beef: 1 pound"   (curated/database recipes: name, then amount)
@@ -27,9 +28,21 @@ enum IngredientScaler {
         return value
     }
 
-    /// The line as shown in the recipe: amount first, multiplied by `factor` (1 = as written)
-    static func display(_ line: String, scaledBy factor: Double = 1) -> String {
-        scale(amountFirst(line), by: factor)
+    /// The line as shown in the recipe: amount first, multiplied by `factor` (1 = as written).
+    /// `inflectsEnglish`: put units and ingredients in English singular/plural; off for recipes in
+    /// other languages, e.g. Turkish says "500 gram", never "500 grams" (see `isEnglish`).
+    static func display(_ line: String, scaledBy factor: Double = 1, inflectsEnglish: Bool = true) -> String {
+        scale(amountFirst(line), by: factor, inflectsEnglish: inflectsEnglish)
+    }
+
+    /// Whether the recipe text (best its steps) is in English, so English plurals fit it.
+    /// Only text that's clearly another language counts as not English: English recipes are full
+    /// of foreign dish names ("queso fresco", "pecorino") that can make short text look Spanish or Italian.
+    static func isEnglish(_ lines: [String]) -> Bool {
+        let recognizer = NLLanguageRecognizer()
+        recognizer.processString(lines.joined(separator: "\n"))
+        guard let (language, confidence) = recognizer.languageHypotheses(withMaximum: 1).first else { return true }
+        return language == .english || confidence < 0.8
     }
 
     // MARK: Sections
@@ -272,7 +285,7 @@ enum IngredientScaler {
 
     /// The line with its leading amount multiplied by `factor` and the following unit or
     /// ingredient in singular/plural to match. Expects an amount-first line (see `amountFirst`).
-    static func scale(_ line: String, by factor: Double) -> String {
+    static func scale(_ line: String, by factor: Double, inflectsEnglish: Bool = true) -> String {
         guard factor > 0 else { return line }
 
         let text = line as NSString
@@ -308,7 +321,9 @@ enum IngredientScaler {
             rest = scaleConversion(in: rest, after: NSMaxRange(unitInfo.range), by: factor)
         }
         // "1 cup" → "2 cups", "2 large eggs" → "1 large egg"
-        rest = inflectNoun(in: rest, for: (second ?? first) * factor)
+        if inflectsEnglish {
+            rest = inflectNoun(in: rest, for: (second ?? first) * factor)
+        }
 
         let prefix = text.substring(to: match.range(at: 1).location)
         return prefix + amount + rest

@@ -344,7 +344,13 @@ struct RecipeDetailView: View {
                         CookingModeToggle(isOn: $isCookingModeOn)
 
                         // Ingredients
-                        IngredientsSection(ingredients: recipe.ingredients, servings: recipe.servings, recipeTitle: recipe.title)
+                        IngredientsSection(
+                            ingredients: recipe.ingredients,
+                            servings: recipe.servings,
+                            recipeTitle: recipe.title,
+                            // Told from the steps: full sentences show the language better than ingredient names
+                            languageSample: [recipe.title] + recipe.instructions
+                        )
 
                         // Instructions
                         InstructionsSection(instructions: recipe.instructions)
@@ -1143,9 +1149,12 @@ struct TimeInfoSection: View {
     let cookTime: String
 
     var body: some View {
-        HStack(spacing: 25) {
-            TimeInfoItem(value: prepTime, label: "Prep time")
-            TimeInfoItem(value: cookTime, label: "Cook time")
+        // Hidden when the recipe gives no times at all (e.g. a note or photo without them)
+        if TimeInfoItem.hasTime(prepTime) || TimeInfoItem.hasTime(cookTime) {
+            HStack(spacing: 25) {
+                TimeInfoItem(value: prepTime, label: "Prep time")
+                TimeInfoItem(value: cookTime, label: "Cook time")
+            }
         }
     }
 }
@@ -1154,6 +1163,12 @@ struct TimeInfoItem: View {
     let value: String
     let label: String
 
+    /// "0" or an empty value means the recipe doesn't give this time
+    static func hasTime(_ value: String) -> Bool {
+        let value = value.trimmingCharacters(in: .whitespaces)
+        return !value.isEmpty && value != "0"
+    }
+
     var body: some View {
         VStack(spacing: 4) {
             ZStack {
@@ -1161,12 +1176,19 @@ struct TimeInfoItem: View {
                     .fill(Color("LightGrayishPink"))
                     .frame(width: 57, height: 57)
 
-                VStack(spacing: 0) {
-                    Text(value)
-                        .font(.custom("Playfair9pt-Regular", size: 18))
+                if Self.hasTime(value) {
+                    VStack(spacing: 0) {
+                        Text(value)
+                            .font(.custom("Playfair9pt-Regular", size: 18))
 
-                    Text("mins")
-                        .font(.custom("Playfair9pt-Regular", size: 14))
+                        Text("mins")
+                            .font(.custom("Playfair9pt-Regular", size: 14))
+                    }
+                } else {
+                    // Not given by the recipe; a dash rather than a made-up "0 mins"
+                    Text("–")
+                        .font(.custom("Playfair9pt-Regular", size: 18))
+                        .accessibilityLabel("Not given")
                 }
             }
 
@@ -1202,6 +1224,8 @@ struct IngredientsSection: View {
     let ingredients: [String]
     let servings: String  // The recipe's servings text, e.g. "4 servings"; scaling starts from it
     var recipeTitle: String = ""  // Helps the AI pick substitutes that suit the dish
+    /// Recipe text (title and steps) used to tell its language, for English plurals
+    var languageSample: [String] = []
 
     /// The Swap an ingredient link opens the list (or the paywall for free users);
     /// tapping a swapped line opens just that one
@@ -1230,6 +1254,8 @@ struct IngredientsSection: View {
 
     private var baseServings: Int? { IngredientScaler.baseServings(from: servings) }
     private var sections: [IngredientScaler.Section] { IngredientScaler.sections(from: ingredients) }
+    /// English plurals ("2 cups") only for English recipes; e.g. Turkish keeps "500 gram"
+    @State private var ingredientsAreEnglish = true
 
     /// Every line with its place in the list, grouped like the list
     private var positions: [(heading: String?, positions: [IngredientPosition])] {
@@ -1245,6 +1271,9 @@ struct IngredientsSection: View {
             HStack {
                 Text("Ingredients")
                     .font(.custom("Playfair9pt-SemiBold", size: 22))
+                    .task(id: languageSample) {
+                        ingredientsAreEnglish = IngredientScaler.isEnglish(languageSample.isEmpty ? ingredients : languageSample)
+                    }
 
                 Spacer()
 
@@ -1413,7 +1442,7 @@ struct IngredientsSection: View {
         if let base = baseServings, let selected = selectedServings {
             factor = Double(selected) / Double(base)
         }
-        let line = IngredientScaler.display(ingredient, scaledBy: factor)
+        let line = IngredientScaler.display(ingredient, scaledBy: factor, inflectsEnglish: ingredientsAreEnglish)
         guard let preferredUnits else { return line }
         return UnitConverter.convert(line, to: preferredUnits)
     }

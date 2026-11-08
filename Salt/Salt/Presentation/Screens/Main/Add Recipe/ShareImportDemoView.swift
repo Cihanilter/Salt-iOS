@@ -10,6 +10,8 @@ import SwiftUI
 /// Short looping walkthrough showing how to send a recipe to Salt
 /// from a social media app: Share > Share to... > Salt.
 struct ShareImportDemoView: View {
+    /// Bigger walkthrough for the popup on the Import screen
+    var isLarge = false
     @State private var currentStep = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -27,10 +29,10 @@ struct ShareImportDemoView: View {
                     .background(Capsule().fill(Color("Orange").opacity(0.12)))
 
                 Text("Importing from social media?")
-                    .font(.custom("Playfair9pt-SemiBold", size: 20))
+                    .font(.custom("Playfair9pt-SemiBold", size: isLarge ? 23 : 20))
 
                 Text("You can share recipes straight to Salt from Instagram, TikTok or YouTube.")
-                    .font(.custom("OpenSans-Regular", size: 14))
+                    .font(.custom("OpenSans-Regular", size: isLarge ? 15 : 14))
                     .foregroundColor(Color("GraniteGray"))
             }
             .multilineTextAlignment(.center)
@@ -38,12 +40,13 @@ struct ShareImportDemoView: View {
 
             TabView(selection: $currentStep) {
                 ForEach(steps) { step in
-                    ShareDemoStepView(step: step, stepCount: steps.count)
+                    ShareDemoStepView(step: step, stepCount: steps.count, mockScale: isLarge ? 1.05 : 0.65)
                         .tag(step.rawValue)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 158)
+            // Mock height at its scale, plus the caption and padding
+            .frame(height: isLarge ? 250 : 158)
 
             ShareDemoPageDots(count: steps.count, current: currentStep)
         }
@@ -86,6 +89,8 @@ enum ShareDemoStep: Int, CaseIterable, Identifiable {
 struct ShareDemoStepView: View {
     let step: ShareDemoStep
     let stepCount: Int
+    /// Mocks are laid out at 220x180 and drawn at this scale
+    var mockScale: CGFloat = 0.65
 
     var body: some View {
         VStack(spacing: 10) {
@@ -100,12 +105,12 @@ struct ShareDemoStepView: View {
             .background(Color("Alabaster"))
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 3)
-            // Mocks are laid out at 220x180 and drawn smaller so the tip fits above the fold
-            .scaleEffect(0.65)
-            .frame(width: 143, height: 117)
+            // Mocks are laid out at 220x180 and drawn at mockScale (smaller so the tip fits above the fold)
+            .scaleEffect(mockScale)
+            .frame(width: 220 * mockScale, height: 180 * mockScale)
 
             Text(step.caption)
-                .font(.custom("Playfair9pt-Regular", size: 18))
+                .font(.custom("Playfair9pt-Regular", size: mockScale > 1 ? 22 : 18))
                 .foregroundColor(Color("OrangeRed"))
         }
         .padding(.vertical, 6)

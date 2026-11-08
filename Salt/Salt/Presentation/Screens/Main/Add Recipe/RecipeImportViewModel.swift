@@ -56,9 +56,17 @@ class RecipeImportViewModel: ObservableObject {
 
         do {
             let recipe = try await importService.importRecipe(from: finalUrl)
+            // Cancelled on the loading screen while the recipe was on its way
+            guard !Task.isCancelled else {
+                isLoading = false
+                return
+            }
             importedRecipe = recipe
             showingPreview = true
             print("✅ Imported recipe: \(recipe.title)")
+        } catch where Task.isCancelled {
+            // Cancelled on the loading screen: no error to show
+            print("⏹️ Import cancelled")
         } catch {
             print("❌ Import error: \(error)")
             let importError = RecipeImportError.from(error)
@@ -112,9 +120,17 @@ class RecipeImportViewModel: ObservableObject {
 
         do {
             let recipe = try await load()
+            // Cancelled on the loading screen while the recipe was on its way
+            guard !Task.isCancelled else {
+                isLoading = false
+                return
+            }
             importedRecipe = recipe
             showingPreview = true
             print("✅ Imported recipe from \(source): \(recipe.title)")
+        } catch where Task.isCancelled {
+            // Cancelled on the loading screen: no error to show
+            print("⏹️ \(source) import cancelled")
         } catch {
             print("❌ \(source) import error: \(error)")
             let importError = RecipeImportError.from(error)
