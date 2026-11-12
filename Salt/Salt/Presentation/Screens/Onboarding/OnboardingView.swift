@@ -16,6 +16,15 @@ enum OnboardingStorage {
     /// Set once the import tutorial has been shown in onboarding, so a web buyer who went
     /// through Get started before logging in doesn't get it again (see WebBuyerWelcome)
     static let tutorialSeenKey = "onboardingTutorialSeen"
+    /// The social app picked in "Where do you find recipes?", so the in-app share how-to
+    /// shows that app's walkthrough (a `ShareTutorialView.Source` raw value)
+    static let socialSourceKey = "onboardingSocialSource"
+
+    /// The walkthrough to show in the app: the onboarding pick, otherwise Instagram
+    static var preferredSocialSource: ShareTutorialView.Source {
+        UserDefaults.standard.string(forKey: socialSourceKey)
+            .flatMap(ShareTutorialView.Source.init(rawValue:)) ?? .instagram
+    }
 }
 
 // MARK: - Review
@@ -143,27 +152,35 @@ private enum OnboardingPage: Int, CaseIterable {
     case intro
     case name
     case sources
-    case showHow
-    case settingUp
+    /// The short demos picked from the sources (OnboardingDemos.swift)
+    case demos
 
     var analyticsName: String {
         switch self {
         case .intro: "intro"
         case .name: "name"
         case .sources: "recipe_sources"
-        case .showHow: "show_how"
-        case .settingUp: "setting_up"
+        case .demos: "demos"
         }
+    }
+
+    /// Pages with the logo and progress bar on top; the rest have their own top bar
+    var showsProgressHeader: Bool {
+        self == .intro || self == .name
     }
 }
 
-/// Where the user keeps recipes, on "Where do you usually store your recipes?"
+/// Answers to "Where do you find recipes?" (saved for analytics)
 private enum RecipeSource: String, CaseIterable, Identifiable {
     case instagram
     case tiktok
+    case youtube
     case facebook
-    case youtubeShorts = "youtube_shorts"
     case websites
+    case cookbooks
+    case handwritten
+    case screenshots
+    case notes
 
     var id: String { rawValue }
 
@@ -171,35 +188,87 @@ private enum RecipeSource: String, CaseIterable, Identifiable {
         switch self {
         case .instagram: "Instagram"
         case .tiktok: "TikTok"
+        case .youtube: "YouTube"
         case .facebook: "Facebook"
-        case .youtubeShorts: "YouTube Shorts"
-        case .websites: "Recipe websites"
+        case .websites: "Websites & blogs"
+        case .cookbooks: "Cookbooks"
+        case .handwritten: "Handwritten & family"
+        case .screenshots: "Screenshots"
+        case .notes: "Notes"
         }
     }
 
-    /// Logo in the asset catalog; websites use a globe symbol
+    /// The app's own logo, for the social apps
     var logo: String? {
         switch self {
         case .instagram: "instagramLogo"
         case .tiktok: "tiktokLogo"
+        case .youtube: "youtubeShortsLogo"
         case .facebook: "facebookLogo"
-        case .youtubeShorts: "youtubeShortsLogo"
-        case .websites: nil
+        case .websites, .cookbooks, .handwritten, .screenshots, .notes: nil
         }
+    }
+
+    /// Gray icon in the row's cream circle, for the rest
+    var systemImage: String {
+        switch self {
+        case .instagram, .tiktok, .youtube, .facebook: "play.rectangle"
+        case .websites: "globe"
+        case .cookbooks: "book"
+        case .handwritten: "pencil"
+        case .screenshots: "photo.on.rectangle"
+        case .notes: "note.text"
+        }
+    }
+
+    /// The share walkthrough for the social apps
+    var tutorialSource: ShareTutorialView.Source? {
+        switch self {
+        case .instagram: .instagram
+        case .tiktok: .tiktok
+        case .youtube: .youtubeShorts
+        case .facebook: .facebook
+        case .websites, .cookbooks, .handwritten, .screenshots, .notes: nil
+        }
+    }
+
+    /// Notes have no demo: a note is shared or pasted as text, which needs no showing
+    var demo: OnboardingDemo? {
+        switch self {
+        case .instagram, .tiktok, .youtube, .facebook: .social
+        case .websites: .website
+        case .cookbooks, .handwritten, .screenshots: .photo
+        case .notes: nil
+        }
+    }
+}
+
+/// Where the app opens after sign-up, from the end of onboarding (read by MainTabView)
+enum OnboardingDestination: String {
+    case addRecipe = "add_recipe"
+    case explore
+
+    static let key = "onboardingDestination"
+
+    /// Read once after sign-up; nil when onboarding didn't set one
+    static func consume() -> OnboardingDestination? {
+        defer { UserDefaults.standard.removeObject(forKey: key) }
+        return UserDefaults.standard.string(forKey: key).flatMap(OnboardingDestination.init(rawValue:))
     }
 }
 
 struct OnboardingFlowView: View {
     @ObservedObject var router: AuthRouter
-    /// Set when Create account opens on top, so coming back lands on the page before Setting up
-    @State private var didOpenCreateAccount = false
     @State private var hasLoggedStart = false
 
     @State private var page: OnboardingPage
     @State private var name = ""
     @State private var sources: Set<RecipeSource> = []
-    @State private var tutorialOutcome: ShareTutorialView.Outcome?
-    @State private var showingTutorial = false
+    /// Demos picked from the sources, in order: social, websites, photos (up to 3)
+    @State private var demos: [OnboardingDemo] = []
+    @State private var demoIndex = 0
+    @State private var learned: Set<OnboardingDemo> = []
+    @State private var showingSocialDemo = false
     @FocusState private var isTextFieldFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -214,27 +283,34 @@ struct OnboardingFlowView: View {
         _page = State(initialValue: page)
     }
 
+    private var currentDemo: OnboardingDemo? {
+        demos.indices.contains(demoIndex) ? demos[demoIndex] : nil
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            header
+            if page.showsProgressHeader {
+                header
+            }
 
             Group {
                 switch page {
                 case .intro: introPage
                 case .name: namePage
                 case .sources: sourcesPage
-                case .showHow: showHowPage
-                case .settingUp: settingUpPage
+                case .demos: demoPage
                 }
             }
-            .id(page)
+            .id(page.rawValue * 10 + (page == .demos ? demoIndex : 0))
             .transition(.asymmetric(
                 insertion: .move(edge: .trailing).combined(with: .opacity),
                 removal: .opacity
             ))
             .frame(maxHeight: .infinity, alignment: .top)
 
-            footer
+            if page.showsProgressHeader || page == .sources {
+                footer
+            }
         }
         .background(Color.white.ignoresSafeArea())
         .sensoryFeedback(.selection, trigger: sources)
@@ -243,20 +319,19 @@ struct OnboardingFlowView: View {
                 hasLoggedStart = true
                 Analytics.log(.onboardingStarted)
             }
-            // Back from Create account: Setting up only runs forwards, so show the page before it
-            if didOpenCreateAccount {
-                didOpenCreateAccount = false
-                page = .showHow
-            }
         }
-        .fullScreenCover(isPresented: $showingTutorial, onDismiss: {
-            // The questionnaire continues after the tutorial, however it ended
-            goForward()
-        }) {
-            ShareTutorialView(context: .onboarding, sources: tutorialSources) { outcome in
+        .fullScreenCover(isPresented: $showingSocialDemo) {
+            // The existing share walkthrough, with the progress line; its Skip goes to the next demo
+            ShareTutorialView(
+                context: .onboarding,
+                sources: [socialSource],
+                progress: progress(for: .social),
+                nextTitle: demos.indices.contains(demoIndex + 1) ? demos[demoIndex + 1].nextTitle : String(localized: "Continue")
+            ) { outcome in
                 UserDefaults.standard.set(true, forKey: OnboardingStorage.tutorialSeenKey)
-                tutorialOutcome = outcome
-                showingTutorial = false
+                if outcome != .skipped { learned.insert(.social) }
+                showingSocialDemo = false
+                nextDemo()
             }
         }
     }
@@ -268,22 +343,11 @@ struct OnboardingFlowView: View {
             OnboardingLogo()
 
             HStack(spacing: 14) {
-                Button {
-                    goBack()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.black)
-                        .frame(width: 32, height: 32)
-                }
-                .accessibilityLabel("Back")
-                // Nothing to go back to while it's setting up
-                .opacity(page == .settingUp ? 0 : 1)
-                .disabled(page == .settingUp)
+                backButton
 
-                // One more step after these pages: Create account
+                // Then the sources question, the demos and Create account
                 ProgressView(value: Double(page.rawValue + 1), total: Double(OnboardingPage.allCases.count + 1))
-                    .tint(Color("Orange"))
+                    .tint(SaltColor.actionPrimary)
                     .animation(.easeInOut, value: page)
             }
         }
@@ -291,24 +355,23 @@ struct OnboardingFlowView: View {
         .padding(.top, 8)
     }
 
-    @ViewBuilder
-    private var footer: some View {
-        VStack(spacing: 12) {
-            switch page {
-            case .settingUp:
-                // Moves on by itself
-                EmptyView()
-            case .showHow:
-                OnboardingPrimaryButton(title: "Show me how") {
-                    showingTutorial = true
-                }
-            default:
-                OnboardingPrimaryButton(title: "Continue", isEnabled: canContinue) {
-                    goForward()
-                }
-            }
+    private var backButton: some View {
+        Button {
+            goBack()
+        } label: {
+            Image(systemName: "chevron.left")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(SaltColor.iconDefault)
+                .frame(width: 44, height: 44)
         }
-        .padding(.horizontal, 20)
+        .accessibilityLabel("Back")
+    }
+
+    private var footer: some View {
+        OnboardingPrimaryButton(title: "Continue", isEnabled: canContinue) {
+            goForward()
+        }
+        .padding(.horizontal, SaltSpacing.screenMargin)
         .padding(.bottom, 16)
     }
 
@@ -325,7 +388,7 @@ struct OnboardingFlowView: View {
     /// Social proof: a user review
     private var introPage: some View {
         ScrollView(showsIndicators: false) {
-            Text("Thousands of cooks \(Text("love").foregroundStyle(Color("Orange"))) using Salt")
+            Text("Thousands of cooks \(Text("love").foregroundStyle(SaltColor.textAccent)) using Salt")
                 .font(.custom("Playfair9pt-Regular", size: 28))
                 .multilineTextAlignment(.center)
             .padding(.horizontal, 24)
@@ -342,93 +405,133 @@ struct OnboardingFlowView: View {
             OnboardingTitle(title: "What should we call you?", subtitle: "This helps us to personalize your experience.")
 
             TextField("Your name", text: $name)
-                .font(.custom("OpenSans-Regular", size: 16))
                 .textContentType(.givenName)
                 .submitLabel(.continue)
                 .focused($isTextFieldFocused)
                 .onSubmit { if canContinue { goForward() } }
-                .padding(.horizontal, 16)
-                .frame(height: 52)
-                .background(RoundedRectangle(cornerRadius: 14).stroke(Color("GrayButtonBorderColor"), lineWidth: 1))
-                .padding(.horizontal, 20)
+                .frame(height: 28)
+                .saltInput(isFocused: isTextFieldFocused)
+                .padding(.horizontal, SaltSpacing.screenMargin)
         }
         .onAppear { isTextFieldFocused = true }
     }
 
+    /// "Where do you find recipes?": a calm list in one color; Skip goes straight on
     private var sourcesPage: some View {
-        ScrollView(showsIndicators: false) {
-            OnboardingTitle(title: "Where do you usually store your recipes?", subtitle: "Select all that apply")
-                .padding(.bottom, 24)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                backButton
+                    .padding(.leading, -12)
+                Spacer()
+                Button("Skip") {
+                    Analytics.log(.onboardingQuestionAnswered, ["question": OnboardingPage.sources.analyticsName, "answers": [String]()])
+                    finish(destination: .addRecipe)
+                }
+                .font(SaltFont.bodyLarge)
+                .foregroundStyle(SaltColor.textSecondary)
+            }
+            .padding(.top, 8)
 
-            VStack(spacing: 10) {
-                ForEach(RecipeSource.allCases) { source in
-                    SourceOptionRow(source: source, isSelected: sources.contains(source)) {
-                        toggle(source)
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Where do you find recipes?")
+                        .font(SaltFont.h1)
+                        .foregroundStyle(SaltColor.textPrimary)
+                        .padding(.top, 16)
+                    Text("Pick all that apply. We\u{2019}ll show you how to save from each \u{2014} skip any you don\u{2019}t need.")
+                        .font(SaltFont.bodyLarge)
+                        .foregroundStyle(SaltColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 12)
+
+                    VStack(spacing: 8) {
+                        ForEach(RecipeSource.allCases) { source in
+                            OnboardingSourceRow(
+                                logo: source.logo,
+                                systemImage: source.systemImage,
+                                title: source.name,
+                                isSelected: sources.contains(source)
+                            ) {
+                                toggle(source)
+                            }
+                        }
                     }
+                    .padding(.top, 24)
+                    .padding(.bottom, 16)
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 16)
+        }
+        .padding(.horizontal, SaltSpacing.screenMargin)
+    }
+
+    @ViewBuilder private var demoPage: some View {
+        switch currentDemo {
+        case .website, .photo:
+            OnboardingSampleDemoView(
+                demo: currentDemo!,
+                progress: progress(for: currentDemo!),
+                onDone: {
+                    learned.insert(currentDemo!)
+                    nextDemo()
+                },
+                onSkip: nextDemo
+            )
+        case .social, nil:
+            // The social demo plays full screen on top
+            Color.white
         }
     }
 
-    /// "Awesome" page before the tutorial, mentioning where the user gets recipes
-    private var showHowPage: some View {
-        VStack(spacing: 0) {
-            OnboardingTitle(title: "Awesome 🎉", subtitle: showHowMessage)
-            ImportSourcesIllustration()
-                .padding(.top, 32)
+    // MARK: Demos
+
+    /// The first social app picked (in list order); its walkthrough covers them all
+    private var socialSource: ShareTutorialView.Source {
+        RecipeSource.allCases.first { sources.contains($0) && $0.tutorialSource != nil }?.tutorialSource ?? .instagram
+    }
+
+    /// "Instagram & TikTok · 1 of 3"
+    private func progress(for demo: OnboardingDemo) -> OnboardingDemoProgress? {
+        guard demos.count > 1, let index = demos.firstIndex(of: demo) else { return nil }
+        let label: String
+        switch demo {
+        case .social:
+            let apps = RecipeSource.allCases.filter { sources.contains($0) && $0.tutorialSource != nil }.map(\.name)
+            label = apps.prefix(2).joined(separator: " & ")
+        case .website:
+            label = String(localized: "Websites & food blogs")
+        case .photo:
+            label = String(localized: "Cookbooks & handwritten notes")
+        }
+        return OnboardingDemoProgress(label: label, index: index, total: demos.count)
+    }
+
+    private func startDemos() {
+        let order: [OnboardingDemo] = [.social, .website, .photo]
+        let picked = Set(sources.compactMap(\.demo))
+        demos = order.filter(picked.contains)
+        demoIndex = 0
+        learned = []
+        showCurrentDemo()
+    }
+
+    private func showCurrentDemo() {
+        // After the last demo, straight on to Create account; the app then opens on Add Recipe
+        guard let demo = currentDemo else {
+            finish(destination: .addRecipe)
+            return
+        }
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { page = .demos }
+        if demo == .social {
+            showingSocialDemo = true
         }
     }
 
-    /// The first social app picked (Instagram if none), unless only websites were picked;
-    /// then websites if picked
-    private var tutorialSources: [ShareTutorialView.Source] {
-        var tutorials: [ShareTutorialView.Source] = []
-        let apps: [(RecipeSource, ShareTutorialView.Source)] = [
-            (.instagram, .instagram), (.tiktok, .tiktok), (.facebook, .facebook), (.youtubeShorts, .youtubeShorts)
-        ]
-        if let app = apps.first(where: { sources.contains($0.0) }) {
-            tutorials.append(app.1)
-        } else if !sources.contains(.websites) {
-            tutorials.append(.instagram)
-        }
-        if sources.contains(.websites) {
-            tutorials.append(.website)
-        }
-        return tutorials
-    }
-
-    /// Names the apps the user picked, plus websites
-    private var showHowMessage: String {
-        var names = RecipeSource.allCases.filter { $0 != .websites && sources.contains($0) }.map(\.name)
-        if names.isEmpty {
-            names = RecipeSource.allCases.filter { $0 != .websites }.map(\.name)
-        }
-        if sources.contains(.websites) {
-            names.append("websites")
-        }
-        return "Salt can import recipes from \(names.formatted(.list(type: .and)))."
-    }
-
-    private var settingUpPage: some View {
-        VStack(spacing: 32) {
-            Text("We're setting everything\nup for you")
-                .font(.custom("Playfair9pt-SemiBold", size: 26))
-                .multilineTextAlignment(.center)
-                .padding(.top, 60)
-
-            SettingUpAnimation()
-
-            Text("Preparing features just for you...")
-                .font(.custom("Playfair9pt-Regular", size: 17))
-                .foregroundColor(Color("GraniteGray"))
-        }
-        .task {
-            try? await Task.sleep(for: .seconds(2.5))
-            // Not again when coming back from Create account
-            guard !Task.isCancelled, !didOpenCreateAccount else { return }
-            goForward()
+    private func nextDemo() {
+        demoIndex += 1
+        // After the full-screen walkthrough closes, so the next screen isn't covered
+        Task {
+            try? await Task.sleep(for: .seconds(0.35))
+            showCurrentDemo()
         }
     }
 
@@ -445,10 +548,11 @@ struct OnboardingFlowView: View {
     private func goForward() {
         logAnswer(for: page)
         isTextFieldFocused = false
-        guard let next = OnboardingPage(rawValue: page.rawValue + 1) else {
-            finish()
+        if page == .sources {
+            startDemos()
             return
         }
+        guard let next = OnboardingPage(rawValue: page.rawValue + 1) else { return }
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) {
             page = next
         }
@@ -456,12 +560,7 @@ struct OnboardingFlowView: View {
 
     private func goBack() {
         isTextFieldFocused = false
-        var previous = OnboardingPage(rawValue: page.rawValue - 1)
-        // Setting up only runs forwards
-        while let candidate = previous, candidate == .settingUp {
-            previous = OnboardingPage(rawValue: candidate.rawValue - 1)
-        }
-        guard let previous else {
+        guard let previous = OnboardingPage(rawValue: page.rawValue - 1) else {
             router.navigateBack()
             return
         }
@@ -480,21 +579,28 @@ struct OnboardingFlowView: View {
 
     /// Saves the answers on the user's analytics profile and moves on to Create account.
     /// The name stays on the device (not sent to analytics); it pre-fills the email sign-up form.
-    private func finish() {
+    /// After sign-up the app opens on `destination`.
+    private func finish(destination: OnboardingDestination) {
         let tutorial: String
-        switch tutorialOutcome {
-        case .completed, .pasteLink: tutorial = "completed"
-        case .skipped: tutorial = "skipped"
-        case nil: tutorial = "not_started"
+        if demos.isEmpty {
+            tutorial = "not_started"
+        } else {
+            tutorial = learned.isEmpty ? "skipped" : "completed"
         }
         Analytics.log(
             .onboardingCompleted,
-            ["tutorial": tutorial],
+            [
+                "tutorial": tutorial,
+                "demos": demos.map(\.rawValue),
+                "demos_completed": learned.map(\.rawValue).sorted()
+            ],
             userProperties: ["onboarding_recipe_sources": sources.map(\.rawValue).sorted()]
         )
         UserDefaults.standard.set(name.trimmed, forKey: OnboardingStorage.nameKey)
-        // Pushed on top, so Create account's back button returns here
-        didOpenCreateAccount = true
+        if sources.contains(where: { $0.tutorialSource != nil }) {
+            UserDefaults.standard.set(socialSource.rawValue, forKey: OnboardingStorage.socialSourceKey)
+        }
+        UserDefaults.standard.set(destination.rawValue, forKey: OnboardingDestination.key)
         router.navigate(to: .createAccount)
     }
 }
@@ -750,75 +856,15 @@ private struct ReviewCard: View {
     }
 }
 
-/// A recipe source with its logo and a checkbox
-private struct SourceOptionRow: View {
-    let source: RecipeSource
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                Group {
-                    if let logo = source.logo {
-                        Image(logo)
-                            .resizable()
-                            .scaledToFit()
-                    } else {
-                        Image(systemName: "globe")
-                            .resizable()
-                            .scaledToFit()
-                            .foregroundColor(Color("GraniteGray"))
-                    }
-                }
-                .frame(width: 24, height: 24)
-
-                Text(source.name)
-                    .font(.custom("OpenSans-Regular", size: 16))
-                    .foregroundColor(.black)
-
-                Spacer()
-
-                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
-                    .font(.system(size: 22))
-                    .foregroundColor(isSelected ? Color("Orange") : Color("GrayButtonBorderColor"))
-            }
-            .padding(.horizontal, 16)
-            .frame(height: 56)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(isSelected ? Color("PeachCream") : Color.white)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(isSelected ? Color("Orange") : Color("GrayButtonBorderColor"), lineWidth: isSelected ? 2 : 1)
-            )
-            .contentShape(Rectangle())
-            .animation(.easeInOut(duration: 0.15), value: isSelected)
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-}
-
 struct OnboardingPrimaryButton: View {
     let title: String
     var isEnabled = true
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.custom("OpenSans-SemiBold", size: 16))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color("Orange").opacity(isEnabled ? 1 : 0.4))
-                )
-        }
-        .disabled(!isEnabled)
+        Button(title, action: action)
+            .buttonStyle(.salt())
+            .disabled(!isEnabled)
     }
 }
 
@@ -857,35 +903,6 @@ struct ImportSourcesIllustration: View {
     }
 }
 
-/// Salt icon with ramen ingredients circling it
-private struct SettingUpAnimation: View {
-    @State private var isAnimating = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        ZStack {
-            ForEach(Array(["🍜", "🥚", "🌶️", "🧄"].enumerated()), id: \.offset) { index, emoji in
-                Text(emoji)
-                    .font(.system(size: 38))
-                    .offset(y: -90)
-                    .rotationEffect(.degrees(Double(index) * 90 + (isAnimating ? 360 : 0)))
-            }
-            Image("saltAppIcon")
-                .resizable()
-                .frame(width: 90, height: 90)
-                .clipShape(RoundedRectangle(cornerRadius: 22))
-        }
-        .frame(height: 230)
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.linear(duration: 6).repeatForever(autoreverses: false)) {
-                isAnimating = true
-            }
-        }
-        .accessibilityHidden(true)
-    }
-}
-
 // MARK: - Preview
 
 #Preview("Welcome") {
@@ -898,14 +915,6 @@ private struct SettingUpAnimation: View {
 
 #Preview("Sources") {
     OnboardingFlowView(router: AuthRouter(), startingAt: .sources)
-}
-
-#Preview("Show How") {
-    OnboardingFlowView(router: AuthRouter(), startingAt: .showHow)
-}
-
-#Preview("Setting Up") {
-    OnboardingFlowView(router: AuthRouter(), startingAt: .settingUp)
 }
 
 #Preview("Create Account") {

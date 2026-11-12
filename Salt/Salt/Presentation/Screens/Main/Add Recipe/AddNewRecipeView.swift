@@ -24,28 +24,18 @@ struct AddNewRecipeView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            // Header
-            Text("Add New Recipe")
-                .font(.custom("Playfair9pt-SemiBold", size: 28))
-                .padding(.horizontal)
-                .padding(.top, 16)
-
-            ImportRecipeView(
-                recipeLink: $recipeLink,
-                switchToMyRecipes: switchToMyRecipes,
-                switchToCreate: { showingCreate = true }
-            )
-        }
-        .background(Color(.systemBackground))
+        ImportRecipeView(
+            recipeLink: $recipeLink,
+            requestedTab: $requestedTab,
+            switchToMyRecipes: switchToMyRecipes,
+            switchToCreate: { showingCreate = true }
+        )
+        .background(SaltColor.surfaceScreen)
         .navigationDestination(isPresented: $showingCreate) {
             CreateRecipeView(switchToMyRecipes: {
                 showingCreate = false
                 switchToMyRecipes?()
             })
-            .navigationTitle("Create Recipe")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar(.visible, for: .navigationBar)
         }
         .onAppear {
             if shareImportRouter.pendingImport != nil {
@@ -59,52 +49,101 @@ struct AddNewRecipeView: View {
             }
         }
         .onChange(of: requestedTab, initial: true) { _, tab in
-            // e.g. Create manually on the Explore banner
+            // e.g. Create manually on the Explore banner; Import and Link are handled by ImportRecipeView
             guard let tab else { return }
             showingCreate = tab == .create
-            requestedTab = nil
+            if tab == .create { requestedTab = nil }
         }
     }
 }
 
 // MARK: - Tab Enum
 
+/// What to open on the Add Recipe tab when switching to it from elsewhere
 enum AddRecipeTab {
     case create
+    /// The Add Recipe page itself
     case `import`
+    /// The Link sheet, e.g. "Import a recipe" on Explore's no-results state
+    case link
 }
 
 // MARK: - Import Recipe View
 
+/// The Add Recipe page: the ways to import, the import sheets and the import flow.
+/// A successful import is saved straight away and opens on the recipe page with the saved toast.
 struct ImportRecipeView: View {
     @Binding var recipeLink: String
+    @Binding var requestedTab: AddRecipeTab?
     @StateObject private var viewModel = RecipeImportViewModel()
-    @State private var navigateToPreview = false
-    @State private var showingPaywall = false
-    @State private var showingImportLimitAlert = false
-    @FocusState private var isLinkFieldFocused: Bool
     @ObservedObject private var shareImportRouter = ShareImportRouter.shared
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
+    @Environment(\.scenePhase) private var scenePhase
+
     /// Last link received from the Share Extension, so analytics can tell shared links from pasted ones
     @State private var sharedLink: String?
-    @State private var showingPhotoOptions = false
+    @State private var pastedText = ""
+
+    // Sheets
+    @State private var activeSheet: ImportSheet?
+    /// Opened once the current sheet is gone; two sheets can't show at once
+    @State private var afterDismiss: AfterDismiss?
     @State private var showingCamera = false
     @State private var showingPhotoPicker = false
+    @State private var showingPaywall = false
+    @State private var showingShareTutorial = false
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var capturedImage: UIImage?
-    @State private var showingPasteText = false
-    @State private var showingShareTip = false
-    /// Chosen in the photo source sheet; opened once the sheet is dismissed
-    @State private var pickedPhotoSource: PhotoSource?
-    /// The running import, so the loading screen can cancel it
+
+    // Import state
+    /// The running import
     @State private var importTask: Task<Void, Never>?
+    /// Full-screen loading screen, for photo and Share Extension imports (link and text
+    /// imports load inside their sheet)
     @State private var showingImportProgress = false
     @State private var importProgressKind: ImportProgressKind = .link
-    @State private var pastedText = ""
     /// Photo or text import being run; kept while the paywall is shown so the import can continue after upgrading
     @State private var pendingImport: PendingImport?
+    @State private var linkFailure: ImportFailure?
+    @State private var photoFailure: ImportFailure?
+    @State private var textFailure: ImportFailure?
+    @State private var freeImportsLeft: Int?
+    /// The recipe just imported, shown as a preview to save or edit
+    @State private var openedRecipe: OpenedRecipe?
+
+    // Page state
+    @State private var clipboardHasLink = false
+    /// Clipboard contents already imported from the "You copied a link" card
+    @AppStorage("addRecipe.consumedPasteboardChange") private var consumedPasteboardChange = -1
 
     /// A recipe can span a few pages or screenshots (e.g. ingredients on one, steps on the next)
     private static let maxImportPhotos = 5
+
+    /// One a day, from the date: no state to keep
+    private static let subtitles: [LocalizedStringKey] = [
+        "No ads, no long stories. Just the recipe.",
+        "Turn any recipe into a clean, ready-to-cook one.",
+        "From your feed to your kitchen.",
+        "Saw it on Instagram? Save it here.",
+        "All your recipes, finally in one place."
+    ]
+
+    private static var todaysSubtitle: LocalizedStringKey {
+        let day = Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0
+        return subtitles[day % subtitles.count]
+    }
+
+    enum ImportSheet: String, Identifiable {
+        case link, photo, text, importLimit
+        var id: String { rawValue }
+    }
+
+    private enum AfterDismiss {
+        case sheet(ImportSheet)
+        case camera
+        case library
+        case paywall
+    }
 
     /// An import without a link, and how it started (for analytics)
     private enum PendingImport {
@@ -112,9 +151,17 @@ struct ImportRecipeView: View {
         case text(String, entry: String)
     }
 
-    private var isImportingPhoto: Bool {
-        guard viewModel.isLoading, case .photos = pendingImport else { return false }
-        return true
+    private struct OpenedRecipe: Identifiable, Hashable {
+        let id = UUID()
+        let recipe: RecipeDetail
+        let notice: String?
+
+        static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
+        func hash(into hasher: inout Hasher) { hasher.combine(id) }
+    }
+
+    private var isImportingLink: Bool {
+        viewModel.isLoading && pendingImport == nil
     }
 
     private var isImportingText: Bool {
@@ -129,173 +176,51 @@ struct ImportRecipeView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 16) {
-                // Title
-                Text("Enter your recipe link here")
-                    .font(.custom("Playfair9pt-Regular", size: 22))
+            VStack(alignment: .leading, spacing: 0) {
+                header
 
-                // Text Field
-                ZStack(alignment: .leading) {
-                    if recipeLink.isEmpty {
-                        Text("e.g., https://example.com/recipe/pancake")
-                            .font(.custom("OpenSans-Regular", size: 14))
-                            .foregroundColor(Color("DarkSilver"))
-                            .padding(.horizontal, 16)
-                    }
-
-                    TextField("", text: $recipeLink)
-                        .font(.custom("OpenSans-Regular", size: 14))
-                        .foregroundColor(.black)
-                        .tint(Color("OrangeRed"))
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .keyboardType(.URL)
-                        .focused($isLinkFieldFocused)
-                        .padding(.horizontal, 16)
-                }
-                .frame(height: 35)
-                .frame(maxWidth: .infinity)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color("DarkSilver"), lineWidth: 1)
-                )
-
-                // Description
-                Text("Paste a link from Instagram, TikTok, YouTube or your favorite food blog.")
-                    .font(.custom("OpenSans-Regular", size: 14))
-                    .foregroundColor(Color("DarkSilver"))
-
-                // Error message
-                if let error = viewModel.errorMessage {
-                    Text(error)
-                        .font(.custom("OpenSans-Regular", size: 14))
-                        .foregroundColor(.red)
+                if clipboardHasLink {
+                    clipboardCard
+                        .padding(.top, 24)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                 }
 
-                // Import Button
-                HStack {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Import from")
+                        .font(SaltFont.playfair(22))
+                        .foregroundStyle(SaltColor.textPrimary)
                     Spacer()
-                    Button(action: {
-                        runImport { await startImport() }
-                    }) {
-                        HStack(spacing: 8) {
-                            if viewModel.isLoading && pendingImport == nil {
-                                ProgressView()
-                                    .tint(.white)
-                            }
-                            Text(viewModel.isLoading && pendingImport == nil ? "Importing..." : "Import the Recipe")
-                                .font(.custom("OpenSans-SemiBold", size: 18))
-                                .foregroundColor(.white)
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 14)
-                        .background(Color("Orange"))
-                        .cornerRadius(10)
+                    if let freeImportsLeft {
+                        Text("\(freeImportsLeft) of \(RevenueCatConfig.freeImportLimit) free imports left")
+                            .font(SaltFont.body)
+                            .foregroundStyle(SaltColor.textSecondary)
                     }
-                    .disabled(recipeLink.isEmpty || viewModel.isLoading)
-                    Spacer()
                 }
-                .padding(.top, 16)
+                .padding(.top, SaltSpacing.section)
 
-                // Other ways to add a recipe
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Or add it another way")
-                        .font(.custom("Playfair9pt-Regular", size: 18))
+                sourcesCard
+                    .padding(.top, SaltSpacing.titleToContent)
 
-                    VStack(spacing: 0) {
-                        ImportOptionRow(
-                            systemImage: "camera",
-                            title: "Photo or Screenshot",
-                            subtitle: "A cookbook page, a recipe card, or screenshots of a caption or recipe site",
-                            isLoading: isImportingPhoto
-                        ) {
-                            isLinkFieldFocused = false
-                            showingPhotoOptions = true
-                        }
-
-                        Divider().padding(.leading, 60)
-
-                        ImportOptionRow(
-                            systemImage: "note.text",
-                            title: "From Notes",
-                            subtitle: "Paste a recipe copied from Notes or anywhere else",
-                            isLoading: isImportingText
-                        ) {
-                            isLinkFieldFocused = false
-                            showingPasteText = true
-                        }
-
-                        Divider().padding(.leading, 60)
-
-                        ImportOptionRow(
-                            systemImage: "square.and.pencil",
-                            title: "From Scratch",
-                            subtitle: "Write down your own recipe",
-                            isLoading: false
-                        ) {
-                            isLinkFieldFocused = false
-                            switchToCreate?()
-                        }
-                    }
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color("LightGrayishPink"), lineWidth: 1)
-                    )
-                    .disabled(viewModel.isLoading)
-                }
+                AddRecipeSourceRow(
+                    systemImage: "pencil",
+                    title: "Write your own",
+                    subtitle: "A family recipe or your own creation"
+                ) { switchToCreate?() }
+                .background(cardBorder)
                 .padding(.top, 12)
 
-                // Shortcut for social media, collapsed to a row; the walkthrough opens as a popup
-                Button(action: { showingShareTip = true }) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "lightbulb.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(Color("Orange"))
-                            .frame(width: 30, height: 30)
-                            .background(Circle().fill(Color("Orange").opacity(0.12)))
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Importing from social media?")
-                                .font(.custom("OpenSans-SemiBold", size: 14))
-                                .foregroundColor(.black)
-                            Text("See how to share straight to Salt")
-                                .font(.custom("OpenSans-Regular", size: 12))
-                                .foregroundColor(Color("GraniteGray"))
-                        }
-
-                        Spacer()
-
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(Color("DarkSilver"))
-                    }
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color("PeachCream").opacity(0.7))
-                    )
-                }
-                .padding(.top, 4)
+                // Always shown: sharing is the fastest way in, and it's easy to forget how
+                shareCard
+                    .padding(.top, 12)
             }
-            .padding(.horizontal)
-            .padding(.bottom, 24)
+            .padding(.horizontal, SaltSpacing.screenMargin)
+            .padding(.top, 12)
+            .padding(.bottom, SaltSpacing.bottomTabPadding)
+            .animation(.easeInOut(duration: 0.2), value: clipboardHasLink)
         }
-        .scrollDismissesKeyboard(.interactively)
-        .sheet(isPresented: $showingPhotoOptions, onDismiss: {
-            // The camera or library opens once this sheet is gone; two sheets can't show at once
-            switch pickedPhotoSource {
-            case .camera: showingCamera = true
-            case .library: showingPhotoPicker = true
-            case nil: break
-            }
-            pickedPhotoSource = nil
-        }) {
-            PhotoSourceSheet(maxPhotos: Self.maxImportPhotos) { source in
-                pickedPhotoSource = source
-                showingPhotoOptions = false
-            }
-            .presentationDetents([.height(CameraView.isAvailable ? 330 : 250)])
-            .presentationDragIndicator(.visible)
+        .background(SaltColor.surfaceScreen)
+        .sheet(item: $activeSheet, onDismiss: handleSheetDismiss) { sheet in
+            sheetContent(sheet)
         }
         .fullScreenCover(isPresented: $showingCamera) {
             CameraView(image: $capturedImage)
@@ -308,26 +233,49 @@ struct ImportRecipeView: View {
             selectionBehavior: .ordered,
             matching: .images
         )
-        .fullScreenCover(isPresented: $showingImportProgress, onDismiss: {
-            // Pushed only once the loading screen is gone, so the two transitions don't clash
-            if viewModel.importedRecipe != nil {
-                navigateToPreview = true
-            }
-        }) {
+        .fullScreenCover(isPresented: $showingImportProgress) {
             ImportProgressView(kind: importProgressKind, onCancel: cancelImport)
         }
-        .sheet(isPresented: $showingShareTip) {
-            ShareImportDemoView(isLarge: true)
-                .padding()
-                .presentationDetents([.height(500)])
-                .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showingPasteText) {
-            PasteRecipeTextView(text: $pastedText) {
-                showingPasteText = false
-                pendingImport = .text(pastedText, entry: "pasted")
-                runImport { await startPendingImport() }
+        .fullScreenCover(isPresented: $showingShareTutorial) {
+            ShareTutorialView(context: .explore, sources: [OnboardingStorage.preferredSocialSource]) { outcome in
+                showingShareTutorial = false
+                if outcome == .pasteLink {
+                    present(.link)
+                }
             }
+        }
+        .sheet(isPresented: $showingPaywall) {
+            // Remote paywall: shows whatever is attached to the current offering in the RevenueCat dashboard
+            PaywallView(displayCloseButton: true)
+                .onAppear {
+                    Analytics.log(.paywallShown, ["source": "import_limit"])
+                }
+                .onPurchaseCompleted { customerInfo in
+                    Analytics.log(.subscriptionStarted, ["source": "import_limit"])
+                    continueImportAfterUpgrade(customerInfo)
+                }
+                .onRestoreCompleted { customerInfo in
+                    Analytics.log(.purchasesRestored, ["source": "import_limit"])
+                    continueImportAfterUpgrade(customerInfo)
+                }
+        }
+        .navigationDestination(item: $openedRecipe) { opened in
+            // Not saved yet: Save recipe / Edit recipe stay at the bottom; saving shows the
+            // "Saved to My Recipes" toast (and, the first time, the collection prompt)
+            RecipeDetailView(
+                recipe: opened.recipe,
+                mode: .preview,
+                previewNotice: opened.notice,
+                onSave: {
+                    // The recipe on screen (edits included) is in shared storage
+                    let savedData = PendingSaveDataStorage.shared.retrieve()
+                    guard let recipeDetail = savedData.recipe else { return false }
+                    let saved = await viewModel.saveRecipe(from: recipeDetail, photos: savedData.photos)
+                    if saved { viewModel.clearImport() }
+                    return saved
+                },
+                savedRecipeId: { viewModel.savedRecipeId }
+            )
         }
         .onChange(of: capturedImage) { _, image in
             guard let image else { return }
@@ -352,76 +300,22 @@ struct ImportRecipeView: View {
                 await startPendingImport()
             }
         }
-        .alert("You've used your free imports", isPresented: $showingImportLimitAlert) {
-            Button("Start Free Trial") {
-                showingPaywall = true
-            }
-            Button("Not Now", role: .cancel) {}
-        } message: {
-            Text("You used all \(RevenueCatConfig.freeImportLimit) free imports. Start a free trial of Premium for unlimited imports.")
-        }
-        .sheet(isPresented: $showingPaywall) {
-            // Remote paywall: shows whatever is attached to the current offering in the RevenueCat dashboard
-            PaywallView(displayCloseButton: true)
-                .onAppear {
-                    Analytics.log(.paywallShown, ["source": "import_limit"])
-                }
-                .onPurchaseCompleted { customerInfo in
-                    Analytics.log(.subscriptionStarted, ["source": "import_limit"])
-                    continueImportAfterUpgrade(customerInfo)
-                }
-                .onRestoreCompleted { customerInfo in
-                    Analytics.log(.purchasesRestored, ["source": "import_limit"])
-                    continueImportAfterUpgrade(customerInfo)
-                }
-        }
-        .navigationDestination(isPresented: $navigateToPreview) {
-            if let recipe = viewModel.importedRecipe {
-                RecipeDetailView(
-                    recipe: recipe.toRecipeDetail(),
-                    mode: .preview,
-                    previewNotice: recipe.isFromVideoAudio
-                        ? "This recipe wasn't in the post's caption, so we put it together from what's said in the video. Some ingredients, amounts or steps may be missing. Please check it before saving; you can fix anything with Edit in the menu."
-                        : recipe.origin == .photo
-                            ? "We read this recipe from your photo. Please check the amounts and steps before saving; you can fix anything with Edit in the menu."
-                            : nil,
-                    onSave: {
-                        // Get ALL data from shared storage - no closure parameters!
-                        let savedData = PendingSaveDataStorage.shared.retrieve()
-                        guard let recipeDetail = savedData.recipe else {
-                            return false
-                        }
-                        return await viewModel.saveRecipe(from: recipeDetail, photos: savedData.photos)
-                    },
-                    savedRecipeId: { viewModel.savedRecipeId },
-                    onAddMoreRecipes: {
-                        // Clear and go back
-                        recipeLink = ""
-                        pastedText = ""
-                        viewModel.clearImport()
-                        PendingSaveDataStorage.shared.clear()
-                        navigateToPreview = false
-                    },
-                    onGoToMyRecipes: {
-                        recipeLink = ""
-                        pastedText = ""
-                        viewModel.clearImport()
-                        PendingSaveDataStorage.shared.clear()
-                        navigateToPreview = false
-                        switchToMyRecipes?()
-                    }
-                )
-            }
-        }
-        .onChange(of: viewModel.savedSuccessfully) { _, saved in
-            if saved {
-                // Clear the link or text after recipe is successfully saved
-                recipeLink = ""
-                pastedText = ""
-            }
-        }
         .onAppear {
+            checkClipboard()
             importSharedLinkIfNeeded()
+            applyRequestedTab()
+            // An import only counts once it's saved, which happens on the preview
+            Task { await refreshFreeImportsLeft() }
+        }
+        .task(id: subscriptionManager.isPremium) {
+            await refreshFreeImportsLeft()
+        }
+        .onChange(of: requestedTab) { _, _ in applyRequestedTab() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { checkClipboard() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIPasteboard.changedNotification)) { _ in
+            checkClipboard()
         }
         .onChange(of: shareImportRouter.pendingImport) { _, _ in
             importSharedLinkIfNeeded()
@@ -434,36 +328,258 @@ struct ImportRecipeView: View {
         }
     }
 
-    private func startImport() async {
-        // End editing first: a pasted link leaves the field focused, and a focused field can
-        // put its text back after the link is cleared on save
-        isLinkFieldFocused = false
+    // MARK: - Page
 
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Add New Recipe")
+                .font(SaltFont.h1)
+                .foregroundStyle(SaltColor.textPrimary)
+            Text(Self.todaysSubtitle)
+                .font(SaltFont.bodyLarge)
+                .foregroundStyle(SaltColor.textSecondary)
+        }
+    }
+
+    private var cardBorder: some View {
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .stroke(SaltColor.borderSubtle, lineWidth: 1)
+    }
+
+    private var sourcesCard: some View {
+        VStack(spacing: 0) {
+            AddRecipeSourceRow(
+                systemImage: "link",
+                title: "Link",
+                subtitle: "Paste a link from Instagram, TikTok, YouTube or any recipe site"
+            ) { present(.link) }
+
+            Rectangle().fill(SaltColor.borderSubtle).frame(height: 1)
+
+            AddRecipeSourceRow(
+                systemImage: "camera",
+                title: "Photo",
+                subtitle: "Cookbook page, screenshot or handwritten card"
+            ) { present(.photo) }
+
+            Rectangle().fill(SaltColor.borderSubtle).frame(height: 1)
+
+            AddRecipeSourceRow(
+                systemImage: "doc.text",
+                title: "Notes & text",
+                subtitle: "Paste from Notes, messages or email"
+            ) { present(.text) }
+        }
+        .background(cardBorder)
+        .disabled(viewModel.isLoading && !isImportingLink && !isImportingText)
+    }
+
+    /// Shown only when the clipboard has a link (checked without reading it, so no paste alert)
+    private var clipboardCard: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "clipboard")
+                .font(.system(size: 17))
+                .foregroundStyle(SaltColor.iconAccent)
+                .frame(width: 40, height: 40)
+                .background(SaltColor.surfaceScreen, in: Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("You copied a link")
+                    .font(SaltFont.bodyLargeStrong)
+                    .foregroundStyle(SaltColor.textPrimary)
+                Text("Import it in one tap")
+                    .font(SaltFont.body)
+                    .foregroundStyle(SaltColor.textSecondary)
+            }
+
+            Spacer(minLength: 8)
+
+            SystemPasteButton(style: .primary) { pasted in
+                consumedPasteboardChange = UIPasteboard.general.changeCount
+                clipboardHasLink = false
+                recipeLink = pasted.trimmingCharacters(in: .whitespacesAndNewlines)
+                linkFailure = nil
+                present(.link)
+                runImport { await startImport() }
+            }
+            .frame(width: 76, height: 38)
+        }
+        .padding(14)
+        .background(SaltColor.surfaceWarm, in: RoundedRectangle(cornerRadius: SaltRadius.card, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: SaltRadius.card, style: .continuous)
+                .stroke(SaltColor.actionPrimary, lineWidth: 1)
+        )
+    }
+
+    private var shareCard: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "square.and.arrow.up")
+                .font(.system(size: 16))
+                .foregroundStyle(SaltColor.iconAccent)
+                .frame(width: 32, height: 32)
+                .background(SaltColor.surfaceScreen, in: Circle())
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Fastest way: share to Salt")
+                    .font(SaltFont.h3)
+                    .foregroundStyle(SaltColor.textPrimary)
+                Text("From Instagram, TikTok or any website, tap Share and choose Salt. Set it up once in 30 seconds.")
+                    .font(SaltFont.body)
+                    .foregroundStyle(SaltColor.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Show me how") { showingShareTutorial = true }
+                    .buttonStyle(.salt(.text, size: .small))
+                    // Keeps the 44pt tap area without it adding to the card's height
+                    .padding(.vertical, -6)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(SaltColor.surfaceWarm, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    // MARK: - Sheets
+
+    @ViewBuilder private func sheetContent(_ sheet: ImportSheet) -> some View {
+        switch sheet {
+        case .link:
+            LinkImportSheet(
+                link: $recipeLink,
+                isImporting: isImportingLink,
+                failure: linkFailure,
+                freeImportsLeft: freeImportsLeft,
+                onImport: { runImport { await startImport() } },
+                onClearFailure: { linkFailure = nil },
+                onUseScreenshot: { present(.photo) },
+                onPasteAsText: { present(.text) }
+            )
+        case .photo:
+            PhotoImportSheet(
+                maxPhotos: Self.maxImportPhotos,
+                failure: photoFailure,
+                onTakePhoto: {
+                    afterDismiss = .camera
+                    activeSheet = nil
+                },
+                onChooseFromLibrary: {
+                    afterDismiss = .library
+                    activeSheet = nil
+                }
+            )
+        case .text:
+            TextImportSheet(
+                text: $pastedText,
+                isImporting: isImportingText,
+                failure: textFailure,
+                freeImportsLeft: freeImportsLeft,
+                onImport: {
+                    pendingImport = .text(pastedText, entry: "pasted")
+                    runImport { await startPendingImport() }
+                },
+                onClearFailure: { textFailure = nil }
+            )
+        case .importLimit:
+            PremiumFeatureSheet(
+                title: String(localized: "You've used your \(RevenueCatConfig.freeImportLimit) free imports"),
+                message: limitMessage,
+                onTryPremium: {
+                    afterDismiss = .paywall
+                    activeSheet = nil
+                },
+                onNotNow: { activeSheet = nil }
+            )
+        }
+    }
+
+    private var limitMessage: String {
+        switch pendingImport {
+        case .photos: String(localized: "Go Premium for unlimited imports.\nYour photos are saved.")
+        case .text: String(localized: "Go Premium for unlimited imports.\nYour text is saved.")
+        case nil: String(localized: "Go Premium for unlimited imports.\nYour link is saved.")
+        }
+    }
+
+    /// Shows a sheet, replacing the one on screen (it opens once the current one is gone)
+    private func present(_ sheet: ImportSheet) {
+        if sheet == .photo { photoFailure = nil }
+        if activeSheet == nil {
+            activeSheet = sheet
+        } else if activeSheet != sheet {
+            afterDismiss = .sheet(sheet)
+            activeSheet = nil
+        }
+    }
+
+    private func handleSheetDismiss() {
+        let next = afterDismiss
+        afterDismiss = nil
+        switch next {
+        case .sheet(let sheet): activeSheet = sheet
+        case .camera: showingCamera = true
+        case .library: showingPhotoPicker = true
+        case .paywall: showingPaywall = true
+        case nil: break
+        }
+    }
+
+    // MARK: - Page state
+
+    /// Whether the clipboard holds a link, without reading it (no iOS paste alert)
+    private func checkClipboard() {
+        let pasteboard = UIPasteboard.general
+        let hasLink = pasteboard.hasURLs && pasteboard.changeCount != consumedPasteboardChange
+        if hasLink != clipboardHasLink {
+            clipboardHasLink = hasLink
+        }
+    }
+
+    private func refreshFreeImportsLeft() async {
+        freeImportsLeft = await subscriptionManager.freeImportsLeft()
+    }
+
+    private func applyRequestedTab() {
+        guard requestedTab == .link || requestedTab == .import else { return }
+        if requestedTab == .link { present(.link) }
+        requestedTab = nil
+    }
+
+    // MARK: - Import
+
+    private func startImport() async {
         let entry = recipeLink == sharedLink ? "share_extension" : "pasted"
 
         // A whole recipe pasted into the link field is imported as text
         if RecipeImportService.firstWebUrl(in: recipeLink) == nil, recipeLink.count > 100 {
+            pastedText = recipeLink
             pendingImport = .text(recipeLink, entry: entry)
+            present(.text)
             await startPendingImport()
             return
         }
 
         // A link import replaces any photo or text import blocked by the paywall
         pendingImport = nil
+        linkFailure = nil
 
-        // Free users who've used all their imports are told so, then offered the paywall.
-        // The link stays in the field so the import can continue after upgrading.
+        // The link stays in the field so the import can continue after upgrading
         guard await SubscriptionManager.shared.canImportRecipe() else {
             Analytics.log(.importLimitReached, ["entry": entry])
-            showingImportLimitAlert = true
+            present(.importLimit)
             return
         }
 
-        importProgressKind = .link
-        showingImportProgress = true
+        // Shared links load on the full-screen loading screen; pasted ones inside the Link sheet
+        let usesLoadingScreen = activeSheet != .link
+        if usesLoadingScreen {
+            importProgressKind = .link
+            showingImportProgress = true
+        }
         await viewModel.importRecipe(from: recipeLink, entry: entry)
-        // Closing the loading screen opens the preview (see its onDismiss)
-        showingImportProgress = false
+        await finishImport(usesLoadingScreen: usesLoadingScreen) {
+            linkFailure = $0
+            present(.link)
+        }
     }
 
     /// Imports `pendingImport` (photos or text), with the same free import limit as links
@@ -476,15 +592,21 @@ struct ImportRecipeView: View {
             case .photos(_, let entry), .text(_, let entry):
                 Analytics.log(.importLimitReached, ["entry": entry])
             }
-            showingImportLimitAlert = true
+            present(.importLimit)
             return
         }
 
+        // Pasted text loads inside the Text sheet; photos and shared text on the loading screen
+        var usesLoadingScreen = true
         switch pendingImport {
-        case .photos(let photos, _): importProgressKind = .photos(photos)
-        case .text: importProgressKind = .note
+        case .photos(let photos, _):
+            importProgressKind = .photos(photos)
+        case .text(_, let entry):
+            importProgressKind = .note
+            usesLoadingScreen = entry == "share_extension" || activeSheet != .text
         }
-        showingImportProgress = true
+        textFailure = nil
+        if usesLoadingScreen { showingImportProgress = true }
 
         switch pendingImport {
         case .photos(let photos, let entry):
@@ -492,9 +614,77 @@ struct ImportRecipeView: View {
         case .text(let text, let entry):
             await viewModel.importRecipe(fromText: text, entry: entry)
         }
-        self.pendingImport = nil
-        // Closing the loading screen opens the preview (see its onDismiss)
-        showingImportProgress = false
+        let finished = pendingImport
+        if viewModel.importedRecipe != nil {
+            self.pendingImport = nil
+        }
+        await finishImport(usesLoadingScreen: usesLoadingScreen) { failure in
+            self.pendingImport = nil
+            switch finished {
+            case .photos:
+                photoFailure = failure
+                present(.photo)
+            case .text(let text, _):
+                pastedText = text
+                textFailure = failure
+                present(.text)
+            }
+        }
+    }
+
+    /// Opens a successful import as a preview (saved from there); a failure goes back to its
+    /// sheet with the error. The import stays in the view model until it's saved.
+    private func finishImport(usesLoadingScreen _: Bool, onFailure: (ImportFailure) -> Void) async {
+        guard !Task.isCancelled else { return }
+
+        var failure: ImportFailure?
+        if let imported = viewModel.importedRecipe {
+            pendingOpen = OpenedRecipe(recipe: imported.toRecipeDetail(), notice: notice(for: imported))
+            recipeLink = ""
+            pastedText = ""
+        } else if let error = viewModel.lastError {
+            failure = ImportFailure(error)
+        }
+
+        await refreshFreeImportsLeft()
+
+        // A sheet can't open while the loading screen is still on top
+        if showingImportProgress {
+            showingImportProgress = false
+            try? await Task.sleep(for: .seconds(0.5))
+        }
+
+        if let failure {
+            onFailure(failure)
+        } else if pendingOpen != nil {
+            if activeSheet != nil {
+                activeSheet = nil
+                // Lets the sheet slide away before the recipe page is pushed
+                try? await Task.sleep(for: .seconds(0.35))
+            }
+            openImportedRecipeIfReady()
+        }
+    }
+
+    /// Imported; waiting for the sheet or loading screen to close
+    @State private var pendingOpen: OpenedRecipe?
+
+    private func openImportedRecipeIfReady() {
+        guard let pendingOpen else { return }
+        self.pendingOpen = nil
+        PendingSaveDataStorage.shared.clear()
+        openedRecipe = pendingOpen
+    }
+
+    /// Asks the user to check recipes that were pieced together from a video or read from a photo
+    private func notice(for recipe: ImportedRecipe) -> String? {
+        if recipe.isFromVideoAudio {
+            return String(localized: "This recipe wasn't in the post's caption, so we put it together from what's said in the video. Some ingredients, amounts or steps may be missing. You can fix anything with Edit recipe below.")
+        }
+        if recipe.origin == .photo {
+            return String(localized: "We read this recipe from your photo. Please check the amounts and steps; you can fix anything with Edit recipe below.")
+        }
+        return nil
     }
 
     /// Runs an import as a task the loading screen can cancel
@@ -503,7 +693,7 @@ struct ImportRecipeView: View {
         importTask = Task { await work() }
     }
 
-    /// Cancel on the loading screen: stops the import and stays on the Import screen
+    /// Cancel on the loading screen: stops the import and stays on Add Recipe
     private func cancelImport() {
         importTask?.cancel()
         importTask = nil
@@ -531,8 +721,9 @@ struct ImportRecipeView: View {
     private func importSharedLinkIfNeeded() {
         guard !viewModel.isLoading, let sharedImport = shareImportRouter.consume() else { return }
 
-        // Leave any preview currently shown so the new recipe replaces it
-        navigateToPreview = false
+        // Leave any recipe currently shown so the new one replaces it
+        openedRecipe = nil
+        activeSheet = nil
         viewModel.clearImport()
         PendingSaveDataStorage.shared.clear()
 
@@ -551,306 +742,54 @@ struct ImportRecipeView: View {
     }
 }
 
-// MARK: - Photo Source Sheet
+// MARK: - Source Row
 
-enum PhotoSource {
-    case camera
-    case library
-}
-
-/// Where to get the recipe photos from: the camera or the photo library
-private struct PhotoSourceSheet: View {
-    let maxPhotos: Int
-    let onPick: (PhotoSource) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Import from a Photo")
-                    .font(.custom("Playfair9pt-SemiBold", size: 22))
-                Text("Up to \(maxPhotos) photos or screenshots for one recipe. Pick them in order, e.g. ingredients first, then the steps.")
-                    .font(.custom("OpenSans-Regular", size: 13))
-                    .foregroundColor(Color("GraniteGray"))
-            }
-
-            VStack(spacing: 0) {
-                if CameraView.isAvailable {
-                    ImportOptionRow(
-                        systemImage: "camera",
-                        title: "Take a Photo",
-                        subtitle: "Snap a cookbook page or a recipe card",
-                        isLoading: false
-                    ) { onPick(.camera) }
-
-                    Divider().padding(.leading, 60)
-                }
-
-                ImportOptionRow(
-                    systemImage: "photo.on.rectangle",
-                    title: "Choose from Library",
-                    subtitle: "Screenshots of a caption or recipe site, or saved photos",
-                    isLoading: false
-                ) { onPick(.library) }
-            }
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color("LightGrayishPink"), lineWidth: 1)
-            )
-
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal)
-        .padding(.top, 28)
-    }
-}
-
-// MARK: - Import Option Row
-
-/// One of the other ways to add a recipe, e.g. from a photo or from Notes
-private struct ImportOptionRow: View {
+/// One way to add a recipe: pink icon circle, title, one line on what it's for, chevron
+private struct AddRecipeSourceRow: View {
     let systemImage: String
-    let title: String
-    let subtitle: String
-    let isLoading: Bool
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
-                Group {
-                    if isLoading {
-                        ProgressView()
-                            .tint(Color("Orange"))
-                    } else {
-                        Image(systemName: systemImage)
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(Color("Orange"))
-                    }
-                }
-                .frame(width: 36, height: 36)
-                .background(Circle().fill(Color("Orange").opacity(0.12)))
+            HStack(spacing: 14) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(SaltColor.iconDefault)
+                    .frame(width: 42, height: 42)
+                    .background(SaltColor.surfacePink, in: Circle())
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(isLoading ? "Reading your recipe..." : title)
-                        .font(.custom("OpenSans-SemiBold", size: 15))
-                        .foregroundColor(.black)
+                    Text(title)
+                        .font(SaltFont.openSans(17))
+                        .foregroundStyle(SaltColor.textPrimary)
                     Text(subtitle)
-                        .font(.custom("OpenSans-Regular", size: 12))
-                        .foregroundColor(Color("GraniteGray"))
+                        .font(SaltFont.body)
+                        .foregroundStyle(SaltColor.textSecondary)
                         .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer(minLength: 8)
 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(Color("DarkSilver"))
+                    .foregroundStyle(SaltColor.textSecondary)
             }
-            .padding(12)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 16)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 }
 
-// MARK: - Paste Recipe Text
-
-/// A recipe pasted in as text, e.g. copied from the Notes app
-private struct PasteRecipeTextView: View {
-    @Binding var text: String
-    let onImport: () -> Void
-    @Environment(\.dismiss) private var dismiss
-    @FocusState private var isFocused: Bool
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Paste the whole recipe from Notes or anywhere else, with its ingredients and steps.")
-                    .font(.custom("OpenSans-Regular", size: 14))
-                    .foregroundColor(Color("DarkSilver"))
-
-                TextEditor(text: $text)
-                    .font(.custom("OpenSans-Regular", size: 14))
-                    .tint(Color("OrangeRed"))
-                    .focused($isFocused)
-                    .padding(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color("DarkSilver"), lineWidth: 1)
-                    )
-            }
-            .padding()
-            .navigationTitle("Import from Notes")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Import", action: onImport)
-                        .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
-            .onAppear { isFocused = true }
-        }
-    }
-}
-
-// MARK: - Imported Recipe Preview
-
-struct ImportedRecipePreviewView: View {
-    let recipe: ImportedRecipe
-    @ObservedObject var viewModel: RecipeImportViewModel
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Image
-                    if let imageUrl = recipe.imageUrl, let url = URL(string: imageUrl) {
-                        CachedAsyncImage(url: url) { phase in
-                            switch phase {
-                            case .empty:
-                                Rectangle()
-                                    .fill(Color(.systemGray5))
-                                    .overlay(ProgressView())
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                            case .failure:
-                                Rectangle()
-                                    .fill(Color(.systemGray5))
-                                    .overlay(
-                                        Image(systemName: "photo")
-                                            .foregroundColor(.gray)
-                                    )
-                            @unknown default:
-                                EmptyView()
-                            }
-                        }
-                        .frame(height: 200)
-                        .clipped()
-                        .cornerRadius(12)
-                    }
-
-                    // Title
-                    Text(recipe.title)
-                        .font(.custom("Playfair9pt-SemiBold", size: 24))
-
-                    // Source
-                    if let source = recipe.sourceName {
-                        HStack(spacing: 4) {
-                            Image(systemName: "link")
-                            Text("From \(source)")
-                        }
-                        .font(.custom("OpenSans-Regular", size: 14))
-                        .foregroundColor(Color("GraniteGray"))
-                    }
-
-                    // Time info
-                    HStack(spacing: 20) {
-                        if let prepTime = recipe.prepTimeMinutes {
-                            VStack {
-                                Text("\(prepTime)")
-                                    .font(.custom("Playfair9pt-SemiBold", size: 18))
-                                Text("Prep")
-                                    .font(.custom("OpenSans-Regular", size: 12))
-                                    .foregroundColor(Color("GraniteGray"))
-                            }
-                        }
-                        if let cookTime = recipe.cookTimeMinutes {
-                            VStack {
-                                Text("\(cookTime)")
-                                    .font(.custom("Playfair9pt-SemiBold", size: 18))
-                                Text("Cook")
-                                    .font(.custom("OpenSans-Regular", size: 12))
-                                    .foregroundColor(Color("GraniteGray"))
-                            }
-                        }
-                        VStack {
-                            Text(recipe.servings)
-                                .font(.custom("Playfair9pt-SemiBold", size: 18))
-                            Text("Servings")
-                                .font(.custom("OpenSans-Regular", size: 12))
-                                .foregroundColor(Color("GraniteGray"))
-                        }
-                    }
-                    .padding(.vertical, 10)
-
-                    // Description
-                    if let description = recipe.description {
-                        Text(description)
-                            .font(.custom("OpenSans-Regular", size: 14))
-                            .foregroundColor(Color("GraniteGray"))
-                    }
-
-                    // Ingredients
-                    if !recipe.ingredients.isEmpty {
-                        Text("Ingredients")
-                            .font(.custom("Playfair9pt-SemiBold", size: 20))
-                            .padding(.top, 10)
-
-                        ForEach(recipe.ingredients, id: \.self) { ingredient in
-                            HStack(alignment: .top, spacing: 8) {
-                                Circle()
-                                    .fill(Color("Orange"))
-                                    .frame(width: 6, height: 6)
-                                    .padding(.top, 6)
-                                Text(ingredient)
-                                    .font(.custom("OpenSans-Regular", size: 14))
-                            }
-                        }
-                    }
-
-                    // Instructions
-                    if !recipe.instructions.isEmpty {
-                        Text("Instructions")
-                            .font(.custom("Playfair9pt-SemiBold", size: 20))
-                            .padding(.top, 10)
-
-                        ForEach(Array(recipe.instructions.enumerated()), id: \.offset) { index, instruction in
-                            HStack(alignment: .top, spacing: 8) {
-                                Text("\(index + 1).")
-                                    .font(.custom("OpenSans-SemiBold", size: 14))
-                                    .foregroundColor(Color("Orange"))
-                                    .frame(width: 24, alignment: .leading)
-                                Text(instruction)
-                                    .font(.custom("OpenSans-Regular", size: 14))
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    }
-                }
-                .padding()
-            }
-            .navigationTitle("Preview")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        viewModel.clearImport()
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        Task {
-                            if await viewModel.saveRecipe() {
-                                dismiss()
-                            }
-                        }
-                    }
-                    .fontWeight(.semibold)
-                }
-            }
-        }
-    }
-}
-
 // MARK: - Create Recipe View
 
+/// Create and Edit form (Figma "Create form — Final"). Title is the only required field.
+/// Create: "Preview & Save" opens the preview (same layout as the recipe page) first.
+/// Edit: "Save changes" saves straight away.
 struct CreateRecipeView: View {
     @StateObject private var viewModel = CreateRecipeViewModel()
     @FocusState private var focusedField: CreateRecipeField?
@@ -860,6 +799,8 @@ struct CreateRecipeView: View {
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var capturedImage: UIImage?
     @State private var navigateToPreview = false
+    @State private var showsTitleError = false
+    @State private var showingDiscardAlert = false
     @Environment(\.dismiss) private var dismiss
 
     // Callback to switch to My Recipes tab
@@ -873,9 +814,13 @@ struct CreateRecipeView: View {
     // Editing a recipe that's already saved (own recipe, or a copy of an Explore recipe):
     // the button saves right away and the sheet stays open until it succeeds
     var onSaveChanges: ((RecipeDetail, [UIImage]) async throws -> Void)? = nil
-    var saveChangesTitle = "Save Changes"
+    var saveChangesTitle = "Save changes"
     var editNotice: String? = nil  // Shown above the form, e.g. that a copy is saved
+    /// Back in a sheet (edit); nil when pushed (create), where back pops the form
+    var onCancel: (() -> Void)? = nil
     @State private var isSavingChanges = false
+    /// Shown as an alert: the form is long, so a message at its bottom would go unseen
+    @State private var saveChangesError: String?
 
     enum CreateRecipeField: Hashable {
         case title, description, prep, cook, servings, notes
@@ -885,211 +830,101 @@ struct CreateRecipeView: View {
 
     private static let maxPhotos = 6
 
+    private var screenTitle: String {
+        isEditMode ? String(localized: "Edit Recipe") : String(localized: "New Recipe")
+    }
+
+    private var mainActionTitle: String {
+        if onSaveChanges != nil { return saveChangesTitle }
+        return isEditMode ? String(localized: "Update preview") : String(localized: "Preview & Save")
+    }
+
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 24) {
-                if let editNotice {
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "info.circle")
-                            .foregroundColor(Color("OrangeRed"))
-                        Text(editNotice)
-                            .font(.custom("OpenSans-Regular", size: 14))
-                            .foregroundColor(.primary)
+        ScrollViewReader { proxy in
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: SaltSpacing.section) {
+                    if let editNotice {
+                        PreviewNoticeBanner(text: editNotice)
                     }
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color("PeachCream"))
-                    .cornerRadius(10)
-                }
 
-                // Title
-                CreateRecipeTextField(
-                    title: "Title",
-                    placeholder: "Give your recipe a name",
-                    text: $viewModel.title,
-                    isRequired: true
-                )
-                .focused($focusedField, equals: .title)
+                    titleSection
+                        .id(CreateRecipeField.title)
 
-                // Description
-                CreateRecipeTextEditor(
-                    title: "Description",
-                    placeholder: "Describe your recipe in a few words (e.g., quick, family-favorite, or festive)",
-                    text: $viewModel.description,
-                    isOptional: true
-                )
-                .focused($focusedField, equals: .description)
+                    CreateRecipeMultilineField(
+                        title: "Description",
+                        isOptional: true,
+                        placeholder: "Describe your recipe in a few words (e.g., quick, family favorite, festive)",
+                        text: $viewModel.description,
+                        isFocused: focusedField == .description
+                    )
+                    .focused($focusedField, equals: .description)
 
-                ingredientsSection
+                    timeAndServingsSection
 
-                instructionsSection
+                    ingredientsSection
 
-                // Time & Servings Row
-                HStack {
-                    // Servings
-                    HStack(spacing: 10) {
-                        Button(action: {
-                            if let current = Int(viewModel.servings), current > 1 {
-                                viewModel.servings = "\(current - 1)"
-                            }
-                        }) {
-                            Image("minusIcon")
-                                .resizable()
-                                .frame(width: 33, height: 33)
-                        }
-                        
-                        VStack(spacing: 0) {
-                            Text(viewModel.servings.isEmpty ? "2" : viewModel.servings)
-                                .font(.custom("Playfair9pt-Regular", size: 20))
-                            Text("servings")
-                                .font(.custom("Playfair9pt-Regular", size: 18))
-                        }
-                        
-                        Button(action: {
-                            if let current = Int(viewModel.servings) {
-                                viewModel.servings = "\(current + 1)"
-                            } else {
-                                viewModel.servings = "3"
-                            }
-                        }) {
-                            Image("plusIcon")
-                                .resizable()
-                                .frame(width: 33, height: 33)
-                        }
-                    }
-                    Spacer()
-                    
-                    // Prep & Cook
-                    HStack(spacing: 20) {
-                    // Prep Time
-                    VStack(spacing: 8) {
-                        HStack(spacing: 4) {
-                            Text("Prep")
-                                .font(.custom("Playfair9pt-Regular", size: 20))
-                            Image("timerIcon")
-                                .resizable()
-                                .renderingMode(.template)
-                                .frame(width: 24, height: 24)
-                                .foregroundColor(Color("GraniteGray"))
-                        }
-                        
-                        TextField("mins", text: $viewModel.prepTime)
-                            .font(.custom("OpenSans-Regular", size: 14))
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.center)
-                            .focused($focusedField, equals: .prep)
-                            .frame(width: 72, height: 35)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color("DarkSilver"), lineWidth: 1)
-                            )
-                    }
-                    
-                    // Cook Time
-                    VStack(spacing: 8) {
-                        HStack(spacing: 4) {
-                            Text("Cook")
-                                .font(.custom("Playfair9pt-Regular", size: 20))
-                            Image("timerIcon")
-                                .resizable()
-                                .renderingMode(.template)
-                                .frame(width: 24, height: 24)
-                                .foregroundColor(Color("GraniteGray"))
-                        }
-                        
-                        TextField("mins", text: $viewModel.cookTime)
-                            .font(.custom("OpenSans-Regular", size: 14))
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.center)
-                            .focused($focusedField, equals: .cook)
-                            .frame(width: 72, height: 35)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color("DarkSilver"), lineWidth: 1)
-                            )
-                    }
+                    instructionsSection
+
+                    CreateRecipeMultilineField(
+                        title: "Notes & tips",
+                        isOptional: true,
+                        placeholder: "Add any tips, tricks or substitutions",
+                        text: $viewModel.notes,
+                        isFocused: focusedField == .notes
+                    )
+                    .focused($focusedField, equals: .notes)
+
+                    photoSection
+
+                    if let error = viewModel.errorMessage, !showsTitleError {
+                        SaltFieldError(message: error)
                     }
                 }
-              
-
-                // Notes & Tips
-                CreateRecipeTextEditor(
-                    title: "Notes & Tips",
-                    placeholder: "Add any tips, tricks, or substitutions",
-                    text: $viewModel.notes,
-                    isOptional: true,
-                    minLines: 3
-                )
-                .focused($focusedField, equals: .notes)
-
-                photoSection
-
-                // Error Message
-                if let error = viewModel.errorMessage {
-                    Text(error)
-                        .font(.custom("OpenSans-Regular", size: 14))
-                        .foregroundColor(.red)
-                }
-
-                // Preview & Save Button (or Update Preview in edit mode)
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        if let onSaveChanges {
-                            let updatedRecipe = viewModel.toRecipeDetail()
-                            let photos = copiedPhotos()
-                            Task {
-                                isSavingChanges = true
-                                viewModel.errorMessage = nil
-                                do {
-                                    try await onSaveChanges(updatedRecipe, photos)
-                                } catch {
-                                    viewModel.errorMessage = error.localizedDescription
-                                }
-                                isSavingChanges = false
-                            }
-                        } else if isEditMode {
-                            // In edit mode, pass the updated recipe and any new photos back
-                            onUpdate?(viewModel.toRecipeDetail(), copiedPhotos())
-                        } else {
-                            navigateToPreview = true
-                        }
-                    }) {
-                        HStack(spacing: 8) {
-                            if isSavingChanges {
-                                ProgressView()
-                                    .tint(.white)
-                                    .scaleEffect(0.8)
-                            }
-                            Text(onSaveChanges != nil ? saveChangesTitle : (isEditMode ? "Update Preview" : "Preview & Save"))
-                                .font(.custom("OpenSans-SemiBold", size: 18))
-                                .foregroundColor(.white)
-                        }
-                        .frame(width: isEditMode ? 180 : 164, height: 45)
-                        .background(Color("Orange"))
-                        .cornerRadius(10)
-                    }
-                    .disabled(!viewModel.isValid || isSavingChanges)
-                    Spacer()
-                }
-                .padding(.top, 10)
+                .padding(.horizontal, SaltSpacing.screenMargin)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             }
-            .padding(.horizontal)
-            .padding(.bottom, 30)
+            .scrollDismissesKeyboard(.interactively)
+            .safeAreaInset(edge: .top, spacing: 0) { header }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                mainAction(scrollTo: proxy)
+            }
         }
-        .onTapGesture {
-            focusedField = nil
-        }
+        .background(SaltColor.surfaceScreen)
+        .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
+        .navigationBarBackButtonHidden(true)
         .onAppear {
+            if viewModel.savedSuccessfully {
+                // Saved from the preview: back to Add Recipe with an empty form
+                viewModel.reset()
+                dismiss()
+                return
+            }
             // Initialize from recipe if in edit mode
-            if let recipe = initialRecipe {
+            if let recipe = initialRecipe, viewModel.title.isEmpty {
                 viewModel.initializeFrom(recipe)
             }
+        }
+        .alert(isEditMode ? "Discard changes?" : "Discard this recipe?", isPresented: $showingDiscardAlert) {
+            Button("Keep editing", role: .cancel) { }
+            Button("Discard", role: .destructive) { leave() }
+        } message: {
+            Text(isEditMode ? "Your changes won't be saved." : "What you've written won't be saved.")
+        }
+        .alert("Couldn't Save Changes", isPresented: Binding(
+            get: { saveChangesError != nil },
+            set: { if !$0 { saveChangesError = nil } }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(saveChangesError ?? "")
         }
         .navigationDestination(isPresented: $navigateToPreview) {
             RecipeDetailView(
                 recipe: viewModel.toRecipeDetail(),
                 mode: .preview,
+                editReturnsToForm: true,
                 pendingPhotos: viewModel.photoImages,
                 onSave: {
                     // Get ALL data from shared storage - no closure parameters!
@@ -1099,18 +934,7 @@ struct CreateRecipeView: View {
                     }
                     return await viewModel.saveRecipe(from: recipeDetail, photos: savedData.photos)
                 },
-                savedRecipeId: { viewModel.savedRecipeId },
-                onAddMoreRecipes: {
-                    // Pop to root - reset state and dismiss
-                    viewModel.reset()
-                    PendingSaveDataStorage.shared.clear()
-                    navigateToPreview = false
-                },
-                onGoToMyRecipes: {
-                    PendingSaveDataStorage.shared.clear()
-                    navigateToPreview = false
-                    switchToMyRecipes?()
-                }
+                savedRecipeId: { viewModel.savedRecipeId }
             )
         }
         .fullScreenCover(isPresented: $showingCamera) {
@@ -1123,14 +947,15 @@ struct CreateRecipeView: View {
             maxSelectionCount: max(1, Self.maxPhotos - viewModel.photoImages.count),
             matching: .images
         )
-        .confirmationDialog("Add Photo", isPresented: $showingPhotoOptions, titleVisibility: .visible) {
-            Button("Take Photo") {
-                showingCamera = true
+        .confirmationDialog("Add photo", isPresented: $showingPhotoOptions, titleVisibility: .hidden) {
+            if CameraView.isAvailable {
+                Button("Take photo") { showingCamera = true }
             }
-            Button("Choose from Library") {
-                showingPhotoPicker = true
-            }
+            Button("Choose from library") { showingPhotoPicker = true }
             Button("Cancel", role: .cancel) {}
+        }
+        .onChange(of: viewModel.title) { _, _ in
+            if showsTitleError { showsTitleError = false }
         }
         .onChange(of: viewModel.ingredientRows) { _, _ in
             // Return in a name field, or a pasted list, adds rows; move the cursor to the last one
@@ -1162,84 +987,260 @@ struct CreateRecipeView: View {
         }
     }
 
-    // MARK: - Ingredients
+    // MARK: - Header & Main Action
 
-    private var ingredientsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            CreateRecipeSectionHeader(title: "Ingredients", isRequired: true, addTitle: "Add") {
-                focusedField = .ingredientAmount(viewModel.addIngredient())
+    private var header: some View {
+        HStack(spacing: 12) {
+            Button {
+                focusedField = nil
+                if viewModel.hasUnsavedChanges {
+                    showingDiscardAlert = true
+                } else {
+                    leave()
+                }
+            } label: {
+                Image(systemName: "arrow.left")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(SaltColor.iconDefault)
+                    .frame(width: 44, height: 44)
+            }
+            .padding(.leading, -12)
+            .accessibilityLabel("Back")
+
+            Text(screenTitle)
+                .font(SaltFont.h2)
+                .foregroundStyle(SaltColor.textPrimary)
+                .accessibilityAddTraits(.isHeader)
+
+            Spacer()
+        }
+        .padding(.horizontal, SaltSpacing.screenMargin)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
+        .background(SaltColor.surfaceScreen)
+    }
+
+    private func mainAction(scrollTo proxy: ScrollViewProxy) -> some View {
+        Button {
+            submit(proxy)
+        } label: {
+            SaltButtonLabel(title: mainActionTitle, isLoading: isSavingChanges)
+        }
+        .buttonStyle(.salt())
+        .allowsHitTesting(!isSavingChanges)
+        .padding(.horizontal, SaltSpacing.screenMargin)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .background(
+            SaltColor.surfaceScreen
+                .overlay(alignment: .top) {
+                    Rectangle().fill(SaltColor.surfaceControl).frame(height: 1)
+                }
+                .ignoresSafeArea(edges: .bottom)
+        )
+    }
+
+    /// Without a title: scroll up to it and mark it. Otherwise preview, update or save.
+    private func submit(_ proxy: ScrollViewProxy) {
+        guard viewModel.isValid else {
+            withAnimation {
+                showsTitleError = true
+                proxy.scrollTo(CreateRecipeField.title, anchor: .top)
+            }
+            focusedField = .title
+            return
+        }
+        focusedField = nil
+
+        if let onSaveChanges {
+            let updatedRecipe = viewModel.toRecipeDetail()
+            let photos = copiedPhotos()
+            Task {
+                isSavingChanges = true
+                do {
+                    try await onSaveChanges(updatedRecipe, photos)
+                } catch {
+                    saveChangesError = error.localizedDescription
+                }
+                isSavingChanges = false
+            }
+        } else if isEditMode {
+            // In edit mode, pass the updated recipe and any new photos back
+            onUpdate?(viewModel.toRecipeDetail(), copiedPhotos())
+        } else {
+            navigateToPreview = true
+        }
+    }
+
+    private func leave() {
+        if let onCancel {
+            onCancel()
+        } else {
+            dismiss()
+        }
+    }
+
+    // MARK: - Title
+
+    private var titleSection: some View {
+        VStack(alignment: .leading, spacing: SaltSpacing.titleToContent) {
+            CreateRecipeSectionTitle(title: "Title")
+
+            TextField("", text: $viewModel.title, prompt: Text("Give your recipe a name").foregroundStyle(SaltColor.textSecondary), axis: .vertical)
+                .lineLimit(1...3)
+                .submitLabel(.next)
+                .focused($focusedField, equals: .title)
+                .saltInput(isFocused: focusedField == .title, hasError: showsTitleError)
+
+            if showsTitleError {
+                Text("Add a title to save your recipe.")
+                    .font(SaltFont.body)
+                    .foregroundStyle(SaltColor.textDestructive)
+            }
+        }
+    }
+
+    // MARK: - Time & Servings
+
+    private var timeAndServingsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            CreateRecipeSectionTitle(title: "Time & servings", isOptional: true)
+                .padding(.bottom, -4)
+
+            HStack(spacing: 12) {
+                minutesField(label: "Prep time", text: $viewModel.prepTime, field: .prep)
+                minutesField(label: "Cook time", text: $viewModel.cookTime, field: .cook)
             }
 
-            ForEach($viewModel.ingredientRows) { $row in
-                HStack(spacing: 8) {
-                    CreateRecipeInputField(placeholder: "2", text: $row.amount)
-                        .keyboardType(.numbersAndPunctuation)
-                        .submitLabel(.next)
-                        .focused($focusedField, equals: .ingredientAmount(row.id))
-                        .onSubmit { focusedField = .ingredientUnit(row.id) }
-                        .frame(width: 56)
-                        .accessibilityLabel("Amount")
-
-                    CreateRecipeInputField(placeholder: "cups", text: $row.unit)
-                        .submitLabel(.next)
-                        .focused($focusedField, equals: .ingredientUnit(row.id))
-                        .onSubmit { focusedField = .ingredientName(row.id) }
-                        .frame(width: 76)
-                        .accessibilityLabel("Unit")
-
-                    // Multiline so Return (or pasting a list) can start the next ingredient
-                    CreateRecipeInputField(placeholder: "Ingredient", text: $row.name, axis: .vertical)
-                        .focused($focusedField, equals: .ingredientName(row.id))
-                        .accessibilityLabel("Ingredient")
-
-                    if viewModel.ingredientRows.count > 1 {
-                        CreateRecipeDeleteButton(label: "Remove ingredient") {
-                            withAnimation { viewModel.removeIngredient(row.id) }
-                        }
+            HStack {
+                Text("Servings")
+                    .font(SaltFont.bodyLarge)
+                    .foregroundStyle(SaltColor.textPrimary)
+                Spacer()
+                let servings = Int(viewModel.servings) ?? 2
+                SaltStepper(
+                    label: servings == 1 ? String(localized: "1 serving") : String(localized: "\(servings) servings"),
+                    canDecrement: servings > 1,
+                    canIncrement: servings < 99,
+                    onDecrement: { viewModel.servings = "\(max(1, servings - 1))" },
+                    onIncrement: { viewModel.servings = "\(min(99, servings + 1))" }
+                )
+                .padding(.trailing, -7)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Servings")
+                .accessibilityValue("\(servings)")
+                .accessibilityAdjustableAction { direction in
+                    switch direction {
+                    case .increment: viewModel.servings = "\(min(99, servings + 1))"
+                    case .decrement: viewModel.servings = "\(max(1, servings - 1))"
+                    default: break
                     }
                 }
             }
+        }
+    }
 
-            Text("Tip: Enter amount, unit, and ingredient name separately")
-                .font(.custom("OpenSans-Regular", size: 12))
-                .foregroundColor(Color("GraniteGray"))
+    /// Minutes field showing "15 min"
+    private func minutesField(label: LocalizedStringKey, text: Binding<String>, field: CreateRecipeField) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label)
+                .font(SaltFont.body)
+                .foregroundStyle(SaltColor.textSecondary)
+            HStack(spacing: 4) {
+                TextField("", text: text, prompt: Text("0").foregroundStyle(SaltColor.textSecondary))
+                    .keyboardType(.numberPad)
+                    .focused($focusedField, equals: field)
+                    .fixedSize()
+                Text("min")
+                    .foregroundStyle(text.wrappedValue.isEmpty ? SaltColor.textSecondary : SaltColor.textPrimary)
+                Spacer(minLength: 0)
+            }
+            .saltInput(isFocused: focusedField == field)
+            .contentShape(Rectangle())
+            .onTapGesture { focusedField = field }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Ingredients
+
+    private var ingredientsSection: some View {
+        VStack(alignment: .leading, spacing: SaltSpacing.titleToContent) {
+            CreateRecipeSectionTitle(title: "Ingredients")
+
+            ForEach($viewModel.ingredientRows) { $row in
+                HStack(alignment: .top, spacing: 8) {
+                    TextField("", text: $row.amount, prompt: Text("1").foregroundStyle(SaltColor.textSecondary))
+                        .keyboardType(.numbersAndPunctuation)
+                        .submitLabel(.next)
+                        .focused($focusedField, equals: .ingredientAmount(row.id))
+                        .onSubmit { focusedField = .ingredientName(row.id) }
+                        .saltInput(isFocused: focusedField == .ingredientAmount(row.id))
+                        .frame(width: 60)
+                        .accessibilityLabel("Amount")
+
+                    CreateRecipeUnitPicker(unit: $row.unit)
+                        .frame(width: 92)
+
+                    // Multiline so Return (or pasting a list) can start the next ingredient
+                    TextField("", text: $row.name, prompt: Text("Ingredient").foregroundStyle(SaltColor.textSecondary), axis: .vertical)
+                        .lineLimit(1...4)
+                        .focused($focusedField, equals: .ingredientName(row.id))
+                        .saltInput(isFocused: focusedField == .ingredientName(row.id))
+                        .accessibilityLabel("Ingredient")
+
+                    CreateRecipeDeleteButton(label: "Remove ingredient") {
+                        withAnimation { viewModel.removeIngredient(row.id) }
+                    }
+                    .opacity(viewModel.ingredientRows.count > 1 || !row.line.isEmpty ? 1 : 0)
+                    .disabled(viewModel.ingredientRows.count <= 1 && row.line.isEmpty)
+                }
+            }
+
+            CreateRecipeAddButton(title: "Add ingredient") {
+                focusedField = .ingredientAmount(viewModel.addIngredient())
+            }
+
+            Text("Tip: paste a whole list and Salt will split it into rows.")
+                .font(SaltFont.caption)
+                .foregroundStyle(SaltColor.textSecondary)
         }
     }
 
     // MARK: - Instructions
 
     private var instructionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            CreateRecipeSectionHeader(title: "Instructions", isRequired: true, addTitle: "Add Step") {
-                focusedField = .step(viewModel.addStep())
-            }
+        VStack(alignment: .leading, spacing: SaltSpacing.titleToContent) {
+            CreateRecipeSectionTitle(title: "Instructions")
 
             ForEach(Array($viewModel.instructionSteps.enumerated()), id: \.element.id) { index, $step in
-                HStack(alignment: .top, spacing: 10) {
-                    Text("\(index + 1)")
-                        .font(.custom("OpenSans-SemiBold", size: 12))
-                        .foregroundColor(.white)
-                        .frame(width: 24, height: 24)
-                        .background(Circle().fill(Color("OrangeRed")))
-                        .padding(.top, 10)
+                HStack(alignment: .top, spacing: 12) {
+                    StepNumber(number: index + 1)
                         .accessibilityHidden(true)
 
-                    CreateRecipeInputField(
-                        placeholder: "Step \(index + 1): Describe what to do",
+                    TextField(
+                        "",
                         text: $step.text,
-                        axis: .vertical,
-                        minLines: 2
+                        prompt: Text(index == 0 ? "Describe the first step" : "Describe the next step")
+                            .foregroundStyle(SaltColor.textSecondary),
+                        axis: .vertical
                     )
+                    .lineLimit(3...10)
                     .focused($focusedField, equals: .step(step.id))
+                    .saltInput(isFocused: focusedField == .step(step.id))
                     .accessibilityLabel("Step \(index + 1)")
-
-                    if viewModel.instructionSteps.count > 1 {
-                        CreateRecipeDeleteButton(label: "Remove step \(index + 1)") {
-                            withAnimation { viewModel.removeStep(step.id) }
+                    .contextMenu {
+                        if viewModel.instructionSteps.count > 1 {
+                            Button("Remove step", systemImage: "trash", role: .destructive) {
+                                withAnimation { viewModel.removeStep(step.id) }
+                            }
                         }
-                        .padding(.top, 10)
                     }
                 }
+            }
+
+            CreateRecipeAddButton(title: "Add step") {
+                focusedField = .step(viewModel.addStep())
             }
         }
     }
@@ -1247,24 +1248,26 @@ struct CreateRecipeView: View {
     // MARK: - Photos
 
     private var photoSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: SaltSpacing.titleToContent) {
             CreateRecipeSectionTitle(title: "Photo", isOptional: true)
 
             if viewModel.photoImages.isEmpty {
                 Button {
+                    focusedField = nil
                     showingPhotoOptions = true
                 } label: {
-                    VStack(spacing: 10) {
+                    VStack(spacing: 8) {
                         PhotoUploadIcon()
-                        Text("Tap to upload photo")
-                            .font(.custom("OpenSans-Regular", size: 14))
-                            .foregroundColor(Color("GraniteGray"))
-                        Text("Up to \(Self.maxPhotos) photos")
-                            .font(.custom("OpenSans-Regular", size: 12))
-                            .foregroundColor(Color("DarkSilver"))
+                            .padding(.bottom, 4)
+                        Text("Add a cover photo")
+                            .font(SaltFont.bodyLarge)
+                            .foregroundStyle(SaltColor.textPrimary)
+                        Text("You can add it later, after you cook · up to \(Self.maxPhotos)")
+                            .font(SaltFont.caption)
+                            .foregroundStyle(SaltColor.textSecondary)
                     }
                     .frame(maxWidth: .infinity)
-                    .frame(height: 170)
+                    .padding(.vertical, 24)
                     .background(PhotoUploadBackground())
                 }
                 .buttonStyle(.plain)
@@ -1276,27 +1279,29 @@ struct CreateRecipeView: View {
                                 .resizable()
                                 .scaledToFill()
                                 .frame(width: 110, height: 110)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .clipShape(RoundedRectangle(cornerRadius: SaltRadius.input, style: .continuous))
                                 .overlay(alignment: .topTrailing) {
                                     Button {
                                         withAnimation { viewModel.removePhoto(at: index) }
                                     } label: {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .font(.system(size: 20))
-                                            .foregroundStyle(.white, Color.black.opacity(0.55))
+                                        Image(systemName: "xmark")
+                                            .font(.system(size: 11, weight: .semibold))
+                                            .foregroundStyle(SaltColor.iconDefault)
+                                            .frame(width: 24, height: 24)
+                                            .background(Color.white.opacity(0.92), in: Circle())
+                                            .frame(width: 44, height: 44)
                                     }
-                                    .padding(6)
                                     .accessibilityLabel("Remove photo \(index + 1)")
                                 }
                                 .overlay(alignment: .bottomLeading) {
                                     // The first photo is the recipe's main image
                                     if index == 0 {
                                         Text("Cover")
-                                            .font(.custom("OpenSans-SemiBold", size: 11))
-                                            .foregroundColor(.white)
+                                            .font(SaltFont.captionStrong)
+                                            .foregroundStyle(SaltColor.textPrimary)
                                             .padding(.horizontal, 8)
-                                            .padding(.vertical, 3)
-                                            .background(Capsule().fill(Color.black.opacity(0.55)))
+                                            .frame(height: 22)
+                                            .background(Color.white.opacity(0.92), in: Capsule())
                                             .padding(6)
                                     }
                                 }
@@ -1306,14 +1311,9 @@ struct CreateRecipeView: View {
                             Button {
                                 showingPhotoOptions = true
                             } label: {
-                                VStack(spacing: 6) {
-                                    PhotoUploadIcon(size: 40)
-                                    Text("Add")
-                                        .font(.custom("OpenSans-Regular", size: 12))
-                                        .foregroundColor(Color("GraniteGray"))
-                                }
-                                .frame(width: 110, height: 110)
-                                .background(PhotoUploadBackground())
+                                PhotoUploadIcon(size: 40)
+                                    .frame(width: 110, height: 110)
+                                    .background(PhotoUploadBackground())
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel("Add photo")
@@ -1323,8 +1323,8 @@ struct CreateRecipeView: View {
                 }
 
                 Text("\(viewModel.photoImages.count) of \(Self.maxPhotos) photos")
-                    .font(.custom("OpenSans-Regular", size: 12))
-                    .foregroundColor(Color("GraniteGray"))
+                    .font(SaltFont.caption)
+                    .foregroundStyle(SaltColor.textSecondary)
             }
         }
     }
@@ -1343,26 +1343,20 @@ struct CreateRecipeView: View {
 
 // MARK: - Create Recipe Section Title
 
-/// Section title with a red asterisk for required fields or "(Optional)"
+/// Form label for full-page forms: Playfair 22, with a quiet gray "Optional"
 struct CreateRecipeSectionTitle: View {
-    let title: String
-    var isRequired = false
+    let title: LocalizedStringKey
     var isOptional = false
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(title)
-                .font(.custom("Playfair9pt-Regular", size: 24))
-            if isRequired {
-                Text("*")
-                    .font(.custom("OpenSans-SemiBold", size: 18))
-                    .foregroundColor(Color("OrangeRed"))
-                    .accessibilityLabel("required")
-            }
+                .font(SaltFont.labelControl)
+                .foregroundStyle(SaltColor.textPrimary)
             if isOptional {
-                Text("(Optional)")
-                    .font(.custom("OpenSans-Regular", size: 13))
-                    .foregroundColor(Color("GraniteGray"))
+                Text("Optional")
+                    .font(SaltFont.body)
+                    .foregroundStyle(SaltColor.textSecondary)
             }
         }
         .accessibilityElement(children: .combine)
@@ -1370,61 +1364,78 @@ struct CreateRecipeSectionTitle: View {
     }
 }
 
-// MARK: - Create Recipe Section Header
+// MARK: - Multiline Field
 
-/// Section title with an orange "+ Add" button on the right
-struct CreateRecipeSectionHeader: View {
-    let title: String
-    var isRequired = false
-    let addTitle: String
-    let onAdd: () -> Void
+struct CreateRecipeMultilineField: View {
+    let title: LocalizedStringKey
+    var isOptional = false
+    let placeholder: String
+    @Binding var text: String
+    var isFocused = false
 
     var body: some View {
-        HStack {
-            CreateRecipeSectionTitle(title: title, isRequired: isRequired)
-            Spacer()
-            Button(action: onAdd) {
-                HStack(spacing: 4) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 11, weight: .bold))
-                    Text(addTitle)
-                        .font(.custom("OpenSans-SemiBold", size: 13))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(Capsule().fill(Color("OrangeRed")))
-            }
+        VStack(alignment: .leading, spacing: SaltSpacing.titleToContent) {
+            CreateRecipeSectionTitle(title: title, isOptional: isOptional)
+            TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(SaltColor.textSecondary), axis: .vertical)
+                .lineLimit(3...10)
+                .saltInput(isFocused: isFocused)
         }
     }
 }
 
-// MARK: - Create Recipe Input Field
+// MARK: - Unit Picker
 
-/// Bordered text field used for ingredient parts and steps
-struct CreateRecipeInputField: View {
-    let placeholder: String
-    @Binding var text: String
-    var axis: Axis = .horizontal
-    var minLines = 1
+/// "cups ⌄" menu of common units; keeps an unusual unit from an edited recipe
+struct CreateRecipeUnitPicker: View {
+    @Binding var unit: String
+
+    private static let units = ["cups", "cup", "tbsp", "tsp", "g", "kg", "ml", "l", "oz", "lb", "pinch", "clove", "can", "piece"]
+
+    private var options: [String] {
+        let trimmed = unit.trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty || Self.units.contains(trimmed) ? Self.units : [trimmed] + Self.units
+    }
 
     var body: some View {
-        TextField(
-            "",
-            text: $text,
-            prompt: Text(placeholder).foregroundColor(Color("DarkSilver")),
-            axis: axis
-        )
-        .font(.custom("OpenSans-Regular", size: 14))
-        .foregroundColor(.primary)
-        .lineLimit(axis == .vertical ? minLines...8 : 1...1)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .frame(minHeight: 40)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color("DarkSilver"), lineWidth: 1)
-        )
+        Menu {
+            Picker("Unit", selection: $unit) {
+                Text("No unit").tag("")
+                ForEach(options, id: \.self) { Text($0).tag($0) }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(unit.isEmpty ? String(localized: "Unit") : unit)
+                    .foregroundStyle(unit.isEmpty ? SaltColor.textSecondary : SaltColor.textPrimary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(SaltColor.textPrimary)
+            }
+            .saltInput()
+        }
+        .accessibilityLabel("Unit")
+        .accessibilityValue(unit.isEmpty ? "None" : unit)
+    }
+}
+
+// MARK: - Add Button
+
+/// Small Secondary button with an orange +, e.g. "+ Add ingredient"
+struct CreateRecipeAddButton: View {
+    let title: LocalizedStringKey
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(SaltColor.iconAccent)
+                Text(title)
+            }
+        }
+        .buttonStyle(.salt(.secondary, size: .small))
     }
 }
 
@@ -1436,10 +1447,10 @@ struct CreateRecipeDeleteButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: "trash")
+            Image(systemName: "xmark")
                 .font(.system(size: 15))
-                .foregroundColor(Color("GraniteGray"))
-                .frame(width: 24, height: 40)
+                .foregroundStyle(SaltColor.textSecondary)
+                .frame(width: 28, height: 50)
         }
         .accessibilityLabel(label)
     }
@@ -1447,242 +1458,37 @@ struct CreateRecipeDeleteButton: View {
 
 // MARK: - Photo Upload
 
-/// Camera icon in a white circle, as on the photo upload card
+/// Orange camera icon in a white circle, as on the photo upload card
 struct PhotoUploadIcon: View {
-    var size: CGFloat = 52
+    var size: CGFloat = 48
 
     var body: some View {
         Image(systemName: "camera")
-            .font(.system(size: size * 0.38, weight: .medium))
-            .foregroundColor(Color("OrangeRed"))
+            .font(.system(size: size * 0.38))
+            .foregroundStyle(SaltColor.iconAccent)
             .frame(width: size, height: size)
             .background(Circle().fill(Color.white))
-            .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
     }
 }
 
-/// Soft peach card with a light border
+/// Peach card with a dashed outline
 struct PhotoUploadBackground: View {
     var body: some View {
-        RoundedRectangle(cornerRadius: 14)
-            .fill(Color("PeachCream").opacity(0.5))
+        RoundedRectangle(cornerRadius: SaltRadius.card, style: .continuous)
+            .fill(SaltColor.surfaceWarm)
             .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color("DarkSilver").opacity(0.5), lineWidth: 1)
+                RoundedRectangle(cornerRadius: SaltRadius.card, style: .continuous)
+                    .stroke(SaltColor.borderSubtle, style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
             )
-    }
-}
-
-// MARK: - Create Recipe Text Field
-
-struct CreateRecipeTextField: View {
-    let title: String
-    let placeholder: String
-    @Binding var text: String
-    var isRequired = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            CreateRecipeSectionTitle(title: title, isRequired: isRequired)
-
-            ZStack(alignment: .topLeading) {
-                if text.isEmpty {
-                    Text(placeholder)
-                        .font(.custom("OpenSans-Regular", size: 14))
-                        .foregroundColor(Color("DarkSilver"))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                }
-
-                TextField("", text: $text, axis: .vertical)
-                    .font(.custom("OpenSans-Regular", size: 14))
-                    .foregroundColor(.primary)
-                    .lineLimit(1...5)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-            }
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color("DarkSilver"), lineWidth: 1)
-            )
-        }
-    }
-}
-
-// MARK: - Create Recipe Text Editor
-
-struct CreateRecipeTextEditor: View {
-    let title: String
-    let placeholder: String
-    @Binding var text: String
-    var isOptional = false
-    var minLines = 1
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            CreateRecipeSectionTitle(title: title, isOptional: isOptional)
-
-            ZStack(alignment: .topLeading) {
-                if text.isEmpty {
-                    Text(placeholder)
-                        .font(.custom("OpenSans-Regular", size: 14))
-                        .foregroundColor(Color("DarkSilver"))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                }
-
-                TextField("", text: $text, axis: .vertical)
-                    .font(.custom("OpenSans-Regular", size: 14))
-                    .foregroundColor(.primary)
-                    .lineLimit(minLines...10)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-            }
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color("DarkSilver"), lineWidth: 1)
-            )
-        }
-    }
-}
-
-// MARK: - Create Recipe Preview View
-
-struct CreateRecipePreviewView: View {
-    @ObservedObject var viewModel: CreateRecipeViewModel
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Title
-                    Text(viewModel.title)
-                        .font(.custom("Playfair9pt-SemiBold", size: 24))
-
-                    // Time info
-                    if viewModel.prepTimeMinutes != nil || viewModel.cookTimeMinutes != nil {
-                        HStack(spacing: 20) {
-                            if let prep = viewModel.prepTimeMinutes {
-                                VStack {
-                                    Text("\(prep)")
-                                        .font(.custom("Playfair9pt-SemiBold", size: 18))
-                                    Text("Prep")
-                                        .font(.custom("OpenSans-Regular", size: 12))
-                                        .foregroundColor(Color("GraniteGray"))
-                                }
-                            }
-                            if let cook = viewModel.cookTimeMinutes {
-                                VStack {
-                                    Text("\(cook)")
-                                        .font(.custom("Playfair9pt-SemiBold", size: 18))
-                                    Text("Cook")
-                                        .font(.custom("OpenSans-Regular", size: 12))
-                                        .foregroundColor(Color("GraniteGray"))
-                                }
-                            }
-                            if let servings = viewModel.servingsInt {
-                                VStack {
-                                    Text("\(servings)")
-                                        .font(.custom("Playfair9pt-SemiBold", size: 18))
-                                    Text("Servings")
-                                        .font(.custom("OpenSans-Regular", size: 12))
-                                        .foregroundColor(Color("GraniteGray"))
-                                }
-                            }
-                        }
-                        .padding(.vertical, 10)
-                    }
-
-                    // Description
-                    if !viewModel.description.isEmpty {
-                        Text(viewModel.description)
-                            .font(.custom("Playfair9pt-Regular", size: 24))
-                            .foregroundColor(Color("GraniteGray"))
-                    }
-
-                    // Ingredients
-                    if !viewModel.ingredientsList.isEmpty {
-                        Text("Ingredients")
-                            .font(.custom("Playfair9pt-SemiBold", size: 20))
-                            .padding(.top, 10)
-
-                        ForEach(viewModel.ingredientsList, id: \.self) { ingredient in
-                            HStack(alignment: .top, spacing: 8) {
-                                Circle()
-                                    .fill(Color("Orange"))
-                                    .frame(width: 6, height: 6)
-                                    .padding(.top, 6)
-                                Text(ingredient)
-                                    .font(.custom("OpenSans-Regular", size: 14))
-                            }
-                        }
-                    }
-
-                    // Instructions
-                    if !viewModel.instructionsList.isEmpty {
-                        Text("Instructions")
-                            .font(.custom("Playfair9pt-SemiBold", size: 20))
-                            .padding(.top, 10)
-
-                        ForEach(Array(viewModel.instructionsList.enumerated()), id: \.offset) { index, instruction in
-                            HStack(alignment: .top, spacing: 8) {
-                                Text("\(index + 1).")
-                                    .font(.custom("OpenSans-SemiBold", size: 14))
-                                    .foregroundColor(Color("Orange"))
-                                    .frame(width: 24, alignment: .leading)
-                                Text(instruction)
-                                    .font(.custom("OpenSans-Regular", size: 14))
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    }
-
-                    // Notes
-                    if !viewModel.notes.isEmpty {
-                        VStack(spacing: 10) {
-                            Text("Notes & Tips")
-                                .font(.custom("Playfair9pt-SemiBold", size: 20))
-
-                            Text(viewModel.notes)
-                                .font(.custom("OpenSans-Regular", size: 14))
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color("PeachCream"))
-                        .cornerRadius(15)
-                    }
-                }
-                .padding()
-            }
-            .navigationTitle("Preview")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Edit") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        Task {
-                            if await viewModel.saveRecipe() {
-                                dismiss()
-                            }
-                        }
-                    }
-                    .fontWeight(.semibold)
-                    .disabled(viewModel.isSaving)
-                }
-            }
-        }
     }
 }
 
 // MARK: - Preview
 
 #Preview {
-    AddNewRecipeView()
+    NavigationStack {
+        AddNewRecipeView()
+    }
 }
 
 #Preview("Create Recipe") {

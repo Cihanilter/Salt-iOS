@@ -3,7 +3,8 @@
 //  Salt
 //
 //  Filter chips under the Explore search bar (Ingredients, Total time, Cuisine, Meal type)
-//  and the sheet each one opens.
+//  and the sheet each one opens. One sheet template: grabber, Playfair title, Reset (gray
+//  until something is chosen), content, and a Primary button with the live result count.
 //
 
 import SwiftUI
@@ -16,53 +17,33 @@ enum SearchFilterKind: String, Identifiable, CaseIterable {
     var title: String {
         switch self {
         case .ingredients: "Ingredients"
-        case .time: "Total Time"
+        case .time: "Total time"
         case .cuisine: "Cuisine"
-        case .mealType: "Meal Type"
+        case .mealType: "Meal type"
         }
     }
 }
 
 // MARK: - Chips Row
 
-/// Horizontal row of filter chips; a chip shows its selection once set (e.g. "Under 30 min")
+/// Filter chips: outline when empty; once applied, peach + ✓ showing the chosen value
 struct SearchFiltersBar: View {
     let filters: RecipeSearchFilters
     let onSelect: (SearchFilterKind) -> Void
-    let onClearAll: () -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                // First, so all filters can be removed with one tap
-                if filters.isActive {
-                    Button(action: onClearAll) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.counterclockwise")
-                                .font(.system(size: 12, weight: .semibold))
-                            Text("Reset")
-                        }
-                        .font(.custom("OpenSans-SemiBold", size: 14))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 14)
-                        .frame(height: 34)
-                        .background(Capsule().fill(Color("OrangeRed")))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Reset all filters")
-                    .transition(.scale.combined(with: .opacity))
-                }
-
                 ForEach(SearchFilterKind.allCases) { kind in
                     let label = label(for: kind)
-                    FilterChip(title: label ?? kind.title, isActive: label != nil) {
+                    SaltChip(title: label ?? kind.title, isSelected: label != nil, showsChevron: true) {
                         onSelect(kind)
                     }
                     .accessibilityLabel(label.map { "\(kind.title): \($0)" } ?? kind.title)
+                    .accessibilityAddTraits(label != nil ? .isSelected : [])
                 }
             }
-            .padding(.horizontal, 18)
-            .animation(.easeInOut(duration: 0.2), value: filters.isActive)
+            .padding(.horizontal, SaltSpacing.screenMargin)
         }
     }
 
@@ -76,149 +57,165 @@ struct SearchFiltersBar: View {
     }
 }
 
-private struct FilterChip: View {
-    let title: String
-    let isActive: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Text(title)
-                    .lineLimit(1)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
-            }
-            .font(.custom(isActive ? "OpenSans-SemiBold" : "OpenSans-Regular", size: 14))
-            .foregroundColor(isActive ? Color("OrangeRed") : .primary)
-            .padding(.horizontal, 14)
-            .frame(height: 34)
-            .background(Capsule().fill(isActive ? Color("Orange").opacity(0.12) : Color(.systemBackground)))
-            .overlay(Capsule().stroke(isActive ? Color("Orange") : Color("DarkSilver"), lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isActive ? .isSelected : [])
-    }
-}
-
 // MARK: - Filter Sheet
 
-/// Edits one filter; Show Results applies it and searches
+/// Edits one filter; "Show 12 recipes" applies it. Swipe down cancels.
 struct SearchFilterSheet: View {
     let kind: SearchFilterKind
     @Binding var filters: RecipeSearchFilters
+    /// Results the (not yet applied) filters would give; nil when unknown
+    let countResults: (RecipeSearchFilters) async -> Int?
     let onApply: () -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var draft = RecipeSearchFilters()
     @State private var ingredientText = ""
+    @State private var liveCount: Int?
+    @State private var isCounting = false
     @FocusState private var isIngredientFocused: Bool
 
+    private var usesTallSheet: Bool {
+        kind == .cuisine || kind == .mealType
+    }
+
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    switch kind {
-                    case .ingredients: ingredientsContent
-                    case .time: timeContent
-                    case .cuisine: cuisineContent
-                    case .mealType: mealTypeContent
+        VStack(alignment: .leading, spacing: 0) {
+            SaltSheetHeader(title: kind.title) {
+                Button("Reset", action: resetThisFilter)
+                    .font(SaltFont.bodyLarge)
+                    .foregroundStyle(hasValue ? SaltColor.textAccent : SaltColor.textDisabled)
+                    .disabled(!hasValue)
+            }
+            .padding(.bottom, 20)
+
+            Group {
+                if usesTallSheet {
+                    ScrollView(showsIndicators: false) {
+                        content
+                            .padding(.bottom, 8)
                     }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 20)
-            }
-            // Swiping down on the options hides the Ingredients keyboard
-            .scrollDismissesKeyboard(.interactively)
-            .safeAreaInset(edge: .bottom) {
-                Button(action: apply) {
-                    Text("Show Results")
-                        .font(.custom("OpenSans-SemiBold", size: 16))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color("Orange"))
-                        .cornerRadius(10)
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                .background(Color(.systemBackground))
-            }
-            .navigationTitle(kind.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Reset", action: resetThisFilter)
-                        .disabled(!hasValue)
+                    .scrollDismissesKeyboard(.interactively)
+                } else {
+                    content
                 }
             }
+
+            footer
+                .padding(.top, 20)
         }
-        .presentationDetents(kind == .cuisine ? [.large] : [.medium, .large])
+        .modifier(FilterSheetSizing(isTall: usesTallSheet))
         .onAppear { draft = filters }
+        .task(id: draft) {
+            // Debounced so quick taps don't each run a count
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            isCounting = true
+            liveCount = await countResults(draft)
+            isCounting = false
+        }
+    }
+
+    @ViewBuilder private var content: some View {
+        switch kind {
+        case .ingredients: ingredientsContent
+        case .time: timeContent
+        case .cuisine: cuisineContent
+        case .mealType: mealTypeContent
+        }
+    }
+
+    // MARK: Footer
+
+    /// "Show 12 recipes"; a combination with no results → disabled "No matches" + a hint
+    @ViewBuilder private var footer: some View {
+        let noMatches = liveCount == 0 && draft.isActive
+        VStack(spacing: 12) {
+            if noMatches {
+                Text(noMatchesHint)
+                    .font(SaltFont.body)
+                    .foregroundStyle(SaltColor.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            }
+            Button(action: apply) {
+                Text(buttonTitle)
+                    .contentTransition(.numericText())
+            }
+            .buttonStyle(.salt())
+            .disabled(noMatches)
+            .animation(.easeInOut(duration: 0.2), value: liveCount)
+        }
+    }
+
+    private var buttonTitle: String {
+        guard draft.isActive, let liveCount else { return String(localized: "Show recipes") }
+        if liveCount == 0 { return String(localized: "No matches") }
+        return liveCount == 1 ? String(localized: "Show 1 recipe") : String(localized: "Show \(liveCount) recipes")
+    }
+
+    private var noMatchesHint: String {
+        switch kind {
+        case .ingredients where draft.ingredients.count > 1:
+            String(localized: "No recipe has all \(draft.ingredients.count). Try removing an ingredient.")
+        case .time:
+            String(localized: "Nothing that quick yet. Try a longer time.")
+        default:
+            String(localized: "Nothing matches all your filters. Try removing one.")
+        }
     }
 
     // MARK: Ingredients
 
     private var ingredientsContent: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 0) {
             Text("Recipes with all of these ingredients")
-                .font(.custom("OpenSans-Regular", size: 14))
-                .foregroundColor(Color("GraniteGray"))
+                .font(SaltFont.body)
+                .foregroundStyle(SaltColor.textSecondary)
+                .padding(.bottom, 16)
 
             HStack(spacing: 10) {
-                TextField("Add an ingredient", text: $ingredientText)
-                    .font(.custom("OpenSans-Regular", size: 16))
+                TextField("", text: $ingredientText, prompt: Text("Add an ingredient").foregroundStyle(SaltColor.textSecondary))
                     .focused($isIngredientFocused)
                     .submitLabel(.done)
                     .onSubmit { addIngredient(ingredientText) }
                     .textInputAutocapitalization(.never)
                 Button("Add") { addIngredient(ingredientText) }
-                    .font(.custom("OpenSans-SemiBold", size: 15))
-                    .foregroundColor(Color("OrangeRed"))
+                    .font(SaltFont.bodyLargeStrong)
+                    .foregroundStyle(ingredientText.trimmingCharacters(in: .whitespaces).isEmpty ? SaltColor.textDisabled : SaltColor.textAccent)
                     .disabled(ingredientText.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-            .padding(.horizontal, 16)
-            .frame(height: 48)
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color("DarkSilver"), lineWidth: 1))
-
-            if !draft.ingredients.isEmpty {
-                ChipFlow(spacing: 8) {
-                    ForEach(draft.ingredients, id: \.self) { ingredient in
-                        Button(action: { draft.ingredients.removeAll { $0 == ingredient } }) {
-                            HStack(spacing: 6) {
-                                Text(ingredient)
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 10, weight: .bold))
-                            }
-                            .font(.custom("OpenSans-SemiBold", size: 14))
-                            .foregroundColor(Color("OrangeRed"))
-                            .padding(.horizontal, 12)
-                            .frame(height: 32)
-                            .background(Capsule().fill(Color("Orange").opacity(0.12)))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Remove \(ingredient)")
-                    }
-                }
-            }
+            .frame(height: 28)
+            .saltInput(isFocused: isIngredientFocused)
+            .padding(.bottom, 24)
 
             Text("Popular")
-                .font(.custom("Playfair9pt-SemiBold", size: 18))
-                .padding(.top, 4)
+                .font(SaltFont.h3)
+                .foregroundStyle(SaltColor.textPrimary)
+                .padding(.bottom, SaltSpacing.titleToContent)
+
             ChipFlow(spacing: 8) {
-                ForEach(RecipeSearchFilters.suggestedIngredients.filter { suggestion in
-                    !draft.ingredients.contains { $0.caseInsensitiveCompare(suggestion) == .orderedSame }
-                }, id: \.self) { suggestion in
-                    OptionChip(title: suggestion, isSelected: false) {
-                        addIngredient(suggestion)
+                // Typed ingredients first, then the quick picks
+                ForEach(ingredientOptions, id: \.self) { ingredient in
+                    let isSelected = draft.ingredients.contains { $0.caseInsensitiveCompare(ingredient) == .orderedSame }
+                    SaltChip(title: ingredient, isSelected: isSelected) {
+                        if isSelected {
+                            draft.ingredients.removeAll { $0.caseInsensitiveCompare(ingredient) == .orderedSame }
+                        } else {
+                            addIngredient(ingredient)
+                        }
                     }
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }
             }
         }
+    }
+
+    private var ingredientOptions: [String] {
+        let suggested = RecipeSearchFilters.suggestedIngredients
+        let typed = draft.ingredients.filter { ingredient in
+            !suggested.contains { $0.caseInsensitiveCompare(ingredient) == .orderedSame }
+        }
+        return typed + suggested
     }
 
     private func addIngredient(_ text: String) {
@@ -234,12 +231,16 @@ struct SearchFilterSheet: View {
 
     // MARK: Total time
 
+    /// Single choice, so a radio list instead of chips
     private var timeContent: some View {
         VStack(spacing: 0) {
-            timeRow(title: "Any time", minutes: nil)
+            timeRow(title: String(localized: "Any time"), minutes: nil)
             ForEach(RecipeSearchFilters.timeOptions, id: \.self) { minutes in
-                Divider()
-                timeRow(title: "Under \(minutes) minutes", minutes: minutes)
+                Rectangle().fill(SaltColor.borderSubtle).frame(height: 1)
+                timeRow(
+                    title: minutes == 60 ? String(localized: "Under 1 hour") : String(localized: "Under \(minutes) minutes"),
+                    minutes: minutes
+                )
             }
         }
     }
@@ -249,14 +250,22 @@ struct SearchFilterSheet: View {
         return Button(action: { draft.maxTotalMinutes = minutes }) {
             HStack {
                 Text(title)
-                    .font(.custom("OpenSans-Regular", size: 16))
-                    .foregroundColor(.primary)
+                    .font(SaltFont.bodyLarge)
+                    .foregroundStyle(SaltColor.textPrimary)
                 Spacer()
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 22))
-                    .foregroundColor(isSelected ? Color("Orange") : Color("DarkSilver"))
+                ZStack {
+                    if isSelected {
+                        Circle().fill(SaltColor.actionPrimary)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.white)
+                    } else {
+                        Circle().stroke(SaltColor.borderDefault, lineWidth: 1)
+                    }
+                }
+                .frame(width: 24, height: 24)
             }
-            .padding(.vertical, 14)
+            .frame(height: 52)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -266,19 +275,20 @@ struct SearchFilterSheet: View {
     // MARK: Cuisine
 
     private var cuisineContent: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Recipes from any of these cuisines")
-                .font(.custom("OpenSans-Regular", size: 14))
-                .foregroundColor(Color("GraniteGray"))
+                .font(SaltFont.body)
+                .foregroundStyle(SaltColor.textSecondary)
             ChipFlow(spacing: 8) {
                 ForEach(RecipeSearchFilters.cuisineOptions, id: \.self) { cuisine in
-                    OptionChip(title: cuisine, isSelected: draft.cuisines.contains(cuisine)) {
+                    SaltChip(title: cuisine, isSelected: draft.cuisines.contains(cuisine)) {
                         if draft.cuisines.contains(cuisine) {
                             draft.cuisines.remove(cuisine)
                         } else {
                             draft.cuisines.insert(cuisine)
                         }
                     }
+                    .accessibilityAddTraits(draft.cuisines.contains(cuisine) ? .isSelected : [])
                 }
             }
         }
@@ -287,19 +297,21 @@ struct SearchFilterSheet: View {
     // MARK: Meal type
 
     private var mealTypeContent: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Recipes of any of these types")
-                .font(.custom("OpenSans-Regular", size: 14))
-                .foregroundColor(Color("GraniteGray"))
+                .font(SaltFont.body)
+                .foregroundStyle(SaltColor.textSecondary)
             ChipFlow(spacing: 8) {
-                ForEach(MealType.allCases) { mealType in
-                    OptionChip(title: mealType.displayName, isSelected: draft.mealTypes.contains(mealType)) {
-                        if draft.mealTypes.contains(mealType) {
-                            draft.mealTypes.remove(mealType)
+                // The same categories as the chips on Explore
+                ForEach(DishType.all) { dishType in
+                    SaltChip(title: dishType.displayName, isSelected: draft.dishTypes.contains(dishType.name)) {
+                        if draft.dishTypes.contains(dishType.name) {
+                            draft.dishTypes.remove(dishType.name)
                         } else {
-                            draft.mealTypes.insert(mealType)
+                            draft.dishTypes.insert(dishType.name)
                         }
                     }
+                    .accessibilityAddTraits(draft.dishTypes.contains(dishType.name) ? .isSelected : [])
                 }
             }
         }
@@ -312,7 +324,7 @@ struct SearchFilterSheet: View {
         case .ingredients: !draft.ingredients.isEmpty || !ingredientText.isEmpty
         case .time: draft.maxTotalMinutes != nil
         case .cuisine: !draft.cuisines.isEmpty
-        case .mealType: !draft.mealTypes.isEmpty
+        case .mealType: !draft.dishTypes.isEmpty
         }
     }
 
@@ -323,7 +335,7 @@ struct SearchFilterSheet: View {
             ingredientText = ""
         case .time: draft.maxTotalMinutes = nil
         case .cuisine: draft.cuisines = []
-        case .mealType: draft.mealTypes = []
+        case .mealType: draft.dishTypes = []
         }
     }
 
@@ -337,29 +349,28 @@ struct SearchFilterSheet: View {
     }
 }
 
-/// Selectable chip in the filter sheets
-private struct OptionChip: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
+/// Half-height white sheet; Cuisine and Meal type can grow to full height
+private struct FilterSheetSizing: ViewModifier {
+    let isTall: Bool
 
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.custom(isSelected ? "OpenSans-SemiBold" : "OpenSans-Regular", size: 14))
-                .foregroundColor(isSelected ? .white : .primary)
-                .padding(.horizontal, 14)
-                .frame(height: 34)
-                .background(Capsule().fill(isSelected ? Color("Orange") : Color(.systemBackground)))
-                .overlay(Capsule().stroke(isSelected ? Color("Orange") : Color("DarkSilver"), lineWidth: 1))
+    func body(content: Content) -> some View {
+        if isTall {
+            content
+                .padding(.horizontal, SaltSpacing.screenMargin)
+                .padding(.top, 32)
+                .padding(.bottom, 16)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(SaltRadius.sheet)
+                .presentationBackground(SaltColor.surfaceScreen)
+        } else {
+            content.saltFittedSheet()
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
 /// Lays chips out in rows, wrapping to the next row when one is full
-private struct ChipFlow: Layout {
+struct ChipFlow: Layout {
     var spacing: CGFloat = 8
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {

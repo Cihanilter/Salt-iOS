@@ -89,6 +89,16 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
+    /// Free imports a free user has left, for the quiet counters on Add Recipe and the import
+    /// sheets; nil when imports are unlimited (Premium, subscriptions off) or the count is unknown
+    func freeImportsLeft() async -> Int? {
+        guard RevenueCatConfig.isEnabled, Purchases.isConfigured, !isPremium else { return nil }
+        guard let used = try? await RecipeService.shared.getImportedRecipesCount() else { return nil }
+        // Premium may have arrived while the count was loading
+        guard !isPremium else { return nil }
+        return max(0, RevenueCatConfig.freeImportLimit - used)
+    }
+
     /// Whether the user has Premium, checked with RevenueCat; nil when it can't be told
     /// (subscriptions off, or RevenueCat unreachable), so nothing is sold to someone who may have it
     func verifiedPremiumStatus() async -> Bool? {

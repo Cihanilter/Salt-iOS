@@ -16,11 +16,15 @@ final class CollectionsManager: ObservableObject {
     @Published private(set) var collections: [RecipeCollection] = []
     @Published private(set) var hasLoaded = false
 
-    /// Empty example collection every new user starts with
-    static let starterNames = ["Holiday Favorites"]
+    /// Members of shared collections, for the avatar stacks (loaded on demand)
+    @Published private(set) var membersById: [UUID: [CollectionMember]] = [:]
 
-    /// Starter names, including ones earlier versions created ("Planned"), so they're listed last
-    private static let listedLastNames: Set<String> = Set(starterNames + ["Planned"])
+    /// Empty starter collection every new user starts with: a real collection (renameable,
+    /// deletable) that gives the first "Add to collection" a ready home
+    static let starterNames = ["Dinner ideas"]
+
+    /// Starter names, including ones earlier versions created, so they're listed last
+    private static let listedLastNames: Set<String> = Set(starterNames + ["Planned", "Holiday Favorites"])
 
     /// The user's own collections first (in creation order), then their starter collection,
     /// so the ones they made appear at the top
@@ -207,7 +211,50 @@ final class CollectionsManager: ObservableObject {
     }
 
     func members(of collectionId: UUID) async throws -> [CollectionMember] {
-        try await service.members(of: collectionId)
+        let members = try await service.members(of: collectionId)
+        membersById[collectionId] = members
+        return members
+    }
+
+    /// Loads a shared collection's members once, for its avatars
+    func loadMembersIfNeeded(for collectionId: UUID) async {
+        guard membersById[collectionId] == nil,
+              collection(id: collectionId)?.isShared == true else { return }
+        _ = try? await members(of: collectionId)
+    }
+
+    /// Everyone in the collection, owner first
+    func cachedMembers(of collectionId: UUID) -> [CollectionMember] {
+        (membersById[collectionId] ?? []).sorted { $0.isOwner && !$1.isOwner }
+    }
+
+    /// Changes what a member can do (owner only)
+    func setRole(_ role: CollectionRole, of userId: UUID, in collectionId: UUID) async throws {
+        try await service.setRole(role, of: userId, in: collectionId)
+        if let index = collections.firstIndex(where: { $0.id == collectionId }) {
+            collections[index].memberRoles[userId] = role
+        }
+        if let index = membersById[collectionId]?.firstIndex(where: { $0.userId == userId }) {
+            membersById[collectionId]?[index].role = role
+        }
+        Analytics.log(.collectionMemberRoleChanged, ["role": role.rawValue])
+    }
+
+    /// The role people get when they join with the invite link (owner only)
+    func setNewMemberRole(_ role: CollectionRole, in collectionId: UUID) async throws {
+        try await service.setNewMemberRole(role, in: collectionId)
+        if let index = collections.firstIndex(where: { $0.id == collectionId }) {
+            collections[index].newMemberRole = role
+        }
+    }
+
+    /// How long the invite link works (owner only); reloads to pick up the new expiry date
+    func setInviteExpiry(days: Int?, in collectionId: UUID) async throws {
+        try await service.setInviteExpiry(days: days, in: collectionId)
+        if let index = collections.firstIndex(where: { $0.id == collectionId }) {
+            collections[index].inviteExpiryDays = days
+        }
+        await load()
     }
 
     /// Removes someone from the collection (owner only)
@@ -216,6 +263,7 @@ final class CollectionsManager: ObservableObject {
         if let index = collections.firstIndex(where: { $0.id == collectionId }) {
             collections[index].memberIds.removeAll { $0 == userId }
         }
+        membersById[collectionId]?.removeAll { $0.userId == userId }
         Analytics.log(.collectionMemberRemoved)
     }
 

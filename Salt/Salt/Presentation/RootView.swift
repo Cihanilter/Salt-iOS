@@ -13,16 +13,7 @@ struct RootView: View {
         ZStack {
             // Main content
             Group {
-                if authManager.isLoading {
-                    // Show loading screen while checking auth state
-                    SplashView()
-                } else if authManager.isAuthenticated {
-                    // User is authenticated, show main app
-                    MainTabView()
-                } else {
-                    // User is not authenticated, show auth flow
-                    AuthCoordinatorView()
-                }
+                authContent
             }
 
             // Splash overlay (shows for ~1 second after launch)
@@ -44,6 +35,21 @@ struct RootView: View {
                     showSplash = false
                 }
             }
+        }
+    }
+}
+
+extension RootView {
+    @ViewBuilder private var authContent: some View {
+        if authManager.isLoading {
+            // Show loading screen while checking auth state
+            SplashView()
+        } else if authManager.isAuthenticated {
+            // User is authenticated, show main app
+            MainTabView()
+        } else {
+            // User is not authenticated, show auth flow
+            AuthCoordinatorView()
         }
     }
 }

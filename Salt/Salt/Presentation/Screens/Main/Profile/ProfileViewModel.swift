@@ -150,12 +150,39 @@ class ProfileViewModel: ObservableObject {
         isEditing = false
     }
 
+    /// Longest bio shown under the name
+    static let maxBioLength = 120
+
+    /// Something in Edit profile differs from the saved profile (Save is active only then)
+    var hasEditChanges: Bool {
+        editFullName.trimmingCharacters(in: .whitespacesAndNewlines) != (userProfile?.fullName ?? "")
+            || editBio != (userProfile?.bio ?? "")
+            || Set(editFavoriteCuisines) != Set(userProfile?.favoriteCuisines ?? [])
+    }
+
+    var hasProfileImage: Bool {
+        !(userProfile?.profileImageUrl ?? "").isEmpty
+    }
+
+    /// Removes the profile photo; the avatar goes back to initials
+    func removeProfileImage() async {
+        isUploadingImage = true
+        do {
+            try await profileService.updateProfileImageUrl("")
+            userProfile?.profileImageUrl = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isUploadingImage = false
+    }
+
     func saveProfile() async -> Bool {
         isLoading = true
         errorMessage = nil
 
         do {
             // Save to Supabase
+            editFullName = editFullName.trimmingCharacters(in: .whitespacesAndNewlines)
             try await profileService.upsertProfile(
                 fullName: editFullName,
                 bio: editBio.isEmpty ? nil : editBio,

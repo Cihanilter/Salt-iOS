@@ -15,10 +15,14 @@ class RecipeImportViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var importedRecipe: ImportedRecipe?
     @Published var errorMessage: String?
+    /// The last import's error, so the sheets can pick the right next step
+    @Published var lastError: RecipeImportError?
     @Published var showingPreview = false
     @Published var savedSuccessfully = false
     /// The last saved recipe, for the "Add to a collection?" prompt
     private(set) var savedRecipeId: UUID?
+    /// The last saved recipe, opened on the recipe page after an import
+    private(set) var savedRecipe: UserRecipe?
 
     // MARK: - Private Properties
 
@@ -45,6 +49,7 @@ class RecipeImportViewModel: ObservableObject {
 
         isLoading = true
         errorMessage = nil
+        lastError = nil
         importedRecipe = nil
         // Reset so the view sees this import's save as a change and clears the link again
         savedSuccessfully = false
@@ -71,6 +76,7 @@ class RecipeImportViewModel: ObservableObject {
             print("❌ Import error: \(error)")
             let importError = RecipeImportError.from(error)
             errorMessage = importError.errorDescription
+            lastError = importError
             Analytics.log(.importFailed, [
                 "source": source,
                 "entry": entry,
@@ -109,6 +115,7 @@ class RecipeImportViewModel: ObservableObject {
     ) async {
         isLoading = true
         errorMessage = nil
+        lastError = nil
         importedRecipe = nil
         savedSuccessfully = false
 
@@ -135,6 +142,7 @@ class RecipeImportViewModel: ObservableObject {
             print("❌ \(source) import error: \(error)")
             let importError = RecipeImportError.from(error)
             errorMessage = importError.errorDescription
+            lastError = importError
             Analytics.log(.importFailed, [
                 "source": source,
                 "entry": entry,
@@ -210,11 +218,13 @@ class RecipeImportViewModel: ObservableObject {
                 sourceName: recipeDetail.sourceName ?? importedRecipe?.sourceName
             )
 
-            savedRecipeId = try await RecipeService.shared.saveRecipeDetail(
+            let saved = try await RecipeService.shared.saveRecipeDetail(
                 finalRecipeDetail,
                 sourceUrl: linkSourceUrl,
                 source: importedRecipe?.origin.recipeSource
-            ).id
+            )
+            savedRecipe = saved
+            savedRecipeId = saved.id
             print("✅ Saved edited recipe: \(recipeDetail.title)")
             Analytics.log(.recipeImported, [
                 "source": importedSource,
@@ -234,6 +244,7 @@ class RecipeImportViewModel: ObservableObject {
     func clearImport() {
         importedRecipe = nil
         errorMessage = nil
+        lastError = nil
         showingPreview = false
     }
 }

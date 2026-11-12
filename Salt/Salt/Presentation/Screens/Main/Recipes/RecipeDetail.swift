@@ -2,9 +2,13 @@
 //  RecipeDetail.swift
 //  Salt
 //
-
+//  The recipe page (Figma "Recipe detail — Final"): hero photo with glass top bar
+//  (back, Cooking mode, bookmark for Explore recipes, … menu), the beige title card,
+//  then Description, Ingredients, Instructions, Notes & tips and Nutrition.
+//
 
 import SwiftUI
+import PhotosUI
 import RevenueCat
 import RevenueCatUI
 
@@ -53,7 +57,7 @@ extension Recipe {
             title: title,
             duration: durationText,
             ingredientsCount: "\(ingredientCount) ingredients",
-            description: description ?? "No description available",
+            description: description ?? "",
             servings: servingsDisplayText,
             prepTime: prepDisplay,
             cookTime: cookDisplay,
@@ -142,15 +146,19 @@ struct RecipeDetailView: View {
     @State private var recipeId: UUID?
     @State private var userRecipeId: UUID?  // For user-created/imported recipes (enables edit/delete)
     var mode: RecipeDetailMode = .regular
-    /// Shown above the content while reviewing an unsaved recipe (e.g. one taken from a video's audio)
+    /// Shown above the content, e.g. for a recipe pieced together from a video's audio
     var previewNotice: String? = nil
+    /// After the user's first saved recipe: offers to put it in a collection (SaveToCollectionPrompt)
+    var offersCollectionPrompt = false
+    /// Create flow preview: "Edit recipe" and back return to the form (everything kept)
+    var editReturnsToForm = false
 
     // Callbacks for preview mode - no parameters, data is in PendingSaveDataStorage
     var onSave: (() async -> Bool)? = nil
     /// The recipe once `onSave` succeeds; when set, offers to add it to a collection
     var savedRecipeId: (() -> UUID?)? = nil
 
-    // Callbacks for saved state
+    // Callbacks for saved state (shared recipe links): show the "Saved to My Recipes" card
     var onAddMoreRecipes: (() -> Void)? = nil
     var onGoToMyRecipes: (() -> Void)? = nil
 
@@ -159,12 +167,15 @@ struct RecipeDetailView: View {
     @State private var showSavedHeader = false
     @State private var hasBeenSaved = false  // Track if recipe was saved (persists after closing saved header)
     @State private var editSheet: EditSheet?
-    @State private var toastMessage: String?  // Short confirmation at the bottom (copy saved, recipe saved)
-    @State private var toastTask: Task<Void, Never>?
     @State private var showingDeleteAlert = false
-    @State private var isDeleting = false
     @State private var pendingPhotoImages: [UIImage] = []  // New photos added in edit mode (for display only)
+    @State private var coverPhotoItem: PhotosPickerItem?
     @State private var isCookingModeOn = false  // Keeps the screen awake while viewing the recipe
+    /// The labeled pill is shown for the first 3 times Cooking mode is turned on, then only the icon
+    @AppStorage("cookingMode.timesTurnedOn") private var cookingModeUses = 0
+    @State private var cookingModeShowsLabel = true
+    @State private var didShowCookingToast = false
+    @State private var showingCookingPremium = false
     @State private var isEstimatingNutrition = false  // AI estimate running for a saved recipe opened without nutrition
     @State private var isCreatingShareLink = false
     @State private var shareLink: ShareLinkItem?
@@ -172,10 +183,20 @@ struct RecipeDetailView: View {
     @State private var collectionTarget: CollectionRecipeRef?
     /// Just-saved recipe for the "Add to a collection?" prompt
     @State private var collectionPromptRef: CollectionRecipeRef?
+    @State private var didOfferCollectionPrompt = false
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var bookmarkManager = BookmarkManager.shared
     @ObservedObject private var subscriptionManager = SubscriptionManager.shared
-    @State private var showingPaywall = false
+    /// Where the paywall was opened from, for analytics and what to do after upgrading
+    @State private var paywallSource: PaywallSource?
+    /// Default units are set in Profile; the … menu changes them too
+    @AppStorage("preferredUnitSystem") private var preferredUnits: UnitSystem?
+
+    private enum PaywallSource: String, Identifiable {
+        case nutritionLock = "nutrition_lock"
+        case cookingMode = "cooking_mode"
+        var id: String { rawValue }
+    }
 
     // Custom init to handle @State initialization
     init(
@@ -184,6 +205,8 @@ struct RecipeDetailView: View {
         userRecipeId: UUID? = nil,
         mode: RecipeDetailMode = .regular,
         previewNotice: String? = nil,
+        offersCollectionPrompt: Bool = false,
+        editReturnsToForm: Bool = false,
         pendingPhotos: [UIImage] = [],
         onSave: (() async -> Bool)? = nil,
         savedRecipeId: (() -> UUID?)? = nil,
@@ -195,6 +218,8 @@ struct RecipeDetailView: View {
         self._userRecipeId = State(initialValue: userRecipeId)
         self.mode = mode
         self.previewNotice = previewNotice
+        self.offersCollectionPrompt = offersCollectionPrompt
+        self.editReturnsToForm = editReturnsToForm
         self._pendingPhotoImages = State(initialValue: pendingPhotos)
         self.onSave = onSave
         self.savedRecipeId = savedRecipeId
@@ -207,6 +232,21 @@ struct RecipeDetailView: View {
         mode == .preview && !hasBeenSaved
     }
 
+    /// The create flow's preview: back + "Preview" on top, Save / Edit sticky at the bottom
+    private var isCreatePreview: Bool {
+        isUnsavedPreview && editReturnsToForm
+    }
+
+    /// A saved recipe: opened from the database, or a preview that has just been saved
+    private var isSavedRecipe: Bool {
+        mode == .regular || (hasBeenSaved && userRecipeId != nil)
+    }
+
+    /// A recipe from Salt's own catalog (Explore), not yet customized
+    private var isExploreRecipe: Bool {
+        recipeId != nil && userRecipeId == nil && mode == .regular
+    }
+
     private var isBookmarked: Bool {
         guard let id = recipeId else { return false }
         return bookmarkManager.isBookmarked(id)
@@ -217,28 +257,58 @@ struct RecipeDetailView: View {
         if isUnsavedPreview {
             return { editSheet = .preview }
         }
-        if userRecipeId != nil && mode == .regular {
+        if userRecipeId != nil && isSavedRecipe {
             return { editSheet = .ownRecipe }
         }
         return nil
     }
 
-    /// Explore/saved recipes are shared, so they're customized as the user's own copy
-    private var canCustomize: Bool {
-        recipeId != nil && userRecipeId == nil && mode == .regular
-    }
-
     /// Saved recipes (the user's own and Explore ones) can be shared with a link
     private var canShare: Bool {
-        mode == .regular && (userRecipeId ?? recipeId) != nil
+        isSavedRecipe && (userRecipeId ?? recipeId) != nil
     }
 
     /// The recipe as a collection entry; nil for unsaved previews
     private var collectionRef: CollectionRecipeRef? {
-        guard mode == .regular else { return nil }
+        guard isSavedRecipe else { return nil }
         if let userRecipeId { return .own(userRecipeId) }
         if let recipeId { return .explore(recipeId) }
         return nil
+    }
+
+    /// Units as the recipe is written, when it has anything to convert
+    private var recipeUnits: UnitSystem? {
+        UnitConverter.system(of: recipe.ingredients)
+    }
+
+    /// Explore recipes are Salt's own catalog: no "Original Recipe" link and no credit line
+    private var showsSource: Bool {
+        !isExploreRecipe
+    }
+
+    /// "@handle · Instagram" or "site.com", only for imported recipes
+    private var sourceCredit: String? {
+        guard showsSource, let sourceUrl = recipe.sourceUrl, !sourceUrl.isEmpty else { return nil }
+        if let platform = SocialPlatform(url: sourceUrl) {
+            let handle = Self.handle(in: sourceUrl)
+                ?? recipe.sourceName.flatMap { name in
+                    let trimmed = name.trimmingCharacters(in: .whitespaces)
+                    // Only a real account name, not the platform or its domain
+                    guard !trimmed.isEmpty, !trimmed.contains(" "), !trimmed.contains("."),
+                          trimmed.lowercased() != platform.name.lowercased() else { return nil }
+                    return trimmed.hasPrefix("@") ? trimmed : "@\(trimmed)"
+                }
+            return handle.map { "\($0) · \(platform.name)" } ?? platform.name
+        }
+        guard let host = URL(string: sourceUrl)?.host else { return recipe.sourceName }
+        return host.replacingOccurrences(of: "www.", with: "")
+    }
+
+    /// The account in links like tiktok.com/@name/video/… or youtube.com/@name
+    private static func handle(in url: String) -> String? {
+        guard let components = URL(string: url)?.pathComponents,
+              let handle = components.first(where: { $0.hasPrefix("@") && $0.count > 1 }) else { return nil }
+        return handle
     }
 
     /// Nutrition is a Premium feature: free users see a locked card instead of the values
@@ -258,7 +328,7 @@ struct RecipeDetailView: View {
     private var nutritionPlaceholder: (message: String, inProgress: Bool)? {
         guard recipe.nutrition == nil, RecipeService.canEstimateNutrition(from: recipe.ingredients) else { return nil }
         if isUnsavedPreview {
-            return ("Save this recipe to see its nutrition in My Recipes.", false)
+            return ("Save this recipe to see its nutrition.", false)
         }
         if mode == .preview {
             // Just saved from this screen; the estimate runs in the background
@@ -273,77 +343,51 @@ struct RecipeDetailView: View {
     var body: some View {
         ScrollViewReader { scrollProxy in
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 24) {
-                    // Image Carousel
-                    ImageCarousel(
+                VStack(alignment: .leading, spacing: 0) {
+                    RecipeHero(
                         images: recipe.images,
                         pendingImages: pendingPhotoImages,
                         currentIndex: $currentImageIndex,
-                        onBack: { dismiss() },
-                        isBookmarked: isBookmarked,
-                        onBookmarkTap: recipeId.map { id in
-                            {
-                                Task {
-                                    await toggleBookmark(id)
-                                }
-                            }
-                        },
-                        showMenuButton: userRecipeId != nil,
-                        onDelete: userRecipeId != nil ? {
-                            showingDeleteAlert = true
-                        } : nil,
-                        onEdit: editAction,
-                        // Discards the unsaved recipe and goes back to the form / link field
-                        onCancel: isUnsavedPreview ? { dismiss() } : nil,
-                        onCustomize: canCustomize ? { editSheet = .customize } : nil,
-                        onShare: canShare ? { Task { await createShareLink() } } : nil,
-                        onAddToCollection: collectionRef.map { ref in { collectionTarget = ref } }
+                        coverPhotoItem: isUnsavedPreview ? $coverPhotoItem : nil
                     )
+                    .overlay(alignment: .top) { topBar }
                     .id("top")  // Anchor for scrolling to top
 
-                    // Info Card - shows saved state or normal state
-                    if showSavedHeader {
-                        SavedRecipeInfoCard(
-                            onClose: {
-                                withAnimation {
-                                    showSavedHeader = false
-                                }
-                            },
-                            onAddMoreRecipes: onAddMoreRecipes,
-                            onGoToMyRecipes: onGoToMyRecipes
-                        )
-                        .padding(.horizontal)
-                        .offset(y: -60)
-                    } else {
-                        RecipeInfoCard(
-                            title: recipe.title,
-                            duration: recipe.duration,
-                            ingredientsCount: recipe.ingredientsCount,
-                            sourceUrl: recipe.sourceUrl
-                        )
-                        .padding(.horizontal)
-                        .offset(y: -60)
+                    // Title card overlaps the hero photo
+                    Group {
+                        if showSavedHeader {
+                            SavedRecipeInfoCard(
+                                onClose: {
+                                    withAnimation { showSavedHeader = false }
+                                },
+                                onAddMoreRecipes: onAddMoreRecipes,
+                                onGoToMyRecipes: onGoToMyRecipes
+                            )
+                        } else {
+                            RecipeInfoCard(
+                                title: recipe.title,
+                                duration: recipe.duration,
+                                ingredientsCount: recipe.ingredientsCount,
+                                sourceUrl: showsSource ? recipe.sourceUrl : nil,
+                                sourceCredit: sourceCredit
+                            )
+                        }
                     }
+                    .padding(.horizontal, 40)
+                    .padding(.top, -64)
 
-                    // Content
-                    VStack(alignment: .leading, spacing: 20) {
-                        if isUnsavedPreview, let previewNotice {
+                    // Content starts 32 below the card
+                    VStack(alignment: .leading, spacing: SaltSpacing.section) {
+                        if let previewNotice, mode == .regular || isUnsavedPreview {
                             PreviewNoticeBanner(text: previewNotice)
                         }
 
-                        // Description
-                        DescriptionSection(text: recipe.description)
-
-                        // Time Info
-                        TimeInfoSection(
+                        DescriptionSection(
+                            text: recipe.description,
                             prepTime: recipe.prepTime,
                             cookTime: recipe.cookTime
                         )
 
-                        // Cooking Mode (keep screen awake)
-                        CookingModeToggle(isOn: $isCookingModeOn)
-
-                        // Ingredients
                         IngredientsSection(
                             ingredients: recipe.ingredients,
                             servings: recipe.servings,
@@ -352,42 +396,25 @@ struct RecipeDetailView: View {
                             languageSample: [recipe.title] + recipe.instructions
                         )
 
-                        // Instructions
-                        InstructionsSection(instructions: recipe.instructions)
+                        if !recipe.instructions.isEmpty {
+                            InstructionsSection(instructions: recipe.instructions)
+                        }
 
-                        // Notes & Tips, only when the recipe has notes.
-                        // The source link lives in the info card at the top.
+                        // Notes & tips: a plain section, only when the recipe has notes
                         if !recipe.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             NotesSection(notes: recipe.notes)
                         }
 
-                        // Nutrition (per serving), at the very bottom; hidden when there's no data
-                        // and no estimate coming
-                        if isNutritionLocked {
-                            if hasNutritionToUnlock {
-                                // Sample values only, so the real ones aren't on screen or read out
-                                NutritionSection(
-                                    nutrition: NutritionSection.placeholderValues,
-                                    onUnlock: { showingPaywall = true }
-                                )
-                            }
-                        } else if let nutrition = recipe.nutrition, NutritionSection.hasValues(nutrition) {
-                            NutritionSection(nutrition: nutrition, isEstimated: recipe.nutritionEstimated)
-                        } else if let placeholder = nutritionPlaceholder {
-                            NutritionSection(
-                                nutrition: NutritionSection.placeholderValues,
-                                placeholderMessage: placeholder.message,
-                                placeholderInProgress: placeholder.inProgress
-                            )
-                        }
+                        nutritionSection
                     }
-                    .padding(.horizontal)
-                    .offset(y: -40)
+                    .padding(.horizontal, SaltSpacing.screenMargin)
+                    .padding(.top, SaltSpacing.section)
                 }
-                .padding(.bottom, 30)
+                .padding(.bottom, isUnsavedPreview ? 24 : SaltSpacing.bottomTabPadding)
             }
+            .background(SaltColor.surfaceScreen)
             .safeAreaInset(edge: .bottom) {
-                // Pinned so Save is always visible while reviewing; users missed it at the end of the content
+                // Pinned so Save is always reachable while reviewing
                 if isUnsavedPreview {
                     previewButtons
                         .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -395,7 +422,6 @@ struct RecipeDetailView: View {
             }
             .onChange(of: showSavedHeader) { _, saved in
                 if saved {
-                    // Scroll to top when recipe is saved
                     withAnimation {
                         scrollProxy.scrollTo("top", anchor: .top)
                     }
@@ -404,7 +430,7 @@ struct RecipeDetailView: View {
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
-        // Hide the tab bar while reviewing a new recipe so the Save footer is the only bottom action
+        // No tab bar while reviewing a new recipe: the user is still inside the create flow
         .toolbar(isUnsavedPreview ? .hidden : .automatic, for: .tabBar)
         .ignoresSafeArea(edges: .top)
         .sheet(item: $editSheet) { sheet in
@@ -413,7 +439,6 @@ struct RecipeDetailView: View {
                     initialRecipe: recipe,
                     isEditMode: true,
                     onUpdate: sheet == .preview ? { updatedRecipe, newPhotos in
-                        // Update recipe
                         recipe = updatedRecipe
                         // Store photos locally for display in carousel
                         pendingPhotoImages = newPhotos
@@ -422,35 +447,46 @@ struct RecipeDetailView: View {
                     onSaveChanges: sheet == .preview ? nil : { updatedRecipe, newPhotos in
                         try await saveEdits(updatedRecipe, newPhotos: newPhotos, for: sheet)
                     },
-                    saveChangesTitle: sheet == .customize ? "Save Copy" : "Save Changes",
+                    saveChangesTitle: "Save changes",
                     editNotice: sheet == .customize
                         ? "Your changes are saved as your own copy in My Recipes. The original recipe isn't affected."
-                        : nil
+                        : nil,
+                    onCancel: { editSheet = nil }
                 )
                 .navigationTitle(sheet == .customize ? "Customize" : "Edit Recipe")
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Cancel") {
-                            editSheet = nil
-                        }
-                    }
-                }
             }
+            .interactiveDismissDisabled()
         }
-        .sheet(isPresented: $showingPaywall) {
+        .sheet(isPresented: $showingCookingPremium, onDismiss: {
+            if pendingCookingPaywall {
+                pendingCookingPaywall = false
+                paywallSource = .cookingMode
+            }
+        }) {
+            PremiumFeatureSheet(
+                title: String(localized: "Keep your screen on"),
+                message: String(localized: "Your screen stays on while you cook,\nso you can follow every step hands-free."),
+                onTryPremium: {
+                    pendingCookingPaywall = true
+                    showingCookingPremium = false
+                },
+                onNotNow: { showingCookingPremium = false }
+            )
+        }
+        .sheet(item: $paywallSource) { source in
             // Remote paywall: shows whatever is attached to the current offering in the RevenueCat dashboard
             PaywallView(displayCloseButton: true)
                 .onAppear {
-                    Analytics.log(.paywallShown, ["source": "nutrition_lock"])
+                    Analytics.log(.paywallShown, ["source": source.rawValue])
                 }
                 .onPurchaseCompleted { customerInfo in
-                    Analytics.log(.subscriptionStarted, ["source": "nutrition_lock"])
-                    unlockNutritionAfterUpgrade(customerInfo)
+                    Analytics.log(.subscriptionStarted, ["source": source.rawValue])
+                    continueAfterUpgrade(customerInfo, from: source)
                 }
                 .onRestoreCompleted { customerInfo in
-                    Analytics.log(.purchasesRestored, ["source": "nutrition_lock"])
-                    unlockNutritionAfterUpgrade(customerInfo)
+                    Analytics.log(.purchasesRestored, ["source": source.rawValue])
+                    continueAfterUpgrade(customerInfo, from: source)
                 }
         }
         .sheet(item: $collectionTarget) { ref in
@@ -475,29 +511,17 @@ struct RecipeDetailView: View {
             if isCreatingShareLink {
                 HStack(spacing: 8) {
                     ProgressView()
-                        .tint(.white)
-                        .scaleEffect(0.8)
+                        .controlSize(.small)
                     Text("Creating link…")
-                        .font(.custom("OpenSans-SemiBold", size: 14))
-                        .foregroundColor(.white)
+                        .font(SaltFont.bodyStrong)
+                        .foregroundStyle(SaltColor.textPrimary)
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Capsule().fill(Color.black.opacity(0.8)))
-                .padding(.bottom, 24)
+                .frame(height: 44)
+                .background(SaltColor.surfaceScreen, in: Capsule())
+                .overlay(Capsule().stroke(SaltColor.borderSubtle, lineWidth: 1))
+                .padding(.bottom, 100)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
-        .overlay(alignment: .bottom) {
-            if let toastMessage {
-                Text(toastMessage)
-                    .font(.custom("OpenSans-SemiBold", size: 14))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(Capsule().fill(Color.black.opacity(0.8)))
-                    .padding(.bottom, 24)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .task {
@@ -505,55 +529,242 @@ struct RecipeDetailView: View {
             // just saved whose estimate is still running) and show it as soon as it arrives
             await estimateNutritionIfNeeded()
         }
+        .task {
+            guard offersCollectionPrompt, !didOfferCollectionPrompt, let userRecipeId else { return }
+            didOfferCollectionPrompt = true
+            // Lets the saved toast show for a moment first
+            try? await Task.sleep(for: .seconds(1.5))
+            collectionPromptRef = .own(userRecipeId)
+        }
         .onAppear {
             Analytics.screen(mode == .preview ? "Recipe Preview" : "Recipe Detail")
+            cookingModeShowsLabel = cookingModeUses < 3
         }
         .onChange(of: isCookingModeOn) { _, isOn in
             UIApplication.shared.isIdleTimerDisabled = isOn
         }
+        .onChange(of: coverPhotoItem) { _, item in
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) {
+                    pendingPhotoImages.insert(image, at: 0)
+                    currentImageIndex = 0
+                }
+                coverPhotoItem = nil
+            }
+        }
         .onDisappear {
-            // Clean up storage when view disappears (back button, etc.)
-            PendingSaveDataStorage.shared.clear()
-            // Restore normal auto-lock when leaving the recipe
+            // Leaving the recipe turns Cooking mode off and restores normal auto-lock
+            isCookingModeOn = false
             UIApplication.shared.isIdleTimerDisabled = false
         }
-        .alert("Delete Recipe", isPresented: $showingDeleteAlert) {
+        .alert("Delete this recipe?", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
-                Task {
-                    await deleteUserRecipe()
-                }
+                deleteUserRecipe()
             }
         } message: {
-            Text("Are you sure you want to delete this recipe? This action cannot be undone.")
+            Text("It will be removed from My Recipes and all your collections.")
         }
     }
 
-    // MARK: - Toast
+    @State private var pendingCookingPaywall = false
 
-    /// Shows a short message at the bottom; a new message replaces the current one
-    private func showToast(_ message: String) {
-        toastTask?.cancel()
-        withAnimation { toastMessage = message }
-        toastTask = Task {
-            try? await Task.sleep(for: .seconds(2.5))
-            guard !Task.isCancelled else { return }
-            withAnimation { toastMessage = nil }
+    // MARK: - Top Bar
+
+    private var topBar: some View {
+        HStack(spacing: 8) {
+            Button {
+                dismiss()
+            } label: {
+                SaltGlassCircle {
+                    Image(systemName: "arrow.left")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(SaltColor.iconDefault)
+                }
+            }
+            .accessibilityLabel("Back")
+
+            Spacer()
+
+            if isCreatePreview {
+                Text("Preview")
+                    .font(SaltFont.bodyStrong)
+                    .foregroundStyle(SaltColor.textPrimary)
+                    .padding(.horizontal, 16)
+                    .frame(height: 38)
+                    .background(SaltColor.surfaceScreen, in: Capsule())
+                Spacer()
+                // Keeps "Preview" centered
+                Color.clear.frame(width: 40, height: 40)
+            } else {
+                if !isUnsavedPreview {
+                    CookingModeButton(
+                        isOn: isCookingModeOn,
+                        isLocked: !subscriptionManager.hasPremiumAccess,
+                        showsLabel: cookingModeShowsLabel || !subscriptionManager.hasPremiumAccess,
+                        action: toggleCookingMode
+                    )
+                }
+
+                if isExploreRecipe, let recipeId {
+                    Button {
+                        Task { await toggleBookmark(recipeId) }
+                    } label: {
+                        // Same bookmark as the Explore cards, in the top bar's 40pt slot
+                        SaltBookmarkCircle(isBookmarked: isBookmarked)
+                            .frame(width: 40, height: 40)
+                            .contentShape(Circle())
+                    }
+                    .accessibilityLabel(isBookmarked ? "Remove from Saved" : "Save recipe")
+                }
+
+                Menu {
+                    menuContent
+                } label: {
+                    SaltGlassCircle {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(SaltColor.iconDefault)
+                    }
+                }
+                // Figma: dark menu icons; only Delete is colored (red, as destructive)
+                .tint(SaltColor.textPrimary)
+                .accessibilityLabel("More")
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 54)
+    }
+
+    /// Native menu; order does the emphasis: Add to Collection, Share | Edit/Customize, Units | Delete
+    @ViewBuilder private var menuContent: some View {
+        if collectionRef != nil || canShare {
+            Section {
+                if let collectionRef {
+                    Button {
+                        collectionTarget = collectionRef
+                    } label: {
+                        Label("Add to Collection", systemImage: "text.badge.plus")
+                    }
+                }
+                if canShare {
+                    Button {
+                        Task { await createShareLink() }
+                    } label: {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                    }
+                }
+            }
+        }
+
+        Section {
+            if let editAction {
+                Button(action: editAction) {
+                    Label("Edit", systemImage: "pencil")
+                }
+            } else if isExploreRecipe {
+                // Makes the user's own editable copy (saved and marked "Edited")
+                Button {
+                    editSheet = .customize
+                } label: {
+                    Label("Customize", systemImage: "pencil")
+                }
+            }
+            if let recipeUnits {
+                Picker(selection: Binding(
+                    get: { preferredUnits ?? recipeUnits },
+                    set: { preferredUnits = $0 }
+                )) {
+                    Text("Imperial").tag(UnitSystem.imperial)
+                    Text("Metric").tag(UnitSystem.metric)
+                } label: {
+                    Label("Units", systemImage: "list.bullet.rectangle")
+                }
+                .pickerStyle(.menu)
+            }
+        }
+
+        if userRecipeId != nil && isSavedRecipe {
+            Section {
+                Button(role: .destructive) {
+                    showingDeleteAlert = true
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        } else if isUnsavedPreview {
+            Section {
+                // Discards the unsaved recipe
+                Button(role: .destructive) {
+                    dismiss()
+                } label: {
+                    Label("Cancel", systemImage: "xmark")
+                }
+            }
+        }
+    }
+
+    // MARK: - Nutrition
+
+    @ViewBuilder private var nutritionSection: some View {
+        // Hidden when there's no data and no estimate coming
+        if isNutritionLocked {
+            if hasNutritionToUnlock {
+                // Sample values only, so the real ones aren't on screen or read out.
+                // Unlock opens the paywall directly; the card already explains it.
+                NutritionSection(
+                    nutrition: NutritionSection.placeholderValues,
+                    onUnlock: { paywallSource = .nutritionLock }
+                )
+            }
+        } else if let nutrition = recipe.nutrition, NutritionSection.hasValues(nutrition) {
+            NutritionSection(nutrition: nutrition, isEstimated: recipe.nutritionEstimated)
+        } else if let placeholder = nutritionPlaceholder {
+            NutritionSection(
+                nutrition: NutritionSection.placeholderValues,
+                placeholderMessage: placeholder.message,
+                placeholderInProgress: placeholder.inProgress
+            )
+        }
+    }
+
+    // MARK: - Cooking Mode
+
+    /// Premium: keeps the screen awake. Free users get a short sheet about the feature.
+    private func toggleCookingMode() {
+        guard subscriptionManager.hasPremiumAccess else {
+            showingCookingPremium = true
+            return
+        }
+        withAnimation(.easeInOut(duration: 0.2)) { isCookingModeOn.toggle() }
+        guard isCookingModeOn else { return }
+        cookingModeUses += 1
+        Analytics.log(.cookingModeTurnedOn)
+        // Confirmed once per recipe
+        if !didShowCookingToast {
+            didShowCookingToast = true
+            SaltToastCenter.shared.show(
+                String(localized: "Cooking mode is on"),
+                detail: String(localized: "Your screen will stay awake on this recipe."),
+                systemImage: "sun.max",
+                duration: .seconds(3.5)
+            )
         }
     }
 
     // MARK: - Bookmark
 
-    /// Saves (or unsaves) an Explore recipe from the menu and confirms it with a toast
+    /// Saves (or unsaves) an Explore recipe; saving shows the standard saved toast
     private func toggleBookmark(_ id: UUID) async {
         let wasBookmarked = bookmarkManager.isBookmarked(id)
         let isNowBookmarked = await bookmarkManager.toggleBookmark(for: id)
         if isNowBookmarked == wasBookmarked {
-            showToast(String(localized: "Couldn't update. Please try again."))
+            SaltToastCenter.shared.show(String(localized: "Couldn't update. Please try again."), showsCheck: false)
         } else if isNowBookmarked {
-            showToast(String(localized: "Saved to My Recipes"))
+            SaltToastCenter.shared.showSaved(.explore(id))
         } else {
-            showToast(String(localized: "Removed from Saved"))
+            SaltToastCenter.shared.dismiss()
         }
     }
 
@@ -583,7 +794,7 @@ struct RecipeDetailView: View {
         editSheet = nil
 
         if sheet == .customize {
-            showToast(String(localized: "Copy saved to My Recipes"))
+            SaltToastCenter.shared.showSaved(.own(saved.id))
         }
 
         // Changed ingredients/servings cleared the old nutrition; the estimate keeps running
@@ -591,17 +802,22 @@ struct RecipeDetailView: View {
         Task { await estimateNutritionIfNeeded() }
     }
 
-    /// Estimates nutrition for a user recipe that has none and shows it once it arrives
-    /// Closes the paywall once the user has Premium and gets this recipe's nutrition if it has none yet
-    private func unlockNutritionAfterUpgrade(_ customerInfo: CustomerInfo) {
+    /// Closes the paywall once the user has Premium and continues with what they wanted
+    private func continueAfterUpgrade(_ customerInfo: CustomerInfo, from source: PaywallSource) {
         subscriptionManager.update(with: customerInfo)
         // A restore with no active subscription leaves the paywall open
         guard subscriptionManager.hasPremiumAccess else { return }
 
-        showingPaywall = false
-        Task { await estimateNutritionIfNeeded() }
+        paywallSource = nil
+        switch source {
+        case .nutritionLock:
+            Task { await estimateNutritionIfNeeded() }
+        case .cookingMode:
+            toggleCookingMode()
+        }
     }
 
+    /// Estimates nutrition for a user recipe that has none and shows it once it arrives
     private func estimateNutritionIfNeeded() async {
         guard subscriptionManager.hasPremiumAccess,
               let userRecipeId, recipe.nutrition == nil,
@@ -647,78 +863,74 @@ struct RecipeDetailView: View {
 
     // MARK: - Delete User Recipe
 
-    private func deleteUserRecipe() async {
+    /// Back to My Recipes with "Recipe deleted · Undo"; the recipe is deleted once the toast is gone
+    private func deleteUserRecipe() {
         guard let recipeId = userRecipeId else { return }
-
-        isDeleting = true
-        do {
-            try await MyRecipesViewModel.shared.deleteRecipe(id: recipeId)
-            await MainActor.run {
-                dismiss()
-            }
-        } catch {
-            print("Failed to delete recipe: \(error)")
-        }
-        isDeleting = false
+        MyRecipesViewModel.shared.deleteRecipeWithUndo(id: recipeId)
+        dismiss()
     }
 
     // MARK: - Preview Footer (Save)
 
-    /// Bottom bar shown while reviewing a created/imported recipe that hasn't been saved yet.
-    /// Edit and Cancel live in the top-right menu so Save is the single primary action.
+    /// Sticky bottom while reviewing a recipe that hasn't been saved yet: Save recipe (main
+    /// action) and Edit recipe (back to the form, nothing lost)
     private var previewButtons: some View {
-        Group {
-            Button(action: {
+        VStack(spacing: 4) {
+            Button {
                 // Store ALL data in shared storage BEFORE async call
-                // This completely avoids passing any data through closures
                 PendingSaveDataStorage.shared.store(recipe: recipe, photos: pendingPhotoImages)
-
-                Task {
-                    isSaving = true
-                    if let save = onSave {
-                        let success = await save()
-                        if success {
-                            withAnimation {
-                                hasBeenSaved = true
-                                showSavedHeader = true
-                            }
-                            if let id = savedRecipeId?() {
-                                // Lets "Saved to My Recipes" show for a moment first
-                                Task {
-                                    try? await Task.sleep(for: .seconds(1.5))
-                                    collectionPromptRef = .own(id)
-                                }
-                            }
-                        }
-                    }
-                    isSaving = false
-                }
-            }) {
-                HStack {
-                    if isSaving {
-                        ProgressView()
-                            .tint(.white)
-                            .scaleEffect(0.8)
-                    }
-                    Text("Save Recipe")
-                        .font(.custom("OpenSans-SemiBold", size: 16))
-                        .foregroundColor(.white)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(Color("Orange"))
-                .cornerRadius(10)
+                Task { await save() }
+            } label: {
+                SaltButtonLabel(title: "Save recipe", isLoading: isSaving)
             }
+            .buttonStyle(.salt())
+            .allowsHitTesting(!isSaving)
+
+            Button("Edit recipe") {
+                if editReturnsToForm {
+                    dismiss()
+                } else {
+                    editSheet = .preview
+                }
+            }
+            .buttonStyle(.salt(.text))
             .disabled(isSaving)
         }
-        .padding(.horizontal)
+        .padding(.horizontal, SaltSpacing.screenMargin)
         .padding(.top, 12)
-        .padding(.bottom, 8)
         .background(
-            Color(.systemBackground)
-                .shadow(color: Color.black.opacity(0.08), radius: 6, y: -2)
+            SaltColor.surfaceScreen
+                .overlay(alignment: .top) {
+                    Rectangle().fill(SaltColor.borderSubtle).frame(height: 1)
+                }
                 .ignoresSafeArea(edges: .bottom)
         )
+    }
+
+    private func save() async {
+        guard let onSave else { return }
+        isSaving = true
+        let success = await onSave()
+        isSaving = false
+        guard success else { return }
+
+        withAnimation { hasBeenSaved = true }
+        let savedId = savedRecipeId?()
+        if onAddMoreRecipes != nil || onGoToMyRecipes != nil {
+            // Shared recipe links keep their "Saved to My Recipes" card
+            withAnimation { showSavedHeader = true }
+        } else {
+            userRecipeId = savedId
+            SaltToastCenter.shared.showSaved(savedId.map { .own($0) })
+        }
+        // Once per account, so another account on the same phone still gets it
+        let promptKey = "collectionPrompt.shown.\(AuthManager.shared.currentUser?.id ?? "")"
+        if let savedId, !UserDefaults.standard.bool(forKey: promptKey) {
+            UserDefaults.standard.set(true, forKey: promptKey)
+            // Lets "Saved to My Recipes" show for a moment first
+            try? await Task.sleep(for: .seconds(1.5))
+            collectionPromptRef = .own(savedId)
+        }
     }
 }
 
@@ -730,7 +942,7 @@ struct ShareLinkItem: Identifiable {
     var id: URL { url }
 }
 
-// MARK: - Saved Recipe Info Card (replaces normal card after save)
+// MARK: - Saved Recipe Info Card (shared recipe links, after saving)
 
 struct SavedRecipeInfoCard: View {
     var onClose: (() -> Void)?
@@ -738,154 +950,81 @@ struct SavedRecipeInfoCard: View {
     var onGoToMyRecipes: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: 12) {
-            // Close button
+        VStack(spacing: 16) {
             HStack {
                 Spacer()
-                Button(action: {
+                Button {
                     onClose?()
-                }) {
-                    Image("closeIcon")
-                        .resizable()
-                        .frame(width: 24, height: 24)
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(SaltColor.textSecondary)
+                        .frame(width: 44, height: 44)
                 }
+                .accessibilityLabel("Close")
             }
-            .padding(.trailing, 8)
-            .padding(.top, 4)
+            .padding(.bottom, -28)
 
-            // Success message
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
+                SaltSuccessBadge(size: 28)
                 Text("Saved to My Recipes")
-                    .font(.custom("Playfair9pt-Bold", size: 22))
-                    .foregroundColor(Color("OrangeRed"))
-                Image("done")
-                    .resizable()
-                    .frame(width: 25, height: 25)
+                    .font(SaltFont.h3)
+                    .foregroundStyle(SaltColor.textPrimary)
             }
 
-            // Add More Recipes button
-            Button(action: {
-                onAddMoreRecipes?()
-            }) {
-                HStack(spacing: 6) {
-                    Text("Add More Recipes")
-                        .font(.custom("Playfair9pt-SemiBold", size: 18))
-                        .foregroundColor(.primary)
-                    ZStack {
-                        Circle()
-                            .fill(Color("Orange"))
-                            .frame(width: 20, height: 20)
-                        Image("addNewRecipeIcon")
-                            .resizable()
-                            .frame(width: 30, height: 30)
-                    }
+            VStack(spacing: 8) {
+                if let onGoToMyRecipes {
+                    Button("Go to My Recipes", action: onGoToMyRecipes)
+                        .buttonStyle(.salt(.primary, size: .small, fullWidth: true))
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Color.white)
-                .cornerRadius(25)
+                if let onAddMoreRecipes {
+                    Button("Add more recipes", action: onAddMoreRecipes)
+                        .buttonStyle(.salt(.secondary, size: .small, fullWidth: true))
+                }
             }
-
-            // Go to My Recipes button
-            Button(action: {
-                onGoToMyRecipes?()
-            }) {
-                Text("Go to My Recipes")
-                    .font(.custom("Playfair9pt-SemiBold", size: 18))
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(Color.white)
-                    .cornerRadius(25)
-
-            }
-            .padding(.bottom, 8)
         }
-        .frame(width: 322)
-        .padding(.all, 24)
-        .background(Color("PeachCream"))
-        .cornerRadius(10)
-        .shadow(color: Color.black.opacity(0.25), radius: 4, x: 0, y: 4)
+        .padding(20)
         .frame(maxWidth: .infinity)
+        .background(SaltColor.surfaceRecipeCard, in: RoundedRectangle(cornerRadius: SaltRadius.titleCard, style: .continuous))
+        .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
     }
 }
 
-// MARK: - Image Carousel
+// MARK: - Hero
 
-struct ImageCarousel: View {
+/// Hero photo(s). Without a photo: a soft cream cover, with "Add a cover photo" while previewing.
+struct RecipeHero: View {
     let images: [String]
     var pendingImages: [UIImage] = []  // New photos not yet uploaded
     @Binding var currentIndex: Int
-    let onBack: () -> Void
-    var isBookmarked: Bool = false
-    var onBookmarkTap: (() -> Void)? = nil
-    var showMenuButton: Bool = false
-    var onDelete: (() -> Void)? = nil
-    // Edit: unsaved preview or the user's own recipe; Cancel: unsaved preview only
-    var onEdit: (() -> Void)? = nil
-    var onCancel: (() -> Void)? = nil
-    // Explore/saved recipes: edit as the user's own copy
-    var onCustomize: (() -> Void)? = nil
-    // Saved recipes: share with a link
-    var onShare: (() -> Void)? = nil
-    // Saved recipes: add to or remove from collections
-    var onAddToCollection: (() -> Void)? = nil
+    /// Set while previewing an unsaved recipe: the empty cover opens the photo library
+    var coverPhotoItem: Binding<PhotosPickerItem?>?
+
+    static let height: CGFloat = 280
 
     private var totalImageCount: Int {
         images.count + pendingImages.count
     }
 
-    private var hasMenuActions: Bool {
-        (showMenuButton && onDelete != nil) || onEdit != nil || onCancel != nil || onCustomize != nil
-            || onShare != nil || onAddToCollection != nil || onBookmarkTap != nil
-    }
-
     var body: some View {
         ZStack {
-            // Placeholder when no images
             if totalImageCount == 0 {
-                Rectangle()
-                    .fill(Color("LightGrayishPink"))
-                    .frame(height: 280)
-                    .overlay(
-                        VStack(spacing: 12) {
-                            Image(systemName: "photo.on.rectangle")
-                                .font(.system(size: 48))
-                                .foregroundColor(Color("GraniteGray"))
-                            Text("No photo")
-                                .font(.custom("OpenSans-Regular", size: 16))
-                                .foregroundColor(Color("GraniteGray"))
-                        }
-                    )
+                emptyCover
             } else {
-                // Images
                 TabView(selection: $currentIndex) {
-                    // URL-based images
                     ForEach(0..<images.count, id: \.self) { index in
                         CachedAsyncImage(url: URL(string: images[index])) { phase in
                             switch phase {
-                            case .empty:
-                                Rectangle()
-                                    .fill(Color(.systemGray5))
-                                    .overlay(ProgressView())
                             case .success(let image):
                                 image
                                     .resizable()
                                     .scaledToFill()
-                            case .failure:
-                                Rectangle()
-                                    .fill(Color(.systemGray5))
-                                    .overlay(
-                                        Image(systemName: "photo")
-                                            .foregroundColor(.gray)
-                                    )
-                            @unknown default:
-                                EmptyView()
+                            default:
+                                SaltColor.surfaceControl
                             }
                         }
                         .tag(index)
                     }
-                    // Pending UIImage photos (not yet uploaded)
                     ForEach(0..<pendingImages.count, id: \.self) { index in
                         Image(uiImage: pendingImages[index])
                             .resizable()
@@ -893,151 +1032,104 @@ struct ImageCarousel: View {
                             .tag(images.count + index)
                     }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .frame(height: 280)
-            }
-
-            // Top buttons (Back + Bookmark)
-            VStack {
-                HStack {
-                    Button(action: onBack) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.white.opacity(0.5))
-                                .frame(width: 40, height: 40)
-
-                            Image("backIcon")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 22, height: 22)
-                        }
-                    }
-                    .padding(.leading, 16)
-
-                    Spacer()
-
-                    // Menu button (user recipes: Edit / Delete; unsaved preview: Edit / Cancel;
-                    // Explore/saved recipes: Save / Customize)
-                    if hasMenuActions {
-                        Menu {
-                            // Explore recipes: save to (or remove from) My Recipes > Saved
-                            if let onBookmarkTap {
-                                Button(action: onBookmarkTap) {
-                                    Label(
-                                        isBookmarked ? "Remove from Saved" : "Save Recipe",
-                                        systemImage: isBookmarked ? "bookmark.slash" : "bookmark"
-                                    )
-                                }
-                            }
-                            if let onShare {
-                                Button(action: onShare) {
-                                    Label("Share", systemImage: "square.and.arrow.up")
-                                }
-                            }
-                            if let onAddToCollection {
-                                Button(action: onAddToCollection) {
-                                    Label("Add to Collection", systemImage: "folder.badge.plus")
-                                }
-                            }
-                            if let onEdit {
-                                Button(action: onEdit) {
-                                    Label("Edit", systemImage: "pencil")
-                                }
-                            }
-                            if let onCustomize {
-                                Button(action: onCustomize) {
-                                    Label("Customize", systemImage: "square.and.pencil")
-                                }
-                            }
-                            if let onCancel {
-                                Button(role: .destructive, action: onCancel) {
-                                    Label("Cancel", systemImage: "xmark")
-                                }
-                            }
-                            if showMenuButton, let onDelete {
-                                Button(role: .destructive, action: onDelete) {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
-                        } label: {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.white.opacity(0.5))
-                                    .frame(width: 40, height: 40)
-
-                                Image(systemName: "ellipsis")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.black)
-                            }
-                        }
-                        .padding(.trailing, 16)
-                    }
-
-                    // Bookmark button
-//                    if let onBookmarkTap = onBookmarkTap {
-//                        Button(action: onBookmarkTap) {
-//                            ZStack {
-//                                Circle()
-//                                    .fill(Color.white.opacity(0.5))
-//                                    .frame(width: 32, height: 32)
-//
-//                                Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-//                                    .font(.system(size: 14))
-//                                    .foregroundColor(isBookmarked ? Color("OrangeRed") : .black)
-//                            }
-//                        }
-//                        .padding(.trailing, 16)
-//                    }
-                }
-                .padding(.top, 50)
-
-                Spacer()
-            }
-            
-            // Next Button with gradient (right side)
-            if totalImageCount > 1 {
-                HStack {
-                    Spacer()
-
-                    ZStack(alignment: .trailing) {
-                        // Gradient
-                        LinearGradient(
-                            stops: [
-                                .init(color: Color("Nero"), location: -3),
-                                .init(color: Color.clear, location: 1)
-                            ],
-                            startPoint: .trailing,
-                            endPoint: .leading
-                        )
-                        .frame(width: 50, height: 280)
-
-                        // Next Button
-                        Button(action: {
-                            withAnimation {
-                                currentIndex = (currentIndex + 1) % totalImageCount
-                            }
-                        }) {
-                            Image("nextIcon")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 24, height: 24)
-                        }
-                        .padding(.trailing, 16)
-                    }
-                }
+                .tabViewStyle(.page(indexDisplayMode: totalImageCount > 1 ? .automatic : .never))
             }
         }
-        .frame(height: 280)
+        .frame(height: Self.height)
+        .frame(maxWidth: .infinity)
+        .clipped()
+    }
+
+    @ViewBuilder private var emptyCover: some View {
+        let cover = SaltColor.surfaceWarmSubtle
+        if let coverPhotoItem {
+            PhotosPicker(selection: coverPhotoItem, matching: .images) {
+                ZStack {
+                    cover
+                    VStack(spacing: 8) {
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(SaltColor.textSecondary)
+                        Text("Add a cover photo")
+                            .font(SaltFont.bodyLarge)
+                            .foregroundStyle(SaltColor.textSecondary)
+                    }
+                    // Clear of the top bar and the title card
+                    .padding(.top, 36)
+                    .padding(.bottom, 30)
+                }
+            }
+            .buttonStyle(.plain)
+        } else {
+            ZStack {
+                cover
+                Image(systemName: "fork.knife")
+                    .font(.system(size: 30))
+                    .foregroundStyle(SaltColor.textDisabled)
+                    .padding(.bottom, 40)
+            }
+        }
+    }
+}
+
+// MARK: - Cooking Mode Button
+
+/// Labeled pill ("☀︎ Cooking mode") for the first 3 uses, then only the icon in a glass circle.
+/// On: deeper peach with an orange icon and label. Free: a small gray lock after the label.
+struct CookingModeButton: View {
+    let isOn: Bool
+    let isLocked: Bool
+    let showsLabel: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Group {
+                if showsLabel {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sun.max")
+                            .font(.system(size: 16))
+                            .foregroundStyle(SaltColor.iconAccent)
+                        Text(isOn ? "Cooking mode on" : "Cooking mode")
+                            .font(SaltFont.bodyLarge)
+                            .foregroundStyle(isOn ? SaltColor.textAccent : SaltColor.textPrimary)
+                        if isLocked {
+                            Image(systemName: "lock")
+                                .font(.system(size: 12))
+                                .foregroundStyle(SaltColor.textSecondary)
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .frame(height: 40)
+                    .background(isOn ? SaltColor.surfaceWarmStrong : Color.white.opacity(0.92), in: Capsule())
+                } else {
+                    SaltGlassCircle(isActive: isOn) {
+                        Image(systemName: "sun.max")
+                            .font(.system(size: 17))
+                            .foregroundStyle(isOn ? SaltColor.iconAccent : SaltColor.iconDefault)
+                    }
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Cooking mode")
+        .accessibilityValue(isOn ? "On" : "Off")
+        .accessibilityHint(isLocked ? "Premium feature. Keeps your screen awake." : "Keeps your screen awake")
+        .help("Cooking mode")
     }
 }
 
 // MARK: - Recipe Info Card
 
+/// Beige title card: Playfair title, pink time + ingredients icons, optional "Original Recipe ↗"
+/// link and a gray source credit line under it ("@handle · Instagram" or "site.com").
 struct RecipeInfoCard: View {
     let title: String
     let duration: String
     let ingredientsCount: String
     var sourceUrl: String? = nil
+    var sourceCredit: String? = nil
 
     /// Link to the page the recipe was imported from, if any
     private var sourceLink: URL? {
@@ -1046,175 +1138,164 @@ struct RecipeInfoCard: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 0) {
             Text(title)
-                .font(.custom("Playfair9pt-SemiBold", size: 18))
+                .font(SaltFont.h3)
+                .foregroundStyle(SaltColor.textPrimary)
                 .lineLimit(2)
                 .truncationMode(.tail)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 16)
 
-            HStack(spacing: 66) {
-                HStack(spacing: 3) {
-                    Image("timerIcon")
-                        .resizable()
-                        .renderingMode(.template)
-                        .frame(width: 24, height: 24)
-                        .foregroundColor(Color("SoftPink"))
-                    
-                    Text(duration)
-                        .font(.custom("Playfair9pt-Regular", size: 16))
-                }
-                
-                HStack(spacing: 3) {
-                    Image("nutritionIcon")
-                        .resizable()
-                        .renderingMode(.template)
-                        .frame(width: 24, height: 24)
-                        .foregroundColor(Color("SoftPink"))
-                    
-                    Text(ingredientsCount)
-                        .font(.custom("Playfair9pt-Regular", size: 16))
-                }
+            HStack {
+                Spacer(minLength: 0)
+                RecipeMetaItem(icon: "timerIcon", text: duration)
+                Spacer(minLength: 16)
+                RecipeMetaItem(icon: "nutritionIcon", text: ingredientsCount)
+                Spacer(minLength: 0)
             }
+            .padding(.top, 16)
 
-            // Original source for imported recipes; the arrow icon signals it opens a link
             if let sourceLink {
                 Link(destination: sourceLink) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 6) {
                         Text("Original Recipe")
-                            .font(.custom("OpenSans-SemiBold", size: 14))
+                            .font(SaltFont.openSans(17, semibold: true))
                         Image(systemName: "arrow.up.right.square")
-                            .font(.system(size: 12))
+                            .font(.system(size: 15))
                     }
-                    .foregroundColor(Color("OrangeRed"))
+                    .foregroundStyle(SaltColor.textAccent)
+                    .frame(minHeight: 32)
+                }
+                .padding(.top, 12)
+
+                if let sourceCredit {
+                    Text(sourceCredit)
+                        .font(SaltFont.caption)
+                        .foregroundStyle(SaltColor.textSecondary)
+                        .lineLimit(1)
                 }
             }
         }
-        .padding(.vertical, 16)
-        .frame(width: 322)
-        .background(Color("Alabaster"))
-        .cornerRadius(10)
-        .shadow(color: Color.black.opacity(0.25), radius: 4, x: 0, y: 4)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 22)
         .frame(maxWidth: .infinity)
+        .background(SaltColor.surfaceRecipeCard, in: RoundedRectangle(cornerRadius: SaltRadius.titleCard, style: .continuous))
+        .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
+    }
+}
+
+/// Pink recipe meta icon + Playfair value (Label/Meta), e.g. "⏱ 25 min"
+struct RecipeMetaItem: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(icon)
+                .resizable()
+                .renderingMode(.template)
+                .frame(width: 24, height: 24)
+                .foregroundStyle(SaltColor.iconMeta)
+            Text(text)
+                .font(SaltFont.labelMeta)
+                .foregroundStyle(SaltColor.textPrimary)
+                .lineLimit(1)
+        }
     }
 }
 
 // MARK: - Preview Notice Banner
 
-/// Heads-up shown on an unsaved preview, e.g. when the recipe was taken from a video's audio
+/// Heads-up shown above the content, e.g. when the recipe was taken from a video's audio
 struct PreviewNoticeBanner: View {
     let text: String
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "waveform")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(Color("OrangeRed"))
-                .padding(.top, 2)
+            Image(systemName: "info.circle")
+                .font(.system(size: 16))
+                .foregroundStyle(SaltColor.textSecondary)
+                .padding(.top, 1)
 
             Text(text)
-                .font(.custom("OpenSans-Regular", size: 14))
+                .font(SaltFont.body)
+                .foregroundStyle(SaltColor.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(12)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color("OrangeRed").opacity(0.08))
-        .cornerRadius(10)
+        .background(SaltColor.surfaceWarmSubtle, in: RoundedRectangle(cornerRadius: SaltRadius.card, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 }
 
 // MARK: - Description Section
 
+/// Description, then one time line under it: "⏱ Prep 10 min · Cook 15 min"
 struct DescriptionSection: View {
     let text: String
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Description")
-                .font(.custom("Playfair9pt-SemiBold", size: 22))
-            
-            Text(text)
-                .font(.custom("OpenSans-Regular", size: 16))
-        }
-    }
-}
-
-// MARK: - Time Info Section
-
-// Servings live in the Ingredients section, where they can be adjusted
-struct TimeInfoSection: View {
     let prepTime: String
     let cookTime: String
 
+    private var hasDescription: Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty && trimmed != "No description available"
+    }
+
+    /// "Prep 10 min · Cook 15 min"; nil when the recipe gives no times
+    private var timeLine: String? {
+        var parts: [String] = []
+        if TimeValue.hasTime(prepTime) { parts.append(String(localized: "Prep \(TimeValue.minutes(prepTime)) min")) }
+        if TimeValue.hasTime(cookTime) { parts.append(String(localized: "Cook \(TimeValue.minutes(cookTime)) min")) }
+        return parts.isEmpty ? nil : parts.joined(separator: "  ·  ")
+    }
+
     var body: some View {
-        // Hidden when the recipe gives no times at all (e.g. a note or photo without them)
-        if TimeInfoItem.hasTime(prepTime) || TimeInfoItem.hasTime(cookTime) {
-            HStack(spacing: 25) {
-                TimeInfoItem(value: prepTime, label: "Prep time")
-                TimeInfoItem(value: cookTime, label: "Cook time")
+        if hasDescription || timeLine != nil {
+            VStack(alignment: .leading, spacing: 0) {
+                if hasDescription {
+                    Text("Description")
+                        .font(SaltFont.h2)
+                        .foregroundStyle(SaltColor.textPrimary)
+                        .accessibilityAddTraits(.isHeader)
+                    Text(text)
+                        .font(SaltFont.bodyLarge)
+                        .foregroundStyle(SaltColor.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, SaltSpacing.titleToContent)
+                }
+                if let timeLine {
+                    HStack(spacing: 8) {
+                        Image("timerIcon")
+                            .resizable()
+                            .renderingMode(.template)
+                            .frame(width: 20, height: 20)
+                            .foregroundStyle(SaltColor.iconMeta)
+                        Text(timeLine)
+                            .font(SaltFont.labelMeta)
+                            .foregroundStyle(SaltColor.textPrimary)
+                    }
+                    .padding(.top, hasDescription ? 16 : 0)
+                    .accessibilityElement(children: .combine)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
 
-struct TimeInfoItem: View {
-    let value: String
-    let label: String
-
+/// Prep/cook values as stored ("10", "0" or empty when not given)
+enum TimeValue {
     /// "0" or an empty value means the recipe doesn't give this time
     static func hasTime(_ value: String) -> Bool {
         let value = value.trimmingCharacters(in: .whitespaces)
         return !value.isEmpty && value != "0"
     }
 
-    var body: some View {
-        VStack(spacing: 4) {
-            ZStack {
-                Circle()
-                    .fill(Color("LightGrayishPink"))
-                    .frame(width: 57, height: 57)
-
-                if Self.hasTime(value) {
-                    VStack(spacing: 0) {
-                        Text(value)
-                            .font(.custom("Playfair9pt-Regular", size: 18))
-
-                        Text("mins")
-                            .font(.custom("Playfair9pt-Regular", size: 14))
-                    }
-                } else {
-                    // Not given by the recipe; a dash rather than a made-up "0 mins"
-                    Text("–")
-                        .font(.custom("Playfair9pt-Regular", size: 18))
-                        .accessibilityLabel("Not given")
-                }
-            }
-
-            Text(label)
-                .font(.custom("OpenSans-Regular", size: 14))
-        }
-    }
-}
-
-// MARK: - Cooking Mode Toggle
-
-struct CookingModeToggle: View {
-    @Binding var isOn: Bool
-
-    var body: some View {
-        Toggle(isOn: $isOn) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Cooking Mode")
-                    .font(.custom("Playfair9pt-SemiBold", size: 18))
-
-                Text("Keep screen awake")
-                    .font(.custom("OpenSans-Regular", size: 14))
-                    .foregroundColor(Color("GraniteGray"))
-            }
-        }
-        .tint(Color("Orange"))
+    static func minutes(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespaces)
+            .replacingOccurrences(of: " mins", with: "")
+            .replacingOccurrences(of: " min", with: "")
     }
 }
 
@@ -1247,9 +1328,12 @@ struct IngredientsSection: View {
     /// Ingredients swapped while viewing the recipe; the recipe itself isn't changed
     @State private var swaps: [IngredientPosition: Substitute] = [:]
     @State private var replaceSheet: ReplaceSheet?
+    /// Changed amounts flash orange for ~1s after the servings change
+    @State private var flashesAmounts = false
+    @State private var flashTask: Task<Void, Never>?
     /// Swapping ingredients is a Premium feature
     @ObservedObject private var subscriptionManager = SubscriptionManager.shared
-    /// The units the user last picked, kept for every recipe; nil = as each recipe is written
+    /// Chosen in Profile or the … menu; nil = as each recipe is written
     @AppStorage("preferredUnitSystem") private var preferredUnits: UnitSystem?
 
     private var baseServings: Int? { IngredientScaler.baseServings(from: servings) }
@@ -1267,24 +1351,14 @@ struct IngredientsSection: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Ingredients")
-                    .font(.custom("Playfair9pt-SemiBold", size: 22))
-                    .task(id: languageSample) {
-                        ingredientsAreEnglish = IngredientScaler.isEnglish(languageSample.isEmpty ? ingredients : languageSample)
-                    }
-
-                Spacer()
-
-                // Hidden when nothing is measured in cups, grams, ounces etc.; there's nothing to convert
-                if let recipeUnits = UnitConverter.system(of: ingredients) {
-                    UnitSystemPicker(selection: Binding(
-                        get: { preferredUnits ?? recipeUnits },
-                        set: { preferredUnits = $0 }
-                    ))
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Ingredients")
+                .font(SaltFont.h2)
+                .foregroundStyle(SaltColor.textPrimary)
+                .accessibilityAddTraits(.isHeader)
+                .task(id: languageSample) {
+                    ingredientsAreEnglish = IngredientScaler.isEnglish(languageSample.isEmpty ? ingredients : languageSample)
                 }
-            }
 
             // Hidden when the recipe doesn't say how many it serves; there's nothing to scale from
             if let base = baseServings {
@@ -1293,17 +1367,19 @@ struct IngredientsSection: View {
                     original: base,
                     onChange: { selectedServings = $0 == base ? nil : $0 }
                 )
+                .padding(.top, 4)
+                .padding(.leading, -7)  // Aligns the visible circle (not its 44pt tap area) with the text
             }
 
             // Imported recipes can group ingredients (Marinade, Crema, Pico de gallo).
             // Lines can repeat (e.g. "Salt" in two groups), so everything is identified by position.
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
                 ForEach(Array(positions.enumerated()), id: \.offset) { _, section in
-                    VStack(alignment: .leading, spacing: 5) {
+                    VStack(alignment: .leading, spacing: 12) {
                         if let heading = section.heading {
                             Text(heading)
-                                .font(.custom("OpenSans-SemiBold", size: 16))
-                                .padding(.bottom, 2)
+                                .font(SaltFont.h3)
+                                .foregroundStyle(SaltColor.textPrimary)
                                 .accessibilityAddTraits(.isHeader)
                         }
                         ForEach(section.positions) { position in
@@ -1312,31 +1388,38 @@ struct IngredientsSection: View {
                     }
                 }
             }
+            .padding(.top, baseServings == nil ? SaltSpacing.titleToContent : 12)
 
             if !ingredients.isEmpty {
-                // A quiet link like the servings Reset, so it doesn't compete with the ingredients
+                // A quiet link, so it doesn't compete with the ingredients
                 Button {
                     replaceSheet = subscriptionManager.hasPremiumAccess ? .pickIngredient : .paywall
                 } label: {
-                    HStack(spacing: 5) {
+                    HStack(spacing: 6) {
                         Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 12))
+                            .font(.system(size: 13))
                         Text("Swap an ingredient")
-                            .font(.custom("OpenSans-Regular", size: 14))
+                            .font(SaltFont.bodyStrong)
                         if !subscriptionManager.hasPremiumAccess {
-                            Image(systemName: "lock.fill")
-                                .font(.system(size: 10))
-                                .foregroundColor(Color("GraniteGray"))
+                            Image(systemName: "lock")
+                                .font(.system(size: 11))
+                                .foregroundStyle(SaltColor.textSecondary)
                         }
                     }
-                    .foregroundColor(Color("Orange"))
+                    .foregroundStyle(SaltColor.textAccent)
+                    .frame(minHeight: 44)
                 }
+                .padding(.top, 8)
                 .accessibilityHint(subscriptionManager.hasPremiumAccess ? "" : "Premium feature")
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         // The recipe was edited (preview mode); start again from its servings
         .onChange(of: servings) { _, _ in
             selectedServings = nil
+        }
+        .onChange(of: selectedServings) { _, _ in
+            flashChangedAmounts()
         }
         // Swaps are tied to positions, which no longer match after an edit
         .onChange(of: ingredients) { _, _ in
@@ -1402,6 +1485,16 @@ struct IngredientsSection: View {
         replaceSheet = .pickIngredient
     }
 
+    private func flashChangedAmounts() {
+        flashTask?.cancel()
+        flashesAmounts = true
+        flashTask = Task {
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.4)) { flashesAmounts = false }
+        }
+    }
+
     /// The line as written, or the substitute in use with the original below it.
     /// Swapped lines can be tapped to pick another substitute or go back to the original.
     @ViewBuilder
@@ -1410,20 +1503,20 @@ struct IngredientsSection: View {
             Button {
                 replaceSheet = .ingredient(position)
             } label: {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Image(systemName: "arrow.triangle.2.circlepath")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(Color("Orange"))
+                            .foregroundStyle(SaltColor.iconAccent)
                             .accessibilityHidden(true)
                         Text(scaled(swap.line))
-                            .font(.custom("OpenSans-Regular", size: 16))
+                            .font(SaltFont.bodyLarge)
+                            .foregroundStyle(SaltColor.textPrimary)
                     }
                     Text("instead of \(scaled(position.text))")
-                        .font(.custom("OpenSans-Regular", size: 13))
-                        .foregroundColor(Color("GraniteGray"))
+                        .font(SaltFont.caption)
+                        .foregroundStyle(SaltColor.textSecondary)
                 }
-                .foregroundColor(.primary)
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
@@ -1431,9 +1524,39 @@ struct IngredientsSection: View {
             .buttonStyle(.plain)
             .accessibilityHint("Change or undo the substitute")
         } else {
-            Text(scaled(position.text))
-                .font(.custom("OpenSans-Regular", size: 16))
+            amountHighlighted(scaled(position.text))
+                .font(SaltFont.bodyLarge)
+                .foregroundStyle(SaltColor.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    /// The line with its amount (and unit) in orange while the flash is on
+    private func amountHighlighted(_ line: String) -> Text {
+        guard flashesAmounts,
+              let range = Self.amountRange(in: line) else { return Text(line) }
+        let amount = String(line[range])
+        let rest = String(line[range.upperBound...])
+        return Text(amount).foregroundColor(SaltColor.textAccent) + Text(rest)
+    }
+
+    private static let units: Set<String> = [
+        "cup", "cups", "tbsp", "tsp", "tablespoon", "tablespoons", "teaspoon", "teaspoons",
+        "g", "kg", "gram", "grams", "ml", "l", "liter", "liters", "litre", "litres",
+        "oz", "ounce", "ounces", "lb", "lbs", "pound", "pounds", "fl", "pinch", "pinches",
+        "clove", "cloves", "can", "cans", "stick", "sticks", "slice", "slices"
+    ]
+
+    /// The leading amount ("2 ¼ cups", "300 g") of an amount-first line
+    private static func amountRange(in line: String) -> Range<String.Index>? {
+        guard let number = line.range(of: #"^[\d½¼¾⅓⅔⅛⅜⅝⅞⅙⅚⅕/.,\-–\s]*[\d½¼¾⅓⅔⅛⅜⅝⅞⅙⅚⅕]"#, options: .regularExpression) else { return nil }
+        var end = number.upperBound
+        let remainder = line[end...]
+        let word = remainder.drop(while: { $0 == " " }).prefix(while: { $0.isLetter || $0 == "." })
+        if units.contains(word.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))) {
+            end = line.index(remainder.startIndex, offsetBy: remainder.distance(from: remainder.startIndex, to: word.endIndex))
+        }
+        return line.startIndex..<end
     }
 
     /// Amount first ("½ cup milk"), scaled to the selected servings, in the selected units
@@ -1448,21 +1571,7 @@ struct IngredientsSection: View {
     }
 }
 
-/// "Imperial | Metric" switch for the ingredient amounts and oven temperatures
-struct UnitSystemPicker: View {
-    @Binding var selection: UnitSystem
-
-    var body: some View {
-        Picker("Units", selection: $selection) {
-            Text("Imperial").tag(UnitSystem.imperial)
-            Text("Metric").tag(UnitSystem.metric)
-        }
-        .pickerStyle(.segmented)
-        .fixedSize()
-    }
-}
-
-/// "−  4 servings  +" control for scaling the ingredient amounts
+/// Pink stepper ("−  4 servings  +") and, once changed, "Scaled from 4 servings · Reset"
 struct ServingsStepper: View {
     let servings: Int
     let original: Int
@@ -1471,21 +1580,14 @@ struct ServingsStepper: View {
     private let range = 1...99
 
     var body: some View {
-        HStack(spacing: 14) {
-            HStack(spacing: 14) {
-                stepButton(systemName: "minus", isEnabled: servings > range.lowerBound) {
-                    onChange(servings - 1)
-                }
-
-                Text(servings == 1 ? "1 serving" : "\(servings) servings")
-                    .font(.custom("OpenSans-Regular", size: 16))
-                    .monospacedDigit()
-                    .frame(minWidth: 96)
-
-                stepButton(systemName: "plus", isEnabled: servings < range.upperBound) {
-                    onChange(servings + 1)
-                }
-            }
+        VStack(alignment: .leading, spacing: 0) {
+            SaltStepper(
+                label: servings == 1 ? String(localized: "1 serving") : String(localized: "\(servings) servings"),
+                canDecrement: servings > range.lowerBound,
+                canIncrement: servings < range.upperBound,
+                onDecrement: { onChange(servings - 1) },
+                onIncrement: { onChange(servings + 1) }
+            )
             // One adjustable control for VoiceOver (swipe up/down) instead of three elements
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Servings")
@@ -1499,90 +1601,102 @@ struct ServingsStepper: View {
             }
 
             if servings != original {
-                Button("Reset") {
-                    onChange(original)
+                HStack(spacing: 6) {
+                    Text(original == 1 ? "Scaled from 1 serving" : "Scaled from \(original) servings")
+                        .font(SaltFont.body)
+                        .foregroundStyle(SaltColor.textSecondary)
+                    Text("·")
+                        .font(SaltFont.body)
+                        .foregroundStyle(SaltColor.textSecondary)
+                    Button("Reset") {
+                        onChange(original)
+                    }
+                    .font(SaltFont.bodyStrong)
+                    .foregroundStyle(SaltColor.textAccent)
+                    .frame(minHeight: 32)
+                    .accessibilityLabel("Reset to \(original) servings")
                 }
-                .font(.custom("OpenSans-Regular", size: 14))
-                .foregroundColor(Color("Orange"))
-                .accessibilityLabel("Reset to \(original) servings")
+                .padding(.leading, 7)
+                .transition(.opacity)
             }
         }
-    }
-
-    private func stepButton(systemName: String, isEnabled: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.primary)
-                .frame(width: 36, height: 36)
-                .background(Circle().fill(Color("LightGrayishPink")))
-        }
-        .disabled(!isEnabled)
-        .opacity(isEnabled ? 1 : 0.4)
+        .animation(.easeInOut(duration: 0.2), value: servings != original)
     }
 }
 
 // MARK: - Instructions Section
 
+/// Numbered steps on pink circles (same as the Create form)
 struct InstructionsSection: View {
     let instructions: [String]
 
-    /// Set by the units switch in the ingredients; oven temperatures follow it
+    /// Oven temperatures follow the chosen units
     @AppStorage("preferredUnitSystem") private var preferredUnits: UnitSystem?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: SaltSpacing.titleToContent) {
             Text("Instructions")
-                .font(.custom("Playfair9pt-SemiBold", size: 22))
-            
-            VStack(alignment: .leading, spacing: 6) {
+                .font(SaltFont.h2)
+                .foregroundStyle(SaltColor.textPrimary)
+                .accessibilityAddTraits(.isHeader)
+
+            VStack(alignment: .leading, spacing: 16) {
                 ForEach(Array(instructions.enumerated()), id: \.offset) { index, instruction in
-                    HStack(alignment: .top, spacing: 6) {
-                        Text("\(index + 1).")
-                            .font(.custom("OpenSans-Regular", size: 16))
-                        
+                    HStack(alignment: .top, spacing: 12) {
+                        StepNumber(number: index + 1)
+
                         Text(preferredUnits.map { UnitConverter.convertTemperatures(in: instruction, to: $0) } ?? instruction)
-                            .font(.custom("OpenSans-Regular", size: 16))
+                            .font(SaltFont.bodyLarge)
+                            .foregroundStyle(SaltColor.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 3)
                     }
+                    .accessibilityElement(children: .combine)
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Step number on a 30pt pink circle
+struct StepNumber: View {
+    let number: Int
+
+    var body: some View {
+        Text("\(number)")
+            .font(SaltFont.bodyLargeStrong)
+            .foregroundStyle(SaltColor.textPrimary)
+            .frame(width: 30, height: 30)
+            .background(SaltColor.surfacePink, in: Circle())
     }
 }
 
 // MARK: - Notes Section
 
+/// Notes & tips: a plain section (title + text), no card
 struct NotesSection: View {
     let notes: String
 
-    private var hasNotes: Bool {
-        !notes.isEmpty
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Notes & Tips")
-                .font(.custom("Playfair9pt-SemiBold", size: 22))
-                .frame(maxWidth: .infinity, alignment: .center)
-
-            if hasNotes {
-                Text(notes)
-                    .font(.custom("OpenSans-Regular", size: 14))
-                    .frame(maxWidth: .infinity, alignment: .center)
-            }
+        VStack(alignment: .leading, spacing: SaltSpacing.titleToContent) {
+            Text("Notes & tips")
+                .font(SaltFont.h2)
+                .foregroundStyle(SaltColor.textPrimary)
+                .accessibilityAddTraits(.isHeader)
+            Text(notes)
+                .font(SaltFont.bodyLarge)
+                .foregroundStyle(SaltColor.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .frame(maxWidth: .infinity)
-        .background(Color("PeachCream"))
-        .cornerRadius(25)
-        .shadow(color: Color.black.opacity(0.25), radius: 4, x: 0, y: 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
 // MARK: - Nutrition Section
 
-/// Per-serving nutrition card: calories highlighted, then the main nutrients as rows.
+/// Per-serving nutrition card on surface/warm: calories as the hero number (orange), then rows.
+/// Free: blurred sample values under a white card with a small "Unlock with Premium" button.
 struct NutritionSection: View {
     let nutrition: NutritionInfo
     var isEstimated = false  // AI-estimated values get a label and a short disclaimer
@@ -1634,69 +1748,71 @@ struct NutritionSection: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
+        VStack(alignment: .leading, spacing: SaltSpacing.titleToContent) {
+            HStack(alignment: .center, spacing: 10) {
                 Text("Nutrition")
-                    .font(.custom("Playfair9pt-SemiBold", size: 22))
-                if isEstimated {
+                    .font(SaltFont.h2)
+                    .foregroundStyle(SaltColor.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                if isEstimated && !isBlurred {
                     Text("Estimated")
-                        .font(.custom("OpenSans-SemiBold", size: 12))
-                        .foregroundColor(Color("Orange"))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(Color("Orange").opacity(0.12)))
+                        .font(SaltFont.captionStrong)
+                        .foregroundStyle(SaltColor.textAccent)
+                        .padding(.horizontal, 10)
+                        .frame(height: 24)
+                        .background(SaltColor.surfaceWarmStrong, in: Capsule())
                 }
                 Spacer()
                 Text("Per serving")
-                    .font(.custom("OpenSans-Regular", size: 14))
-                    .foregroundColor(Color("GraniteGray"))
+                    .font(SaltFont.body)
+                    .foregroundStyle(SaltColor.textSecondary)
             }
 
             VStack(spacing: 0) {
-                // Calories, highlighted
                 if let calories = Self.formatNumber(nutrition.calories) {
-                    HStack(alignment: .firstTextBaseline) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text("Calories")
-                            .font(.custom("OpenSans-SemiBold", size: 16))
+                            .font(SaltFont.bodyLarge)
+                            .foregroundStyle(SaltColor.textPrimary)
                         Spacer()
                         Text(calories)
-                            .font(.custom("OpenSans-SemiBold", size: 28))
-                            .foregroundColor(Color("Orange"))
+                            .font(SaltFont.numberLarge)
+                            .foregroundStyle(SaltColor.textAccent)
                         Text("cal")
-                            .font(.custom("OpenSans-Regular", size: 14))
-                            .foregroundColor(Color("GraniteGray"))
+                            .font(SaltFont.body)
+                            .foregroundStyle(SaltColor.textSecondary)
                     }
-                    .padding(.bottom, 12)
+                    .padding(.vertical, 14)
                     .accessibilityElement(children: .combine)
 
                     if !rows.isEmpty {
-                        Divider()
+                        divider
                     }
                 }
 
                 ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                     HStack {
                         Text(row.name)
-                            .font(.custom("OpenSans-SemiBold", size: 16))
+                            .font(SaltFont.bodyLarge)
                         Spacer()
                         Text(row.value)
-                            .font(.custom("OpenSans-Regular", size: 16))
+                            .font(SaltFont.bodyLarge)
                     }
-                    .padding(.vertical, 10)
+                    .foregroundStyle(SaltColor.textPrimary)
+                    .padding(.vertical, 14)
                     .accessibilityElement(children: .combine)
 
                     if index < rows.count - 1 {
-                        Divider()
+                        divider
                     }
                 }
             }
             // Sample values are blurred so they read as "something's coming", not as data
             .blur(radius: isBlurred ? 6 : 0)
             .accessibilityHidden(isBlurred)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            .background(Color(red: 1.0, green: 0.941, blue: 0.855)) // #FFF0DA
-            .cornerRadius(25)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 4)
+            .background(SaltColor.surfaceWarm, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay {
                 if let onUnlock {
                     lockedOverlay(onUnlock: onUnlock)
@@ -1707,10 +1823,14 @@ struct NutritionSection: View {
 
             if isEstimated && !isBlurred {
                 Text("Estimated with AI from the ingredients. Values are approximate.")
-                    .font(.custom("OpenSans-Regular", size: 12))
-                    .foregroundColor(Color("GraniteGray"))
+                    .font(SaltFont.caption)
+                    .foregroundStyle(SaltColor.textSecondary)
             }
         }
+    }
+
+    private var divider: some View {
+        Rectangle().fill(SaltColor.borderSubtle).frame(height: 1)
     }
 
     /// Message card centered over the blurred sample values
@@ -1718,55 +1838,44 @@ struct NutritionSection: View {
         HStack(spacing: 10) {
             if placeholderInProgress {
                 ProgressView()
-                    .tint(Color("Orange"))
+                    .controlSize(.small)
             } else {
                 Image(systemName: "sparkles")
-                    .foregroundColor(Color("Orange"))
+                    .foregroundStyle(SaltColor.textSecondary)
             }
             Text(message)
-                .font(.custom("OpenSans-SemiBold", size: 15))
+                .font(SaltFont.bodyLarge)
+                .foregroundStyle(SaltColor.textPrimary)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(.systemBackground).opacity(0.92))
-        )
-        .padding(.horizontal, 24)
+        .padding(16)
+        .background(SaltColor.surfaceScreen, in: RoundedRectangle(cornerRadius: SaltRadius.card, style: .continuous))
+        .padding(.horizontal, 28)
         .accessibilityElement(children: .combine)
     }
 
     /// Premium lock centered over the blurred sample values
     private func lockedOverlay(onUnlock: @escaping () -> Void) -> some View {
-        VStack(spacing: 10) {
-            Image(systemName: "lock.fill")
+        VStack(spacing: 12) {
+            Image(systemName: "lock")
                 .font(.system(size: 18))
-                .foregroundColor(Color("Orange"))
+                .foregroundStyle(SaltColor.textSecondary)
                 .accessibilityHidden(true)
 
             Text("See calories, carbs, protein and more with Premium.")
-                .font(.custom("OpenSans-SemiBold", size: 15))
+                .font(SaltFont.bodyLarge)
+                .foregroundStyle(SaltColor.textPrimary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Button(action: onUnlock) {
-                Text("Unlock with Premium")
-                    .font(.custom("OpenSans-SemiBold", size: 14))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 9)
-                    .background(Capsule().fill(Color("Orange")))
-            }
+            Button("Unlock with Premium", action: onUnlock)
+                .buttonStyle(.salt(.primary, size: .small))
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(.systemBackground).opacity(0.92))
-        )
         .padding(.horizontal, 20)
+        .padding(.vertical, 18)
+        .background(SaltColor.surfaceScreen, in: RoundedRectangle(cornerRadius: SaltRadius.card, style: .continuous))
+        .padding(.horizontal, 28)
     }
 
     // MARK: Formatting
@@ -1796,36 +1905,33 @@ struct NutritionSection: View {
 // MARK: - Preview
 
 #Preview {
-    RecipeDetailView(
-        recipe: RecipeDetail(
-            title: "Homemade pancakes",
-            duration: "25 mins",
-            ingredientsCount: "5 ingredients",
-            description: "Quick and fluffy pancakes, perfect for busy mornings.",
-            servings: "4",
-            prepTime: "5",
-            cookTime: "10",
-            ingredients: [
-                "1 cup (125g) all-purpose flour",
-                "1 tablespoon sugar",
-                "1 teaspoon baking powder",
-                "1 cup (240ml) milk",
-                "1 large egg"
-            ],
-            instructions: [
-                "In a bowl, mix the flour, sugar, and baking powder.",
-                "Add the milk and egg. Stir until smooth.",
-                "Heat a non-stick pan over medium heat. Lightly grease if needed.",
-                "Pour 1/4 cup of batter into the pan for each pancake. Cook until bubbles form, about 2 minutes.",
-                "Flip and cook for 1 more minute, until golden."
-            ],
-            notes: "Avoid overmixing the batter, a few lumps are okay for fluffier pancakes.",
-            images: [
-                "https://upload.wikimedia.org/wikipedia/commons/4/43/Pancake.jpg",
-                "https://upload.wikimedia.org/wikipedia/commons/a/ae/Plateau_van_zeevruchten.jpg"
-            ],
-            sourceUrl: "https://www.allrecipes.com/recipe/123/pancakes",
-            sourceName: "AllRecipes"
+    NavigationStack {
+        RecipeDetailView(
+            recipe: RecipeDetail(
+                title: "Fluffy Berry Pancakes",
+                duration: "25 min",
+                ingredientsCount: "7 ingredients",
+                description: "Fluffy weekend pancakes with fresh berries, ready in under 30 minutes.",
+                servings: "4",
+                prepTime: "10",
+                cookTime: "15",
+                ingredients: [
+                    "2 cups all-purpose flour",
+                    "1 1/2 cups milk",
+                    "2 eggs",
+                    "1 cup mixed berries"
+                ],
+                instructions: [
+                    "Whisk the flour, sugar and baking powder in a large bowl.",
+                    "Whisk the milk and eggs, pour into the dry ingredients and stir until just combined.",
+                    "Cook 1/4 cup of batter per pancake on a medium-hot pan until bubbles form, then flip."
+                ],
+                notes: "",
+                images: ["https://upload.wikimedia.org/wikipedia/commons/4/43/Pancake.jpg"],
+                sourceUrl: "https://www.instagram.com/reel/abc",
+                sourceName: "dinnerin10"
+            ),
+            userRecipeId: UUID()
         )
-    )
+    }
 }

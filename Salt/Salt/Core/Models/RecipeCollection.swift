@@ -12,7 +12,7 @@ struct RecipeCollection: Identifiable, Decodable {
     static let maxNameLength = 20
 
     /// Most people in a collection, owner included (also enforced by the database)
-    static let maxPeople = 5
+    static let maxPeople = 10
 
     let id: UUID
     let ownerId: UUID
@@ -20,6 +20,16 @@ struct RecipeCollection: Identifiable, Decodable {
     let createdAt: String?
     /// People the owner invited (not including the owner)
     var memberIds: [UUID]
+    /// What each member can do; members missing here can add & edit
+    var memberRoles: [UUID: CollectionRole]
+    /// Role people get when they join with the invite link ("New members can")
+    var newMemberRole: CollectionRole
+    /// How many days a new invite link works; nil = never expires
+    var inviteExpiryDays: Int?
+    /// When the current invite link stops working; nil = no link, or it doesn't expire
+    var inviteExpiresAt: Date?
+    /// False before the database has link expiry (collection_roles.sql), so the row is hidden
+    let supportsInviteExpiry: Bool
     /// Newest first
     var entries: [CollectionEntry]
 
@@ -30,11 +40,19 @@ struct RecipeCollection: Identifiable, Decodable {
         case createdAt = "created_at"
         case members = "collection_members"
         case entries = "collection_recipes"
+        case newMemberRole = "new_member_role"
+        case inviteExpiryDays = "invite_expiry_days"
+        case inviteExpiresAt = "invite_expires_at"
     }
 
     private struct Member: Decodable {
         let userId: UUID
-        enum CodingKeys: String, CodingKey { case userId = "user_id" }
+        /// Missing before the roles migration (collection_roles.sql); then everyone can edit
+        let role: String?
+        enum CodingKeys: String, CodingKey {
+            case userId = "user_id"
+            case role
+        }
     }
 
     init(from decoder: Decoder) throws {
@@ -43,7 +61,18 @@ struct RecipeCollection: Identifiable, Decodable {
         ownerId = try container.decode(UUID.self, forKey: .ownerId)
         name = try container.decode(String.self, forKey: .name)
         createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt)
-        memberIds = (try container.decodeIfPresent([Member].self, forKey: .members) ?? []).map(\.userId)
+        let members = try container.decodeIfPresent([Member].self, forKey: .members) ?? []
+        memberIds = members.map(\.userId)
+        memberRoles = Dictionary(
+            members.compactMap { member in member.role.flatMap(CollectionRole.init(rawValue:)).map { (member.userId, $0) } },
+            uniquingKeysWith: { first, _ in first }
+        )
+        newMemberRole = (try? container.decodeIfPresent(String.self, forKey: .newMemberRole))
+            .flatMap { $0.flatMap(CollectionRole.init(rawValue:)) } ?? .editor
+        supportsInviteExpiry = container.contains(.inviteExpiryDays)
+        inviteExpiryDays = try? container.decodeIfPresent(Int.self, forKey: .inviteExpiryDays)
+        inviteExpiresAt = (try? container.decodeIfPresent(String.self, forKey: .inviteExpiresAt))
+            .flatMap { $0.flatMap(Self.parseDate) }
         entries = (try container.decodeIfPresent([CollectionEntry].self, forKey: .entries) ?? [])
             .sorted { ($0.addedAt ?? "") > ($1.addedAt ?? "") }
     }
@@ -64,6 +93,42 @@ struct RecipeCollection: Identifiable, Decodable {
     /// Whether the signed-in user owns it (otherwise they joined it)
     var isOwnedByCurrentUser: Bool {
         ownerId.uuidString.lowercased() == AuthManager.shared.currentUser?.id.lowercased()
+    }
+
+    /// Postgres timestamps, with or without fractional seconds
+    private static func parseDate(_ string: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: string) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: string)
+    }
+
+    /// Choices for "Link expires"; nil = never
+    static let inviteExpiryOptions: [Int?] = [1, 7, 30, nil]
+
+    /// "1 day", "7 days", "Never"
+    static func inviteExpiryTitle(_ days: Int?) -> String {
+        guard let days else { return String(localized: "Never") }
+        return days == 1 ? String(localized: "1 day") : String(localized: "\(days) days")
+    }
+
+    /// "In 7 days" for the current link, or how long a new one will last
+    var inviteExpiryStatus: String {
+        guard let days = inviteExpiryDays else { return String(localized: "Never") }
+        guard let inviteExpiresAt else { return Self.inviteExpiryTitle(days) }
+        let left = inviteExpiresAt.timeIntervalSinceNow
+        if left <= 0 { return String(localized: "Expired") }
+        let daysLeft = Int((left / 86_400).rounded(.up))
+        return daysLeft <= 1 ? String(localized: "Within a day") : String(localized: "In \(daysLeft) days")
+    }
+
+    /// The owner, or a member who can add & edit: adds and removes recipes
+    var canCurrentUserEdit: Bool {
+        if isOwnedByCurrentUser { return true }
+        guard let me = AuthManager.shared.currentUser?.id.lowercased(),
+              let myId = memberIds.first(where: { $0.uuidString.lowercased() == me }) else { return false }
+        return memberRoles[myId] != .viewer
     }
 
     /// Recipes that can still be shown (a recipe deleted elsewhere drops out)
@@ -144,11 +209,39 @@ struct CollectionInvite: Decodable {
 }
 
 /// Someone in a collection (get_collection_members)
+/// What a member of a shared collection can do
+enum CollectionRole: String, CaseIterable, Identifiable {
+    /// Can add & edit: adds and removes recipes
+    case editor
+    /// Can only view
+    case viewer
+
+    var id: String { rawValue }
+
+    /// "Can add & edit", under the member's name
+    var title: String {
+        switch self {
+        case .editor: String(localized: "Can add & edit")
+        case .viewer: String(localized: "Can only view")
+        }
+    }
+
+    /// "Add & edit", after "New members can"
+    var shortTitle: String {
+        switch self {
+        case .editor: String(localized: "Add & edit")
+        case .viewer: String(localized: "Only view")
+        }
+    }
+}
+
 struct CollectionMember: Decodable, Identifiable {
     let userId: UUID
     let fullName: String?
     let profileImageUrl: String?
     let isOwner: Bool
+    /// nil for the owner; editor before the roles migration
+    var role: CollectionRole?
 
     var id: UUID { userId }
 
@@ -162,6 +255,17 @@ struct CollectionMember: Decodable, Identifiable {
         case fullName = "full_name"
         case profileImageUrl = "profile_image_url"
         case isOwner = "is_owner"
+        case role
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        userId = try container.decode(UUID.self, forKey: .userId)
+        fullName = try container.decodeIfPresent(String.self, forKey: .fullName)
+        profileImageUrl = try container.decodeIfPresent(String.self, forKey: .profileImageUrl)
+        isOwner = try container.decode(Bool.self, forKey: .isOwner)
+        let rawRole = try container.decodeIfPresent(String.self, forKey: .role)
+        role = isOwner ? nil : (rawRole.flatMap(CollectionRole.init(rawValue:)) ?? .editor)
     }
 }
 

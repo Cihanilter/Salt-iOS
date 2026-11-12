@@ -56,6 +56,9 @@ private nonisolated struct FilteredSearchParams: Encodable, Sendable {
     let p_cuisines: [String]?
     let p_categories: [String]?
     let p_meal_types: [String]?
+    /// Categories that aren't meal types (e.g. Cookies). Nil is left out of the request, so
+    /// searches without one also work before 04_search_recipes_dish_categories.sql is run.
+    let p_dish_categories: [String]?
     let p_offset: Int
     let p_limit: Int
 }
@@ -496,7 +499,8 @@ class ExploreViewModel: ObservableObject {
             p_max_minutes: filters.maxTotalMinutes,
             p_cuisines: filters.cuisines.isEmpty ? nil : Array(filters.cuisines),
             p_categories: nil,
-            p_meal_types: filters.mealTypes.isEmpty ? nil : filters.mealTypes.map(\.rawValue),
+            p_meal_types: filters.mealTypeValues,
+            p_dish_categories: filters.otherCategoryValues,
             p_offset: offset,
             p_limit: searchPageSize
         )
@@ -550,6 +554,48 @@ class ExploreViewModel: ObservableObject {
 
     func clearFilters() {
         filters = RecipeSearchFilters()
+    }
+
+    /// How many recipes the text and these (not yet applied) filters would find, for the
+    /// filter sheet's live "Show 12 recipes" button; nil when it can't be told
+    func countResults(query: String, filters draft: RecipeSearchFilters) async -> Int? {
+        let params = FilteredSearchParams(
+            p_query: query.isEmpty ? nil : query,
+            p_ingredients: draft.ingredients.isEmpty ? nil : draft.ingredients,
+            p_max_minutes: draft.maxTotalMinutes,
+            p_cuisines: draft.cuisines.isEmpty ? nil : Array(draft.cuisines),
+            p_categories: nil,
+            p_meal_types: draft.mealTypeValues,
+            p_dish_categories: draft.otherCategoryValues,
+            p_offset: 0,
+            p_limit: 1
+        )
+        do {
+            let response = try await supabase.rpc("search_recipes", params: params).execute()
+            let rows = try JSONDecoder().decode([FilteredSearchRow].self, from: response.data)
+            return rows.first?.totalCount ?? 0
+        } catch {
+            return nil
+        }
+    }
+
+    // MARK: - See All
+
+    /// One page of a cuisine (or category) section for its "See all" screen
+    func seeAllPage(for sectionName: String, page: Int, limit: Int = 20) async throws -> [Recipe] {
+        guard let section = allSections.first(where: { $0.displayName == sectionName }) else { return [] }
+        return try await fetchRecipesForSection(section, page: page, limit: limit)
+    }
+
+    /// How many recipes a section has; nil when it can't be told
+    func seeAllCount(for sectionName: String) async -> Int? {
+        guard let section = allSections.first(where: { $0.displayName == sectionName }) else { return nil }
+        let response = try? await supabase
+            .from("recipes")
+            .select("id", head: true, count: .exact)
+            .matching(section.name, isCuisine: section.isCuisine)
+            .execute()
+        return response?.count
     }
 
     /// Clear search results

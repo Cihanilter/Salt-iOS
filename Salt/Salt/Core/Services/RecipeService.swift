@@ -121,6 +121,25 @@ class RecipeService {
         return recipes
     }
 
+    /// One of the user's recipes, e.g. one saved since My Recipes last loaded
+    func getUserRecipe(id: UUID) async throws -> UserRecipe {
+        guard let userId = try? await supabase.auth.session.user.id else {
+            throw RecipeServiceError.notAuthenticated
+        }
+
+        let recipes: [UserRecipe] = try await supabase
+            .from("user_recipes")
+            .select()
+            .eq("id", value: id.uuidString)
+            .eq("user_id", value: userId.uuidString)
+            .limit(1)
+            .execute()
+            .value
+
+        guard let recipe = recipes.first else { throw RecipeServiceError.recipeNotFound }
+        return recipe
+    }
+
     /// Count of the recipes the user currently has under Imports (created and imported).
     /// Customized copies of Explore recipes aren't included. Goes down when a recipe is deleted.
     func getActiveImportedRecipesCount() async throws -> Int {

@@ -81,10 +81,24 @@ class CreateRecipeViewModel: ObservableObject {
 
     // MARK: - Computed Properties
 
+    /// Title is the only required field
     var isValid: Bool {
-        !title.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !ingredientsList.isEmpty &&
-        !instructionsList.isEmpty
+        !title.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    /// What the form held when it opened, to tell whether leaving it would lose anything
+    private var initialSnapshot: [String] = CreateRecipeViewModel.emptySnapshot
+
+    private static let emptySnapshot = ["", "", "", "", "", "", "", ""]
+
+    private var snapshot: [String] {
+        [title, description, ingredientsList.joined(separator: "\n"), instructionsList.joined(separator: "\n"),
+         prepTime, cookTime, servings, notes].map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+    }
+
+    /// Something was typed or changed (or a photo added) since the form opened
+    var hasUnsavedChanges: Bool {
+        snapshot != initialSnapshot || !photoImages.isEmpty
     }
 
     var ingredientsList: [String] {
@@ -255,7 +269,7 @@ class CreateRecipeViewModel: ObservableObject {
 
     func saveRecipe() async -> Bool {
         guard isValid else {
-            errorMessage = "Please fill in the title, at least one ingredient and one step"
+            errorMessage = "Add a title to save your recipe."
             return false
         }
 
@@ -418,6 +432,7 @@ class CreateRecipeViewModel: ObservableObject {
         notes = recipe.notes == "Enjoy this delicious recipe!" ? "" : recipe.notes
         // Preserve original image URLs for edit mode
         originalImageUrls = recipe.images
+        initialSnapshot = snapshot
     }
 
     // MARK: - Reset Form (for "Add More Recipes")
@@ -436,6 +451,7 @@ class CreateRecipeViewModel: ObservableObject {
         originalImageUrls = []
         originalSource = (nil, nil)
         originalServings = nil
+        initialSnapshot = Self.emptySnapshot
         errorMessage = nil
         showingPreview = false
         savedSuccessfully = false

@@ -14,22 +14,36 @@ struct RecipeSearchFilters: Equatable {
     var maxTotalMinutes: Int?
     /// Any of these
     var cuisines: Set<String> = []
-    /// Any of these
-    var mealTypes: Set<MealType> = []
+    /// Any of these; `DishType.name`s, the same choices as Explore's category chips
+    var dishTypes: Set<String> = []
 
     var isActive: Bool {
-        !ingredients.isEmpty || maxTotalMinutes != nil || !cuisines.isEmpty || !mealTypes.isEmpty
+        !ingredients.isEmpty || maxTotalMinutes != nil || !cuisines.isEmpty || !dishTypes.isEmpty
     }
 
     var activeCount: Int {
-        [!ingredients.isEmpty, maxTotalMinutes != nil, !cuisines.isEmpty, !mealTypes.isEmpty]
+        [!ingredients.isEmpty, maxTotalMinutes != nil, !cuisines.isEmpty, !dishTypes.isEmpty]
             .filter { $0 }.count
+    }
+
+    /// The picked types that are meal types (search_recipes `p_meal_types`)
+    var mealTypeValues: [String]? {
+        let values = MealType.allCases.filter { dishTypes.contains($0.category) }.map(\.rawValue)
+        return values.isEmpty ? nil : values
+    }
+
+    /// The other picked types, e.g. Cookies or Pasta, matched on the recipes' categories
+    /// (search_recipes `p_dish_categories`)
+    var otherCategoryValues: [String]? {
+        let mealTypeCategories = Set(MealType.allCases.map(\.category))
+        let values = DishType.all.map(\.name).filter { dishTypes.contains($0) && !mealTypeCategories.contains($0) }
+        return values.isEmpty ? nil : values
     }
 
     // MARK: - Options
 
     /// Choices in the Total time filter
-    static let timeOptions = [15, 30, 45, 60, 90]
+    static let timeOptions = [15, 30, 45, 60]
 
     /// Quick picks in the Ingredients filter
     static let suggestedIngredients = [
@@ -48,26 +62,61 @@ struct RecipeSearchFilters: Equatable {
 
     // MARK: - Labels for the filter chips
 
+    /// What a chip shows once set: the chosen values ("Chicken, Garlic"), shortened when
+    /// there are more or they're long ("Chicken +2")
+    private static func label(for values: [String]) -> String? {
+        guard let first = values.first else { return nil }
+        if values.count == 1 { return first }
+        let joined = values.joined(separator: ", ")
+        if values.count == 2 && joined.count <= 18 { return joined }
+        return "\(first) +\(values.count - 1)"
+    }
+
     var ingredientsLabel: String? {
-        guard let first = ingredients.first else { return nil }
-        return ingredients.count == 1 ? first : "\(first) +\(ingredients.count - 1)"
+        Self.label(for: ingredients)
     }
 
     var timeLabel: String? {
-        maxTotalMinutes.map { "Under \($0) min" }
+        maxTotalMinutes.map { $0 == 60 ? "Under 1 hour" : "Under \($0) min" }
     }
 
     var cuisineLabel: String? {
-        let sorted = cuisines.sorted()
-        guard let first = sorted.first else { return nil }
-        return sorted.count == 1 ? first : "\(first) +\(sorted.count - 1)"
+        Self.label(for: cuisines.sorted())
     }
 
     var mealTypeLabel: String? {
-        let sorted = MealType.allCases.filter(mealTypes.contains)
-        guard let first = sorted.first else { return nil }
-        return sorted.count == 1 ? first.displayName : "\(first.displayName) +\(sorted.count - 1)"
+        Self.label(for: DishType.all.filter { dishTypes.contains($0.name) }.map(\.displayName))
     }
+}
+
+/// A recipe category: Explore's chips and the Meal type filter in search
+struct DishType: Identifiable {
+    /// As stored in the recipes table's categories
+    let name: String
+    let displayName: String
+    let icon: String
+
+    var id: String { name }
+
+    static let all = [
+        DishType(name: "Desserts", displayName: "Desserts", icon: "dessertIcon"),
+        DishType(name: "Side Dish", displayName: "Side Dish", icon: "pastaIcon"),
+        DishType(name: "Main Dishes", displayName: "Main Dish", icon: "mainDishIcon"),
+        DishType(name: "Appetizers and Snacks", displayName: "Snacks", icon: "tapasIcon"),
+        DishType(name: "Soups, Stews and Chili Recipes", displayName: "Soups", icon: "soupIcon"),
+        DishType(name: "Salad", displayName: "Salad", icon: "vegetarianIcon"),
+        DishType(name: "Breakfast and Brunch", displayName: "Breakfast", icon: "bakeryIcon"),
+        DishType(name: "Bread", displayName: "Bread", icon: "bakeryIcon"),
+        DishType(name: "Drink Recipes", displayName: "Drinks", icon: "drinksIcon"),
+        DishType(name: "Seafood", displayName: "Seafood", icon: "seafoodIcon"),
+        DishType(name: "Cookies", displayName: "Cookies", icon: "cookiesIcon"),
+        DishType(name: "Cakes", displayName: "Cakes", icon: "cakeIcon"),
+        DishType(name: "Pasta", displayName: "Pasta", icon: "pastaIcon"),
+        DishType(name: "Vegetarian", displayName: "Vegetarian", icon: "vegetarianIcon"),
+        DishType(name: "Sandwich Recipes", displayName: "Sandwich", icon: "sandwichIcon"),
+        DishType(name: "Smoothie Recipes", displayName: "Smoothies", icon: "vegetarianIcon"),
+        DishType(name: "Sauces and Condiments", displayName: "Sauces", icon: "onePotIcon")
+    ]
 }
 
 /// Meal types; raw values match the recipes table's meal_types

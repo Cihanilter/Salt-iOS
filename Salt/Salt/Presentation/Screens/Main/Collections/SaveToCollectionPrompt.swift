@@ -3,8 +3,8 @@
 //  Salt
 //
 //  Shown right after a recipe is imported or created: offers to put it in a collection.
-//  If the user makes a new collection here, it then offers to invite someone to it,
-//  so it becomes a shared cookbook.
+//  If the user makes a new collection here, it can then offer to invite someone to it
+//  ("Cook together", also offered after new collections made elsewhere; see CookTogether).
 //
 
 import SwiftUI
@@ -38,7 +38,6 @@ struct SaveToCollectionPrompt: View {
     }
 
     @ObservedObject private var manager = CollectionsManager.shared
-    @StateObject private var invite = CollectionInviteState()
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -59,7 +58,10 @@ struct SaveToCollectionPrompt: View {
             switch step {
             case .pick: pickStep
             case .name: nameStep
-            case .invite(let collectionId, let collectionName): inviteStep(collectionId: collectionId, name: collectionName)
+            case .invite(let collectionId, let collectionName):
+                CookTogetherView(collectionId: collectionId, collectionName: collectionName) { skipped in
+                    if skipped { skip() } else { dismiss() }
+                }
             }
         }
         .padding(.horizontal, 20)
@@ -78,23 +80,13 @@ struct SaveToCollectionPrompt: View {
         .onChange(of: step) { _, newStep in
             Analytics.log(.collectionPromptShown, ["step": newStep.analyticsName])
         }
-        .sheet(item: $invite.shareItem, onDismiss: closeAfterInvite) { item in
-            ActivityView(items: [item.message, item.url], onComplete: invite.shareFinished)
-                .presentationDetents([.medium, .large])
-        }
-        .collectionToast($invite.sentMessage)
-        .overlay(alignment: .bottom) {
-            if invite.isCreating {
-                CreatingLinkToast()
-            }
-        }
         .alert("Something Went Wrong", isPresented: Binding(
-            get: { (errorMessage ?? invite.errorMessage) != nil },
-            set: { if !$0 { errorMessage = nil; invite.errorMessage = nil } }
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
         )) {
             Button("OK", role: .cancel) { }
         } message: {
-            Text(errorMessage ?? invite.errorMessage ?? "")
+            Text(errorMessage ?? "")
         }
     }
 
@@ -124,7 +116,8 @@ struct SaveToCollectionPrompt: View {
                     }
                     .buttonStyle(.plain)
 
-                    ForEach(manager.collections) { collection in
+                    // Collections the user can only view aren't offered
+                    ForEach(manager.collections.filter(\.canCurrentUserEdit)) { collection in
                         collectionRow(collection)
                     }
                 }
@@ -219,47 +212,6 @@ struct SaveToCollectionPrompt: View {
         }
     }
 
-    // MARK: - Invite
-
-    private func inviteStep(collectionId: UUID, name collectionName: String) -> some View {
-        VStack(spacing: 16) {
-            // Two people sharing a cookbook
-            HStack(spacing: -14) {
-                personCircle("person.fill", color: Color("PeachCream"))
-                personCircle("person.fill", color: Color("LightGrayishPink"))
-            }
-            .padding(.top, 8)
-            .accessibilityHidden(true)
-
-            VStack(spacing: 6) {
-                Text("Cook together")
-                    .font(.custom("Playfair9pt-SemiBold", size: 24))
-                Text("Invite your partner, friends, or family to \u{2018}\(collectionName)\u{2019}.\n\nThey can see, add and remove recipes, making it your shared cookbook.")
-                    .font(.custom("OpenSans-Regular", size: 14))
-                    .foregroundColor(Color("GraniteGray"))
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 0)
-
-            primaryButton("Invite someone", isLoading: invite.isCreating, isEnabled: true) {
-                Task { await invite.create(for: collectionId, reset: false) }
-            }
-            secondaryButton("Maybe later") { skip() }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private func personCircle(_ systemName: String, color: Color) -> some View {
-        Image(systemName: systemName)
-            .font(.system(size: 22))
-            .foregroundColor(Color("GraniteGray"))
-            .frame(width: 56, height: 56)
-            .background(Circle().fill(color))
-            .overlay(Circle().stroke(Color.white, lineWidth: 3))
-    }
-
     // MARK: - Building Blocks
 
     private func header(title: String, subtitle: String? = nil) -> some View {
@@ -312,16 +264,6 @@ struct SaveToCollectionPrompt: View {
         }
     }
 
-    /// After the share sheet: if the invite went out, show "Invite sent" for a moment, then close.
-    /// If it was cancelled, stay on the invite step.
-    private func closeAfterInvite() {
-        guard invite.sentMessage != nil else { return }
-        Task {
-            try? await Task.sleep(for: .seconds(1.5))
-            dismiss()
-        }
-    }
-
     private func skip() {
         Analytics.log(.collectionPromptSkipped, ["step": step.analyticsName])
         dismiss()
@@ -343,7 +285,7 @@ struct SaveToCollectionPrompt: View {
         }
     }
 
-    /// Makes the collection with the recipe in it, then offers to invite someone
+    /// Makes the collection with the recipe in it, then may offer to invite someone (CookTogether)
     private func createCollection() {
         guard !trimmedName.isEmpty, !isCreating else { return }
         isCreating = true
@@ -351,7 +293,14 @@ struct SaveToCollectionPrompt: View {
             do {
                 let collection = try await manager.createCollection(named: trimmedName)
                 try await manager.addRecipe(ref, to: collection.id, source: "save_prompt")
-                goTo(.invite(collectionId: collection.id, name: collection.name))
+                if CookTogether.shouldOffer() {
+                    CookTogether.recordOffer()
+                    goTo(.invite(collectionId: collection.id, name: collection.name))
+                } else {
+                    withAnimation { addedTo = collection.name }
+                    try? await Task.sleep(for: .seconds(1))
+                    dismiss()
+                }
             } catch {
                 errorMessage = "Couldn't create the collection. Please try again."
             }
@@ -373,4 +322,120 @@ struct SaveToCollectionPrompt: View {
         ref: .own(UUID()),
         startingAt: .invite(collectionId: UUID(), name: "Date night")
     )
+}
+
+// MARK: - Cook Together
+
+/// "Cook together" is offered after a new collection is made (anywhere), up to twice per
+/// account. It stops once the user has invited someone, or already shares a collection.
+@MainActor
+enum CookTogether {
+    private static let maxOffers = 2
+
+    static func shouldOffer() -> Bool {
+        guard let userId = AuthManager.shared.currentUser?.id else { return false }
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: usedKey(userId)),
+              defaults.integer(forKey: offersKey(userId)) < maxOffers else { return false }
+        // Already shares one of their collections: they know how
+        let sharesOne = CollectionsManager.shared.collections.contains {
+            $0.ownerId.uuidString.lowercased() == userId.lowercased() && $0.isShared
+        }
+        return !sharesOne
+    }
+
+    /// Call when it's shown
+    static func recordOffer() {
+        guard let userId = AuthManager.shared.currentUser?.id else { return }
+        let key = offersKey(userId)
+        UserDefaults.standard.set(UserDefaults.standard.integer(forKey: key) + 1, forKey: key)
+    }
+
+    /// Call once an invite went out from it
+    static func recordUsed() {
+        guard let userId = AuthManager.shared.currentUser?.id else { return }
+        UserDefaults.standard.set(true, forKey: usedKey(userId))
+    }
+
+    private static func offersKey(_ userId: String) -> String { "cookTogether.offers.\(userId)" }
+    private static func usedKey(_ userId: String) -> String { "cookTogether.used.\(userId)" }
+}
+
+/// Invite a partner, friends or family to a new collection with its invite link.
+/// `onFinish(true)` for Maybe later; `onFinish(false)` once an invite went out.
+struct CookTogetherView: View {
+    let collectionId: UUID
+    let collectionName: String
+    let onFinish: (_ skipped: Bool) -> Void
+
+    @StateObject private var invite = CollectionInviteState()
+
+    var body: some View {
+        VStack(spacing: 16) {
+            // Two people sharing a cookbook
+            HStack(spacing: -14) {
+                personCircle("person.fill", color: Color("PeachCream"))
+                personCircle("person.fill", color: Color("LightGrayishPink"))
+            }
+            .padding(.top, 8)
+            .accessibilityHidden(true)
+
+            VStack(spacing: 6) {
+                Text("Cook together")
+                    .font(.custom("Playfair9pt-SemiBold", size: 24))
+                Text("Invite your partner, friends, or family to \u{2018}\(collectionName)\u{2019}.\n\nThey can see, add and remove recipes, making it your shared cookbook.")
+                    .font(.custom("OpenSans-Regular", size: 14))
+                    .foregroundColor(Color("GraniteGray"))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+
+            Button {
+                Task { await invite.create(for: collectionId, reset: false) }
+            } label: {
+                SaltButtonLabel(title: "Invite someone", isLoading: invite.isCreating)
+            }
+            .buttonStyle(.salt())
+            .allowsHitTesting(!invite.isCreating)
+
+            Button("Maybe later") { onFinish(true) }
+                .buttonStyle(.salt(.text))
+        }
+        .frame(maxWidth: .infinity)
+        .sheet(item: $invite.shareItem, onDismiss: closeAfterInvite) { item in
+            ActivityView(items: [item.message, item.url], onComplete: invite.shareFinished)
+                .presentationDetents([.medium, .large])
+        }
+        .collectionToast($invite.sentMessage)
+        .alert("Something Went Wrong", isPresented: Binding(
+            get: { invite.errorMessage != nil },
+            set: { if !$0 { invite.errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(invite.errorMessage ?? "")
+        }
+    }
+
+    private func personCircle(_ systemName: String, color: Color) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 22))
+            .foregroundColor(Color("GraniteGray"))
+            .frame(width: 56, height: 56)
+            .background(Circle().fill(color))
+            .overlay(Circle().stroke(Color.white, lineWidth: 3))
+    }
+
+    /// After the share sheet: if the invite went out, "Invite sent" shows for a moment, then
+    /// it closes. Cancelled: stays here.
+    private func closeAfterInvite() {
+        guard invite.sentMessage != nil else { return }
+        CookTogether.recordUsed()
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            onFinish(false)
+        }
+    }
 }

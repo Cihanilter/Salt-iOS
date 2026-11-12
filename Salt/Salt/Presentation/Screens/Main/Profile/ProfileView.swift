@@ -1,540 +1,706 @@
-
+//
+//  ProfileView.swift
+//  Salt
+//
+//  Profile (Figma "Profile — Final"): cream band with Edit profile and the settings gear,
+//  left-aligned avatar overlapping it, name (+ Premium badge), bio, two stats, the Free plan
+//  card for free users, and the cuisines the user picked. Settings has the rest.
+//
 
 import SwiftUI
 import PhotosUI
 import StoreKit
 import RevenueCatUI
 
+/// Where "Help & feedback" writes to
+enum SupportConfig {
+    static let feedbackEmail = "saltrecipesapp@gmail.com"
+}
+
 struct ProfileView: View {
     @StateObject private var viewModel = ProfileViewModel()
     @ObservedObject private var subscriptionManager = SubscriptionManager.shared
+    @ObservedObject private var myRecipes = MyRecipesViewModel.shared
+    @ObservedObject private var collections = CollectionsManager.shared
     @State private var showingPaywall = false
-    @State private var showingManageSubscription = false
-    @State private var showingSignOutAlert = false
-    @State private var showingDeleteAccountAlert = false
-    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var showingSettings = false
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 12) {
-                // Header with gradient (photo and name hidden in session recordings)
-                profileHeader
-                    .analyticsMasked()
-
-                // Content
-                VStack(spacing: 16) {
-                    // Stats Card
-                    statsCard
-
-                    // Subscription
-                    if RevenueCatConfig.isEnabled {
-                        premiumCard
-                    }
-
-                    // About Me Section
-                    aboutMeSection
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    header
+                        // Photo and name hidden in session recordings
                         .analyticsMasked()
 
-                    if viewModel.userProfile?.location != nil || viewModel.memberSince != nil || viewModel.email != nil {
-                        // Contact Info (hidden in session recordings)
-                        contactInfoSection
-                            .analyticsMasked()
+                    stats
+                        .padding(.top, 20)
+                        .padding(.horizontal, SaltSpacing.screenMargin)
+
+                    if RevenueCatConfig.isEnabled && !subscriptionManager.isPremium {
+                        freePlanCard
+                            .padding(.top, SaltSpacing.section)
+                            .padding(.horizontal, SaltSpacing.screenMargin)
                     }
 
-                    // Favorite Cuisines
-                    favoriteCuisinesSection
-
-                    // Sign Out Button
-                    signOutButton
-
-                    // Delete Account Button
-                    deleteAccountButton
+                    favoriteCuisines
+                        .padding(.top, SaltSpacing.section)
+                        .padding(.horizontal, SaltSpacing.screenMargin)
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 40)
+                .padding(.bottom, SaltSpacing.bottomTabPadding)
             }
-        }
-        .background(Color(.systemBackground))
-        .ignoresSafeArea(edges: .top)
-        .task {
-            // The tab stays alive between visits, so refresh the count each time
-            // it appears to reflect recipes added or deleted elsewhere
-            await viewModel.loadRecipesCount()
-        }
-        .sheet(isPresented: $viewModel.isEditing) {
-            EditProfileView(viewModel: viewModel)
-        }
-        .sheet(isPresented: $showingPaywall) {
-            // Remote paywall: shows whatever is attached to the current offering in the RevenueCat dashboard
-            PaywallView(displayCloseButton: true)
-                .onAppear {
-                    Analytics.log(.paywallShown, ["source": "profile"])
-                }
-                .onPurchaseCompleted { customerInfo in
-                    Analytics.log(.subscriptionStarted, ["source": "profile"])
-                    subscriptionManager.update(with: customerInfo)
-                    showingPaywall = false
-                }
-                .onRestoreCompleted { customerInfo in
-                    Analytics.log(.purchasesRestored, ["source": "profile"])
-                    subscriptionManager.update(with: customerInfo)
-                    if subscriptionManager.isPremium {
+            .background(SaltColor.surfaceScreen)
+            .ignoresSafeArea(edges: .top)
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(isPresented: $showingSettings) {
+                SettingsView(viewModel: viewModel, showingPaywall: $showingPaywall)
+            }
+            .task {
+                // The tab stays alive between visits, so refresh the counts each time
+                await viewModel.loadRecipesCount()
+                if !collections.hasLoaded { await collections.load() }
+            }
+            .sheet(isPresented: $viewModel.isEditing) {
+                EditProfileView(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showingPaywall) {
+                // Remote paywall: shows whatever is attached to the current offering in the RevenueCat dashboard
+                PaywallView(displayCloseButton: true)
+                    .onAppear {
+                        Analytics.log(.paywallShown, ["source": "profile"])
+                    }
+                    .onPurchaseCompleted { customerInfo in
+                        Analytics.log(.subscriptionStarted, ["source": "profile"])
+                        subscriptionManager.update(with: customerInfo)
                         showingPaywall = false
                     }
-                }
-        }
-        .manageSubscriptionsSheet(isPresented: $showingManageSubscription)
-        .alert("Sign Out", isPresented: $showingSignOutAlert) {
-            Button("Cancel", role: .cancel) {}
-            Button("Sign Out", role: .destructive) {
-                viewModel.signOut()
+                    .onRestoreCompleted { customerInfo in
+                        Analytics.log(.purchasesRestored, ["source": "profile"])
+                        subscriptionManager.update(with: customerInfo)
+                        if subscriptionManager.isPremium {
+                            showingPaywall = false
+                        }
+                    }
             }
-        } message: {
-            Text("Are you sure you want to sign out?")
-        }
-        .alert("Delete Account", isPresented: $showingDeleteAccountAlert) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete Account", role: .destructive) {
-                Task {
-                    await viewModel.deleteAccount()
-                }
-            }
-        } message: {
-            Text("Are you sure you want to delete your account? This action cannot be undone. All your data including saved recipes will be permanently deleted.")
         }
     }
 
-    // MARK: - Profile Placeholder
+    // MARK: - Header
 
-    private var profilePlaceholder: some View {
-        Circle()
-            .fill(Color.white)
-            .frame(width: 96, height: 96)
-            .overlay(
-                Image(systemName: "person.fill")
-                    .font(.system(size: 50))
-                    .foregroundColor(Color("GraniteGray"))
-            )
-            .shadow(color: Color.black.opacity(0.1), radius: 4, y: 2)
-    }
+    private static let bandHeight: CGFloat = 150
+    private static let avatarSize: CGFloat = 88
 
-    // MARK: - Profile Header
-
-    private var profileHeader: some View {
-        VStack(spacing: 0) {
-            ZStack(alignment: .bottom) {
-                // Gradient background
-                LinearGradient(
-                    stops: [
-                        .init(color: Color("OutrageousOrange"), location: 0.05),
-                        .init(color: Color("CoralColor"), location: 3.2)
-                               ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 128)
-                
-             
-                
-
-                // Profile content
-                HStack(alignment: .bottom) {
-                    // Profile Photo
-                    ZStack(alignment: .bottomTrailing) {
-                        // Photo container with white border
-                        Circle()
-                            .fill(Color.white)
-                            .frame(width: 96, height: 96)
-                            .overlay(
-                                Group {
-                                    if let imageUrl = viewModel.userProfile?.profileImageUrl,
-                                       let url = URL(string: imageUrl) {
-                                        CachedAsyncImage(url: url) { phase in
-                                            switch phase {
-                                            case .empty:
-                                                ProgressView()
-                                            case .success(let image):
-                                                image
-                                                    .resizable()
-                                                    .scaledToFill()
-                                            case .failure:
-                                                Image(systemName: "person.fill")
-                                                    .font(.system(size: 40))
-                                                    .foregroundColor(Color("GraniteGray"))
-                                            @unknown default:
-                                                Image(systemName: "person.fill")
-                                                    .font(.system(size: 40))
-                                                    .foregroundColor(Color("GraniteGray"))
-                                            }
-                                        }
-                                    } else {
-                                        Image(systemName: "person.fill")
-                                            .font(.system(size: 40))
-                                            .foregroundColor(Color("GraniteGray"))
-                                    }
-                                }
-                                .frame(width: 88, height: 88)
-                                .clipShape(Circle())
-                            )
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.white, lineWidth: 4)
-                            )
-
-
-                        // Camera button with PhotosPicker
-                        PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color("Orange"))
-                                    .frame(width: 28, height: 28)
-
-                                if viewModel.isUploadingImage {
-                                    ProgressView()
-                                        .scaleEffect(0.6)
-                                        .tint(.white)
-                                } else {
-                                    Image(systemName: "camera.fill")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.white)
-                                }
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ZStack(alignment: .bottomLeading) {
+                SaltColor.surfaceWarmSubtle
+                    .frame(height: Self.bandHeight)
+                    .overlay(alignment: .bottomTrailing) {
+                        HStack(spacing: 12) {
+                            Button("Edit profile") { viewModel.startEditing() }
+                                .buttonStyle(.salt(.outline, size: .small))
+                            Button { showingSettings = true } label: {
+                                Image(systemName: "gearshape")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(SaltColor.iconDefault)
+                                    .frame(width: 38, height: 38)
+                                    .background(SaltColor.surfaceScreen, in: Circle())
+                                    .overlay(Circle().stroke(SaltColor.borderSubtle, lineWidth: 1))
+                                    .frame(width: 44, height: 44)
                             }
+                            .accessibilityLabel("Settings")
                         }
-                        .disabled(viewModel.isUploadingImage)
-                        .onChange(of: selectedPhotoItem) { _, newItem in
-                            Task {
-                                if let data = try? await newItem?.loadTransferable(type: Data.self),
-                                   let image = UIImage(data: data) {
-                                    await viewModel.uploadProfileImage(image)
-                                }
-                            }
-                        }
+                        .padding(.horizontal, SaltSpacing.screenMargin)
+                        .padding(.bottom, 52)
                     }
-                    Spacer()
-                    
-                    // Edit Profile Button
-                    Button(action: {
-                        viewModel.startEditing()
-                    }) {
-                        Text("Edit Profile")
-                            .font(.custom("OpenSans-Regular", size: 14))
-                            .foregroundColor(.primary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                        Capsule()
-                                            .fill(Color.white)
-                                    )
-                                    .overlay(
-                                        Capsule()
-                                            .stroke(Color.black.opacity(0.1), lineWidth: 1)
-                                    )
-                    }
-                    .padding(.bottom, 8)
-                }
-                .padding(.horizontal, 16)
-                .offset(y: 50)
+
+                avatar
+                    .padding(.leading, SaltSpacing.screenMargin)
+                    .offset(y: Self.avatarSize / 2)
             }
-            .padding(.bottom, 60)
+            .padding(.bottom, Self.avatarSize / 2 + 16)
 
-            // Name and Bio
-            VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
                 Text(viewModel.displayName)
-                    .font(.custom("OpenSans-Regular", size: 24))
-                    .foregroundColor(.primary)
-
-                if let bio = viewModel.userProfile?.bio, !bio.isEmpty {
-                    Text(bio)
-                        .font(.custom("OpenSans-Regular", size: 14))
-                        .foregroundColor(Color("GrayText"))
-                        .lineSpacing(4)
+                    .font(SaltFont.h1)
+                    .foregroundStyle(SaltColor.textPrimary)
+                    .lineLimit(2)
+                if RevenueCatConfig.isEnabled && subscriptionManager.isPremium {
+                    SaltPremiumBadge()
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-                       .padding(.horizontal, 16)
-                       .padding(.top, 12)
+            .padding(.horizontal, SaltSpacing.screenMargin)
+
+            if let bio = viewModel.userProfile?.bio, !bio.isEmpty {
+                Text(bio)
+                    .font(SaltFont.bodyLarge)
+                    .foregroundStyle(SaltColor.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 4)
+                    .padding(.horizontal, SaltSpacing.screenMargin)
+            }
         }
     }
 
-    // MARK: - Stats Card
+    /// Photo, or a pink circle with initials; the camera button opens Edit profile
+    private var avatar: some View {
+        ProfileAvatar(
+            name: viewModel.displayName,
+            imageUrl: viewModel.userProfile?.profileImageUrl,
+            size: Self.avatarSize,
+            isLoading: viewModel.isUploadingImage
+        )
+        .overlay(Circle().stroke(Color.white, lineWidth: 4))
+        .overlay(alignment: .bottomTrailing) {
+            Button { viewModel.startEditing() } label: {
+                Image(systemName: "camera")
+                    .font(.system(size: 13))
+                    .foregroundStyle(SaltColor.iconDefault)
+                    .frame(width: 30, height: 30)
+                    .background(SaltColor.surfaceScreen, in: Circle())
+                    .overlay(Circle().stroke(SaltColor.borderSubtle, lineWidth: 1))
+                    .frame(width: 44, height: 44)
+            }
+            .offset(x: 12, y: 6)
+            .accessibilityLabel("Change photo")
+        }
+    }
 
-    private var statsCard: some View {
-        HStack(spacing: 0) {
-            statItem(count: viewModel.activeImportedRecipesCount, label: "Active Imported Recipes")
+    // MARK: - Stats
 
+    /// Two stats without a box, in Number/XLarge
+    private var stats: some View {
+        HStack(spacing: 20) {
+            stat(count: myRecipes.totalRecipesCount, label: myRecipes.totalRecipesCount == 1 ? "recipe" : "recipes")
             Rectangle()
-                .fill(Color("GrayText").opacity(0.25))
-                .frame(width: 1, height: 44)
-
-            statItem(count: viewModel.importedRecipesCount, label: "Total Imported Recipes")
+                .fill(SaltColor.borderSubtle)
+                .frame(width: 1, height: 28)
+            stat(count: collections.collections.count, label: collections.collections.count == 1 ? "collection" : "collections")
         }
-        .padding(.vertical, 20)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 1, y: 1)
-        .shadow(color: Color.black.opacity(0.18), radius: 1.5, y: 1)
     }
 
-    private func statItem(count: Int, label: String) -> some View {
-        VStack(spacing: 4) {
+    private func stat(count: Int, label: LocalizedStringKey) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text("\(count)")
-                .font(.custom("OpenSans-SemiBold", size: 30))
-                .foregroundColor(Color("Orange"))
+                .font(SaltFont.numberXLarge)
+                .foregroundStyle(SaltColor.textPrimary)
             Text(label)
-                .font(.custom("OpenSans-Regular", size: 14))
-                .foregroundColor(Color("GrayText"))
-                .multilineTextAlignment(.center)
+                .font(SaltFont.bodyLarge)
+                .foregroundStyle(SaltColor.textSecondary)
         }
-        .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
     }
 
-    // MARK: - Premium Card
+    // MARK: - Free Plan
 
-    private var premiumCard: some View {
-        HStack(spacing: 12) {
-            Image(systemName: subscriptionManager.isPremium ? "crown.fill" : "sparkles")
-                .font(.system(size: 20))
-                .foregroundColor(Color("Orange"))
-                .frame(width: 40, height: 40)
-                .background(Circle().fill(Color("Orange").opacity(0.12)))
+    /// Clean white upgrade card with usage; Upgrade is the only strong orange on the page
+    private var freePlanCard: some View {
+        let limit = RevenueCatConfig.freeImportLimit
+        let used = min(viewModel.importedRecipesCount, limit)
+        return HStack(spacing: 16) {
+            Image(systemName: "crown.fill")
+                .font(.system(size: 18))
+                .foregroundStyle(SaltColor.iconAccent)
+                .frame(width: 44, height: 44)
+                .overlay(Circle().stroke(SaltColor.borderSubtle, lineWidth: 1))
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(subscriptionManager.isPremium ? "Salt Premium" : "Free Plan")
-                    .font(.custom("OpenSans-SemiBold", size: 16))
-                    .foregroundColor(.primary)
-                Text(premiumCardSubtitle)
-                    .font(.custom("OpenSans-Regular", size: 12))
-                    .foregroundColor(Color("GrayText"))
-            }
-
-            Spacer()
-
-            Button(action: {
-                if subscriptionManager.isPremium {
-                    showingManageSubscription = true
-                } else {
-                    showingPaywall = true
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Free plan")
+                    .font(SaltFont.bodyLargeStrong)
+                    .foregroundStyle(SaltColor.textPrimary)
+                Text("\(used) of \(limit) free imports used")
+                    .font(SaltFont.body)
+                    .foregroundStyle(SaltColor.textSecondary)
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(SaltColor.surfaceControl)
+                        Capsule()
+                            .fill(SaltColor.actionPrimary)
+                            .frame(width: proxy.size.width * CGFloat(used) / CGFloat(max(limit, 1)))
+                    }
                 }
-            }) {
-                Text(subscriptionManager.isPremium ? "Manage" : "Upgrade")
-                    .font(.custom("OpenSans-SemiBold", size: 14))
-                    .foregroundColor(subscriptionManager.isPremium ? Color("Orange") : .white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(
-                        Capsule().fill(subscriptionManager.isPremium ? Color("Orange").opacity(0.12) : Color("Orange"))
-                    )
+                .frame(height: 6)
+                .accessibilityHidden(true)
             }
+
+            Button("Upgrade") { showingPaywall = true }
+                .buttonStyle(.salt(.primary, size: .small))
         }
         .padding(16)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 1, y: 1)
-        .shadow(color: Color.black.opacity(0.18), radius: 1.5, y: 1)
+        .background(SaltColor.surfaceScreen, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(SaltColor.borderSubtle, lineWidth: 1)
+        )
     }
 
-    private var premiumCardSubtitle: String {
-        if subscriptionManager.isPremium {
-            return "Unlimited recipe imports"
-        }
-        let used = min(viewModel.importedRecipesCount, RevenueCatConfig.freeImportLimit)
-        return "\(used) of \(RevenueCatConfig.freeImportLimit) free imports used"
-    }
+    // MARK: - Favorite Cuisines
 
-    // MARK: - About Me Section
-
-    private var aboutMeSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("About Me")
-                .font(.custom("OpenSans-Regular", size: 16))
-
-            if let aboutMe = viewModel.userProfile?.aboutMe, !aboutMe.isEmpty {
-                Text(aboutMe)
-                    .font(.custom("OpenSans-Regular", size: 14))
-                    .foregroundColor(Color("GrayText"))
-            } else {
-                Text("Tell us about yourself and your cooking journey...")
-                    .font(.custom("OpenSans-Regular", size: 14))
-                    .foregroundColor(Color("GrayText"))
-                    .italic()
+    /// Only the cuisines the user picked (read-only peach tags without ✓); Edit opens the list
+    private var favoriteCuisines: some View {
+        VStack(alignment: .leading, spacing: SaltSpacing.titleToContent) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Favorite cuisines")
+                    .font(SaltFont.h2)
+                    .foregroundStyle(SaltColor.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer()
+                Button("Edit") { viewModel.startEditing() }
+                    .font(SaltFont.bodyLarge)
+                    .foregroundStyle(SaltColor.textAccent)
             }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 1, y: 1)
-        .shadow(color: Color.black.opacity(0.18), radius: 1.5, y: 1)
-    }
-
-    // MARK: - Contact Info Section
-
-    private var contactInfoSection: some View {
-        VStack(spacing: 0) {
-            // Location
-            if let location = viewModel.userProfile?.location, !location.isEmpty {
-                ProfileInfoRow(
-                    icon: "locationIcon",
-                    title: "Location",
-                    value: location
-                )
-                Divider()
-                
-            }
-
-            // Member Since
-            if let memberSince = viewModel.memberSince {
-                ProfileInfoRow(
-                    icon: "calendarIcon",
-                    title: "Member Since",
-                    value: memberSince
-                )
-                Divider()
-            }
-
-            // Email
-            if let email = viewModel.email {
-                ProfileInfoRow(
-                    icon: "emailIcon",
-                    title: "Email",
-                    value: email
-                )
-            }
-        }
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 1, y: 1)
-        .shadow(color: Color.black.opacity(0.18), radius: 1.5, y: 1)
-    }
-
-    // MARK: - Favorite Cuisines Section
-
-    private var favoriteCuisinesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Favorite Cuisines")
-                .font(.custom("OpenSans-Regular", size: 16))
 
             if let cuisines = viewModel.userProfile?.favoriteCuisines, !cuisines.isEmpty {
-                FlowLayout(spacing: 8) {
+                ChipFlow(spacing: 8) {
                     ForEach(cuisines, id: \.self) { cuisine in
-                        CuisineTag(name: cuisine)
+                        SaltChip(title: cuisine, isSelected: true, showsCheck: false)
                     }
                 }
             } else {
-                Text("Add your favorite cuisines to personalize your experience")
-                    .font(.custom("OpenSans-Regular", size: 12))
-                    .foregroundColor(Color("GrayText"))
-                    .italic()
+                Text("Pick the cuisines you love to personalize Explore.")
+                    .font(SaltFont.body)
+                    .foregroundStyle(SaltColor.textSecondary)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 1, y: 1)
-        .shadow(color: Color.black.opacity(0.18), radius: 1.5, y: 1)
-    }
-
-    // MARK: - Sign Out Button
-
-    private var signOutButton: some View {
-        Button(action: { showingSignOutAlert = true }) {
-            HStack(spacing: 8) {
-                Image(systemName: "rectangle.portrait.and.arrow.right")
-                Text("Sign Out")
-            }
-            .font(.custom("OpenSans-Regular", size: 16))
-            .foregroundColor(.red)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(Color(.red.opacity(0.1)))
-            .cornerRadius(16)
-        }
-        .padding(.top, 10)
-    }
-
-    // MARK: - Delete Account Button
-
-    private var deleteAccountButton: some View {
-        Button(action: { showingDeleteAccountAlert = true }) {
-            HStack(spacing: 8) {
-                Image(systemName: "trash")
-                Text("Delete Account")
-            }
-            .font(.custom("OpenSans-Regular", size: 16))
-            .foregroundColor(.red)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(Color(.red.opacity(0.1)))
-            .cornerRadius(16)
-        }
-        .padding(.top, 4)
     }
 }
 
-// MARK: - Profile Info Row
+// MARK: - Profile Avatar
 
-struct ProfileInfoRow: View {
-    let icon: String
-    let title: String
-    let value: String
+/// Profile photo, or a pink circle with Playfair initials
+struct ProfileAvatar: View {
+    let name: String
+    let imageUrl: String?
+    let size: CGFloat
+    var isLoading = false
+
+    var body: some View {
+        ZStack {
+            Circle().fill(SaltColor.surfacePink)
+            if let imageUrl, !imageUrl.isEmpty, let url = URL(string: imageUrl) {
+                CachedAsyncImage(url: url) { phase in
+                    if case .success(let image) = phase {
+                        image.resizable().scaledToFill()
+                    } else {
+                        initials
+                    }
+                }
+                .clipShape(Circle())
+            } else {
+                initials
+            }
+            if isLoading {
+                Circle().fill(Color.white.opacity(0.6))
+                ProgressView()
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+
+    private var initials: some View {
+        Text(SaltAvatar.initials(from: name))
+            .font(SaltFont.playfair(size * 0.3, semibold: true))
+            .foregroundStyle(SaltColor.textPrimary)
+    }
+}
+
+// MARK: - Settings
+
+/// Preferences (units, notifications), Subscription, Support and Account.
+/// Delete account stays a quiet red link.
+struct SettingsView: View {
+    @ObservedObject var viewModel: ProfileViewModel
+    @Binding var showingPaywall: Bool
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    /// Default for every recipe; the … menu on a recipe changes it too
+    @AppStorage("preferredUnitSystem") private var preferredUnits: UnitSystem?
+    @State private var showingManageSubscription = false
+    @State private var showingSignOutAlert = false
+    @State private var showingDeleteAccountAlert = false
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 24) {
+                group("Preferences") {
+                    Menu {
+                        Picker("Default units", selection: $preferredUnits) {
+                            Text("As written").tag(UnitSystem?.none)
+                            Text("Imperial").tag(UnitSystem?.some(.imperial))
+                            Text("Metric").tag(UnitSystem?.some(.metric))
+                        }
+                    } label: {
+                        SettingsRow(systemImage: "ruler", title: "Default units", value: unitsLabel)
+                    }
+                    divider
+                    Button {
+                        if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
+                    } label: {
+                        SettingsRow(systemImage: "bell", title: "Notifications")
+                    }
+                }
+
+                if RevenueCatConfig.isEnabled {
+                    group("Subscription") {
+                        Button {
+                            if subscriptionManager.isPremium {
+                                showingManageSubscription = true
+                            } else {
+                                showingPaywall = true
+                            }
+                        } label: {
+                            SettingsRow(
+                                systemImage: "crown",
+                                title: "Salt Premium",
+                                value: subscriptionManager.isPremium ? String(localized: "Manage") : String(localized: "Upgrade")
+                            )
+                        }
+                    }
+                }
+
+                group("Support") {
+                    Button {
+                        if let url = URL(string: "mailto:\(SupportConfig.feedbackEmail)?subject=Salt%20feedback") { openURL(url) }
+                    } label: {
+                        SettingsRow(systemImage: "questionmark.circle", title: "Help & feedback")
+                    }
+                }
+
+                group("Account") {
+                    if let email = viewModel.email {
+                        HStack(spacing: 16) {
+                            Image(systemName: "envelope")
+                                .font(.system(size: 17))
+                                .foregroundStyle(SaltColor.iconDefault)
+                                .frame(width: 24)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Email")
+                                    .font(SaltFont.caption)
+                                    .foregroundStyle(SaltColor.textSecondary)
+                                Text(email)
+                                    .font(SaltFont.bodyLarge)
+                                    .foregroundStyle(SaltColor.textPrimary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                            }
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .analyticsMasked()
+                        divider
+                    }
+                    Button { showingSignOutAlert = true } label: {
+                        SettingsRow(systemImage: "rectangle.portrait.and.arrow.right", title: "Sign out", showsChevron: false)
+                    }
+                }
+
+                VStack(spacing: 16) {
+                    if let memberSince = viewModel.memberSince {
+                        Text("Member since \(memberSince)")
+                            .font(SaltFont.body)
+                            .foregroundStyle(SaltColor.textSecondary)
+                    }
+                    Button("Delete account") { showingDeleteAccountAlert = true }
+                        .font(SaltFont.bodyLarge)
+                        .foregroundStyle(SaltColor.textDestructive)
+                        .frame(minHeight: 44)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 8)
+            }
+            .padding(.horizontal, SaltSpacing.screenMargin)
+            .padding(.top, 8)
+            .padding(.bottom, SaltSpacing.bottomTabPadding)
+        }
+        .background(SaltColor.surfaceScreen)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            SaltBackHeader(title: "Settings") { dismiss() }
+        }
+        .toolbar(.hidden, for: .navigationBar)
+        .manageSubscriptionsSheet(isPresented: $showingManageSubscription)
+        .alert("Sign out?", isPresented: $showingSignOutAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Sign out", role: .destructive) {
+                viewModel.signOut()
+            }
+        }
+        .alert("Delete your account?", isPresented: $showingDeleteAccountAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete account", role: .destructive) {
+                Task { await viewModel.deleteAccount() }
+            }
+        } message: {
+            Text("This can't be undone. Your recipes, collections and profile are deleted for good.")
+        }
+    }
+
+    private var unitsLabel: String {
+        switch preferredUnits {
+        case .imperial: String(localized: "Imperial")
+        case .metric: String(localized: "Metric")
+        case nil: String(localized: "As written")
+        }
+    }
+
+    private var divider: some View {
+        Rectangle().fill(SaltColor.borderSubtle).frame(height: 1)
+    }
+
+    private func group<Content: View>(_ title: LocalizedStringKey, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(SaltFont.bodyStrong)
+                .foregroundStyle(SaltColor.textSecondary)
+            VStack(spacing: 0) {
+                content()
+            }
+            .background(
+                RoundedRectangle(cornerRadius: SaltRadius.card, style: .continuous)
+                    .stroke(SaltColor.borderSubtle, lineWidth: 1)
+            )
+        }
+    }
+}
+
+/// Icon, title, optional gray value and a chevron
+private struct SettingsRow: View {
+    let systemImage: String
+    let title: LocalizedStringKey
+    var value: String?
+    var showsChevron = true
 
     var body: some View {
         HStack(spacing: 16) {
-            Image(icon)
-            .resizable()
-            .renderingMode(.template)
-            .frame(width: 22, height: 22)
-            .foregroundColor(Color("OutrageousOrange"))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.custom("OpenSans-Regular", size: 12))
-                    .foregroundColor(Color("GrayText"))
-                Text(value)
-                    .font(.custom("OpenSans-Regular", size: 14))
-                    .foregroundColor(.primary)
-            }
-
+            Image(systemName: systemImage)
+                .font(.system(size: 17))
+                .foregroundStyle(SaltColor.iconDefault)
+                .frame(width: 24)
+            Text(title)
+                .font(SaltFont.bodyLarge)
+                .foregroundStyle(SaltColor.textPrimary)
             Spacer()
+            if let value {
+                Text(value)
+                    .font(SaltFont.body)
+                    .foregroundStyle(SaltColor.textSecondary)
+            }
+            if showsChevron {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(SaltColor.textSecondary)
+            }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 20)
-    }
-
-    private var iconSystemName: String {
-        switch icon {
-        case "location": return "mappin.circle"
-        case "calendar": return "calendar"
-        case "envelope": return "envelope"
-        default: return icon
-        }
+        .frame(minHeight: 52)
+        .contentShape(Rectangle())
     }
 }
 
-// MARK: - Cuisine Tag
+// MARK: - Edit Profile View
 
-struct CuisineTag: View {
-    let name: String
-    var isSelected: Bool = false
+/// Sheet with Cancel / Save: photo, name, bio (120 characters) and favorite cuisines.
+/// Save is active only after a change; Cancel with changes asks "Discard changes?".
+struct EditProfileView: View {
+    @ObservedObject var viewModel: ProfileViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var showingDiscardAlert = false
+    @State private var showingPhotoOptions = false
+    @State private var showingCamera = false
+    @State private var showingLibrary = false
+    @State private var photoItem: PhotosPickerItem?
+    @State private var capturedImage: UIImage?
+    @State private var isSaving = false
+    @FocusState private var focusedField: Field?
+
+    private enum Field { case name, bio }
+
+    private var nameIsEmpty: Bool {
+        viewModel.editFullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var canSave: Bool {
+        viewModel.hasEditChanges && !nameIsEmpty && !isSaving
+    }
 
     var body: some View {
-        Text(name)
-            .font(.custom("OpenSans-Regular", size: 12))
-            .foregroundColor(.primary)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(Color("LightOlive"))
-            .cornerRadius(20)
-            .overlay(
-                Group {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color("OrangeRed"), lineWidth: 2)
+        VStack(spacing: 0) {
+            // Cancel / Edit profile / Save
+            ZStack {
+                Text("Edit profile")
+                    .font(SaltFont.bodyLargeStrong)
+                    .foregroundStyle(SaltColor.textPrimary)
+                HStack {
+                    Button("Cancel", action: cancel)
+                        .font(SaltFont.bodyLarge)
+                        .foregroundStyle(SaltColor.textPrimary)
+                    Spacer()
+                    Button {
+                        save()
+                    } label: {
+                        if isSaving {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Text("Save")
+                        }
+                    }
+                    .font(SaltFont.bodyLargeStrong)
+                    .foregroundStyle(canSave ? SaltColor.textAccent : SaltColor.textDisabled)
+                    .disabled(!canSave)
+                }
+            }
+            .frame(height: 44)
+            .padding(.horizontal, SaltSpacing.screenMargin)
+            .padding(.top, 20)
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(spacing: 12) {
+                        ProfileAvatar(
+                            name: viewModel.editFullName.isEmpty ? viewModel.displayName : viewModel.editFullName,
+                            imageUrl: viewModel.userProfile?.profileImageUrl,
+                            size: 96,
+                            isLoading: viewModel.isUploadingImage
+                        )
+                        Button("Change photo") { showingPhotoOptions = true }
+                            .font(SaltFont.bodyLargeStrong)
+                            .foregroundStyle(SaltColor.textAccent)
+                            .disabled(viewModel.isUploadingImage)
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        fieldLabel("Name")
+                        TextField("", text: $viewModel.editFullName, prompt: Text("Your name").foregroundStyle(SaltColor.textSecondary))
+                            .focused($focusedField, equals: .name)
+                            .textContentType(.name)
+                            .frame(height: 28)
+                            .saltInput(isFocused: focusedField == .name, hasError: nameIsEmpty)
+                        if nameIsEmpty {
+                            Text("Add your name.")
+                                .font(SaltFont.body)
+                                .foregroundStyle(SaltColor.textDestructive)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 8) {
+                            fieldLabel("Bio")
+                            Text("Optional")
+                                .font(SaltFont.body)
+                                .foregroundStyle(SaltColor.textSecondary)
+                        }
+                        TextField("", text: $viewModel.editBio, prompt: Text("A line about you and your cooking").foregroundStyle(SaltColor.textSecondary), axis: .vertical)
+                            .lineLimit(3...4)
+                            .focused($focusedField, equals: .bio)
+                            .saltInput(isFocused: focusedField == .bio)
+                        Text("\(viewModel.editBio.count)/\(ProfileViewModel.maxBioLength)")
+                            .font(SaltFont.caption)
+                            .foregroundStyle(SaltColor.textSecondary)
+                            .monospacedDigit()
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        fieldLabel("Favorite cuisines")
+                        Text("Pick as many as you like. We use them to personalize Explore.")
+                            .font(SaltFont.body)
+                            .foregroundStyle(SaltColor.textSecondary)
+                        ChipFlow(spacing: 8) {
+                            ForEach(viewModel.availableCuisines, id: \.self) { cuisine in
+                                let isSelected = viewModel.editFavoriteCuisines.contains(cuisine)
+                                SaltChip(title: cuisine, isSelected: isSelected) {
+                                    viewModel.toggleCuisine(cuisine)
+                                }
+                                .accessibilityAddTraits(isSelected ? .isSelected : [])
+                            }
+                        }
+                        .padding(.top, 4)
                     }
                 }
-            )
+                .padding(.horizontal, SaltSpacing.screenMargin)
+                .padding(.top, 24)
+                .padding(.bottom, 32)
+            }
+            .scrollDismissesKeyboard(.interactively)
+        }
+        .background(SaltColor.surfaceScreen)
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(SaltRadius.sheet)
+        // With changes, swiping down doesn't throw them away; Cancel asks first
+        .interactiveDismissDisabled(viewModel.hasEditChanges)
+        .onChange(of: viewModel.editBio) { _, newValue in
+            if newValue.count > ProfileViewModel.maxBioLength {
+                viewModel.editBio = String(newValue.prefix(ProfileViewModel.maxBioLength))
+            }
+        }
+        .alert("Discard changes?", isPresented: $showingDiscardAlert) {
+            Button("Keep editing", role: .cancel) {}
+            Button("Discard", role: .destructive) {
+                viewModel.cancelEditing()
+                dismiss()
+            }
+        }
+        .confirmationDialog("Profile photo", isPresented: $showingPhotoOptions, titleVisibility: .hidden) {
+            if CameraView.isAvailable {
+                Button("Take photo") { showingCamera = true }
+            }
+            Button("Choose from library") { showingLibrary = true }
+            if viewModel.hasProfileImage {
+                Button("Remove photo", role: .destructive) {
+                    Task { await viewModel.removeProfileImage() }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .photosPicker(isPresented: $showingLibrary, selection: $photoItem, matching: .images)
+        .fullScreenCover(isPresented: $showingCamera) {
+            CameraView(image: $capturedImage)
+                .ignoresSafeArea()
+        }
+        .onChange(of: photoItem) { _, item in
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) {
+                    await viewModel.uploadProfileImage(image)
+                }
+                photoItem = nil
+            }
+        }
+        .onChange(of: capturedImage) { _, image in
+            guard let image else { return }
+            capturedImage = nil
+            Task { await viewModel.uploadProfileImage(image) }
+        }
+    }
+
+    /// Small gray Open Sans labels (sheet rule)
+    private func fieldLabel(_ title: LocalizedStringKey) -> some View {
+        Text(title)
+            .font(SaltFont.bodyStrong)
+            .foregroundStyle(SaltColor.textSecondary)
+    }
+
+    private func cancel() {
+        if viewModel.hasEditChanges {
+            showingDiscardAlert = true
+        } else {
+            viewModel.cancelEditing()
+            dismiss()
+        }
+    }
+
+    private func save() {
+        focusedField = nil
+        isSaving = true
+        Task {
+            if await viewModel.saveProfile() {
+                dismiss()
+            }
+            isSaving = false
+        }
     }
 }
 
@@ -544,149 +710,11 @@ struct FlowLayout: Layout {
     var spacing: CGFloat = 8
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = FlowResult(in: proposal.width ?? 0, subviews: subviews, spacing: spacing)
-        return result.size
+        ChipFlow(spacing: spacing).sizeThatFits(proposal: proposal, subviews: subviews, cache: &cache)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let result = FlowResult(in: bounds.width, subviews: subviews, spacing: spacing)
-        for (index, subview) in subviews.enumerated() {
-            subview.place(at: CGPoint(x: bounds.minX + result.positions[index].x,
-                                       y: bounds.minY + result.positions[index].y),
-                         proposal: .unspecified)
-        }
-    }
-
-    struct FlowResult {
-        var size: CGSize = .zero
-        var positions: [CGPoint] = []
-
-        init(in width: CGFloat, subviews: Subviews, spacing: CGFloat) {
-            var x: CGFloat = 0
-            var y: CGFloat = 0
-            var rowHeight: CGFloat = 0
-
-            for subview in subviews {
-                let size = subview.sizeThatFits(.unspecified)
-
-                if x + size.width > width && x > 0 {
-                    x = 0
-                    y += rowHeight + spacing
-                    rowHeight = 0
-                }
-
-                positions.append(CGPoint(x: x, y: y))
-                rowHeight = max(rowHeight, size.height)
-                x += size.width + spacing
-            }
-
-            self.size = CGSize(width: width, height: y + rowHeight)
-        }
-    }
-}
-
-// MARK: - Edit Profile View
-
-struct EditProfileView: View {
-    @ObservedObject var viewModel: ProfileViewModel
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Full Name
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Full Name")
-                            .font(.custom("OpenSans-Regular", size: 24))
-                        TextField("Your name", text: $viewModel.editFullName)
-                            .font(.custom("OpenSans-Regular", size: 24))
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(10)
-                    }
-
-                    // Bio (short tagline under name)
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Bio")
-                            .font(.custom("OpenSans-Regular", size: 14))
-                        Text("Short tagline shown under your name")
-                            .font(.custom("OpenSans-Regular", size: 12))
-                            .foregroundColor(Color("GrayText"))
-                        TextField("e.g., Home cook & food lover", text: $viewModel.editBio)
-                            .font(.custom("OpenSans-Regular", size: 14))
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(10)
-                    }
-
-                    // About Me (longer description)
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("About Me")
-                            .font(.custom("OpenSans-Regular", size: 14))
-                        Text("Tell us about yourself and your cooking journey")
-                            .font(.custom("OpenSans-Regular", size: 12))
-                            .foregroundColor(Color("GrayText"))
-                        TextEditor(text: $viewModel.editAboutMe)
-                            .font(.custom("OpenSans-Regular", size: 14))
-                            .frame(minHeight: 100)
-                            .padding(8)
-                            .scrollContentBackground(.hidden)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(10)
-                    }
-
-                    // Location
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Location")
-                            .font(.custom("OpenSans-Regular", size: 14))
-                        TextField("City, Country", text: $viewModel.editLocation)
-                            .font(.custom("OpenSans-Regular", size: 14))
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(10)
-                    }
-
-                    // Favorite Cuisines
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Favorite Cuisines")
-                            .font(.custom("OpenSans-Regular", size: 14))
-
-                        FlowLayout(spacing: 8) {
-                            ForEach(viewModel.availableCuisines, id: \.self) { cuisine in
-                                Button(action: { viewModel.toggleCuisine(cuisine) }) {
-                                    CuisineTag(
-                                        name: cuisine,
-                                        isSelected: viewModel.editFavoriteCuisines.contains(cuisine)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-                .padding()
-            }
-            .navigationTitle("Edit Profile")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        viewModel.cancelEditing()
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        Task {
-                            if await viewModel.saveProfile() {
-                                dismiss()
-                            }
-                        }
-                    }
-                    .fontWeight(.semibold)
-                }
-            }
-        }
+        ChipFlow(spacing: spacing).placeSubviews(in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
     }
 }
 

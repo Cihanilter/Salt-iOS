@@ -85,7 +85,7 @@ struct CollectionInviteView: View {
                     Task { await join() }
                 }
                 .padding(.top, 12)
-                Text("You can see, add and remove recipes, and leave at any time.")
+                Text("You can see its recipes and leave at any time. The owner decides who can add recipes.")
                     .font(.custom("OpenSans-Regular", size: 13))
                     .foregroundColor(Color("GraniteGray"))
                     .multilineTextAlignment(.center)
@@ -155,7 +155,8 @@ struct CollectionInviteView: View {
 
 // MARK: - Members
 
-/// Everyone in a collection. The owner invites, manages the link and removes people;
+/// Everyone in a collection: white page, one orange action (Invite people → share sheet),
+/// quiet link rows with Reset link the only red item. The owner taps a member to remove them;
 /// members can leave.
 struct CollectionMembersView: View {
     let collectionId: UUID
@@ -165,6 +166,7 @@ struct CollectionMembersView: View {
 
     @State private var members: [CollectionMember] = []
     @State private var isLoading = true
+    @State private var selectedMember: CollectionMember?
     @State private var memberToRemove: CollectionMember?
     @State private var showingResetAlert = false
     @State private var showingTurnOffAlert = false
@@ -181,54 +183,82 @@ struct CollectionMembersView: View {
     }
 
     var body: some View {
-        List {
-            Section {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(collection?.name ?? "")
+                    .font(SaltFont.h2)
+                    .foregroundStyle(SaltColor.textPrimary)
+                    .padding(.bottom, 24)
+
                 if isLoading && members.isEmpty {
                     ProgressView()
                         .frame(maxWidth: .infinity)
+                        .padding(.vertical, 24)
                 }
-                ForEach(members) { member in
+
+                ForEach(Array(members.enumerated()), id: \.element.id) { index, member in
                     memberRow(member)
-                        .swipeActions {
-                            if isOwner && !member.isOwner {
-                                Button("Remove", role: .destructive) {
-                                    memberToRemove = member
-                                }
-                            }
-                        }
+                    if index < members.count - 1 {
+                        Rectangle().fill(SaltColor.borderSubtle).frame(height: 1)
+                    }
                 }
-            } footer: {
+
                 Text("\(members.count) of \(RecipeCollection.maxPeople) people")
-            }
+                    .font(SaltFont.caption)
+                    .foregroundStyle(SaltColor.textSecondary)
+                    .padding(.top, 12)
 
-            if isOwner {
-                Section {
+                if isOwner {
                     Button(action: { Task { await invite.create(for: collectionId, reset: false) } }) {
-                        Label("Invite People", systemImage: "person.badge.plus")
+                        SaltButtonLabel(title: String(localized: "Invite people"), isLoading: invite.isCreating)
                     }
-                    .disabled(collection?.isFull ?? true || invite.isCreating)
+                    .buttonStyle(.salt())
+                    .disabled(collection?.isFull ?? true)
+                    .padding(.top, SaltSpacing.section)
 
-                    Button(action: { showingResetAlert = true }) {
-                        Label("Reset Invite Link", systemImage: "arrow.clockwise")
+                    if collection?.isFull == true {
+                        Text("This collection is full. Remove someone to invite another person.")
+                            .font(SaltFont.body)
+                            .foregroundStyle(SaltColor.textSecondary)
+                            .padding(.top, 8)
                     }
-                    Button(role: .destructive, action: { showingTurnOffAlert = true }) {
-                        Label("Turn Off Invite Link", systemImage: "link.badge.plus")
-                    }
-                } footer: {
-                    Text(collection?.isFull ?? false
-                         ? "This collection is full. Remove someone to invite another person."
-                         : "Anyone with the link can join until you reset it or turn it off.")
-                }
-            } else {
-                Section {
-                    Button(role: .destructive, action: { showingLeaveAlert = true }) {
-                        Label("Leave Collection", systemImage: "rectangle.portrait.and.arrow.right")
-                    }
+
+                    linkSettings
+                        .padding(.top, SaltSpacing.section)
+                } else {
+                    Button("Leave collection") { showingLeaveAlert = true }
+                        .font(SaltFont.bodyLarge)
+                        .foregroundStyle(SaltColor.textDestructive)
+                        .frame(minHeight: 44)
+                        .padding(.top, SaltSpacing.section)
                 }
             }
+            .padding(.horizontal, SaltSpacing.screenMargin)
+            .padding(.top, 8)
+            .padding(.bottom, SaltSpacing.bottomTabPadding)
         }
-        .navigationTitle("Members")
-        .navigationBarTitleDisplayMode(.inline)
+        .background(SaltColor.surfaceScreen)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            ZStack {
+                Text("Members")
+                    .font(SaltFont.bodyLargeStrong)
+                    .foregroundStyle(SaltColor.textPrimary)
+                HStack {
+                    Button { dismiss() } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 19, weight: .medium))
+                            .foregroundStyle(SaltColor.iconDefault)
+                            .frame(width: 44, height: 44)
+                    }
+                    .padding(.leading, -12)
+                    .accessibilityLabel("Back")
+                    Spacer()
+                }
+            }
+            .padding(.horizontal, SaltSpacing.screenMargin)
+            .background(SaltColor.surfaceScreen)
+        }
+        .toolbar(.hidden, for: .navigationBar)
         .task {
             await loadMembers()
         }
@@ -238,16 +268,28 @@ struct CollectionMembersView: View {
         .onAppear {
             Analytics.screen("Collection Members")
         }
-        .overlay(alignment: .bottom) {
-            if invite.isCreating {
-                CreatingLinkToast()
-            }
-        }
         .sheet(item: $invite.shareItem) { item in
             ActivityView(items: [item.message, item.url], onComplete: invite.shareFinished)
                 .presentationDetents([.medium, .large])
         }
         .collectionToast($invite.sentMessage)
+        .confirmationDialog(
+            selectedMember?.displayName ?? "",
+            isPresented: Binding(get: { selectedMember != nil }, set: { if !$0 { selectedMember = nil } }),
+            titleVisibility: .visible,
+            presenting: selectedMember
+        ) { member in
+            // Current role has a ✓
+            ForEach(CollectionRole.allCases) { role in
+                Button((member.role ?? .editor) == role ? "\(role.title)  \u{2713}" : role.title) {
+                    Task { await setRole(role, of: member) }
+                }
+            }
+            Button("Remove from collection", role: .destructive) {
+                memberToRemove = member
+            }
+            Button("Cancel", role: .cancel) { }
+        }
         .alert("Remove \(memberToRemove?.displayName ?? "")?", isPresented: Binding(
             get: { memberToRemove != nil },
             set: { if !$0 { memberToRemove = nil } }
@@ -261,21 +303,21 @@ struct CollectionMembersView: View {
         } message: {
             Text("They won't see this collection anymore. Recipes they added stay in it.")
         }
-        .alert("Reset Invite Link?", isPresented: $showingResetAlert) {
+        .alert("Reset invite link?", isPresented: $showingResetAlert) {
             Button("Cancel", role: .cancel) { }
-            Button("Reset") {
+            Button("Reset", role: .destructive) {
                 Task { await invite.create(for: collectionId, reset: true) }
             }
         } message: {
             Text("Links you've already sent will stop working. People already in the collection stay.")
         }
-        .alert("Turn Off Invite Link?", isPresented: $showingTurnOffAlert) {
+        .alert("Turn off invite link?", isPresented: $showingTurnOffAlert) {
             Button("Cancel", role: .cancel) { }
-            Button("Turn Off", role: .destructive) {
+            Button("Turn off", role: .destructive) {
                 Task { await turnOffLink() }
             }
         } message: {
-            Text("No one new can join with it. Tap Invite People to get a new link later.")
+            Text("No one new can join with it. Tap Invite people to get a new link later.")
         }
         .alert("Leave \u{201C}\(collection?.name ?? "")\u{201D}?", isPresented: $showingLeaveAlert) {
             Button("Cancel", role: .cancel) { }
@@ -285,7 +327,7 @@ struct CollectionMembersView: View {
         } message: {
             Text("You won't see its recipes anymore. Recipes you added stay in it.")
         }
-        .alert("Something Went Wrong", isPresented: Binding(
+        .alert("Something went wrong", isPresented: Binding(
             get: { (errorMessage ?? invite.errorMessage) != nil },
             set: { if !$0 { errorMessage = nil; invite.errorMessage = nil } }
         )) {
@@ -295,21 +337,123 @@ struct CollectionMembersView: View {
         }
     }
 
-    private func memberRow(_ member: CollectionMember) -> some View {
-        HStack(spacing: 12) {
-            MemberAvatar(imageUrl: member.profileImageUrl, size: 40)
-            Text(member.displayName + (isCurrentUser(member) ? " (You)" : ""))
-                .font(.custom("OpenSans-Regular", size: 16))
-            Spacer()
-            if member.isOwner {
-                Text("Owner")
-                    .font(.custom("OpenSans-SemiBold", size: 12))
-                    .foregroundColor(Color("Orange"))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(Color("Orange").opacity(0.12)))
+    /// Quiet list rows for the invite link; Reset link is the only red item
+    private var linkSettings: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Invite link")
+                .font(SaltFont.bodyStrong)
+                .foregroundStyle(SaltColor.textSecondary)
+                .padding(.bottom, 4)
+
+            Button {
+                Task { await copyLink() }
+            } label: {
+                HStack(spacing: 16) {
+                    Image(systemName: "link")
+                        .font(.system(size: 17))
+                        .foregroundStyle(SaltColor.iconDefault)
+                    Text("Copy link")
+                        .font(SaltFont.bodyLarge)
+                        .foregroundStyle(SaltColor.textPrimary)
+                    Spacer()
+                }
+                .frame(height: 50)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+
+            if collection?.supportsInviteExpiry == true {
+                Menu {
+                    Picker("Link expires", selection: Binding(
+                        get: { collection?.inviteExpiryDays },
+                        set: { days in Task { await setInviteExpiry(days) } }
+                    )) {
+                        ForEach(RecipeCollection.inviteExpiryOptions, id: \.self) { days in
+                            Text(days == nil ? RecipeCollection.inviteExpiryTitle(nil) : String(localized: "After \(RecipeCollection.inviteExpiryTitle(days))"))
+                                .tag(days)
+                        }
+                    }
+                } label: {
+                    settingRow("Link expires", value: collection?.inviteExpiryStatus ?? "")
+                }
+                .accessibilityLabel("Link expires: \(collection?.inviteExpiryStatus ?? "")")
+            }
+
+            Menu {
+                Picker("New members can", selection: Binding(
+                    get: { collection?.newMemberRole ?? .editor },
+                    set: { role in Task { await setNewMemberRole(role) } }
+                )) {
+                    ForEach(CollectionRole.allCases) { role in
+                        Text(role.shortTitle).tag(role)
+                    }
+                }
+            } label: {
+                HStack(spacing: 16) {
+                    Text("New members can")
+                        .font(SaltFont.bodyLarge)
+                        .foregroundStyle(SaltColor.textPrimary)
+                    Spacer()
+                    Text((collection?.newMemberRole ?? .editor).shortTitle)
+                        .font(SaltFont.body)
+                        .foregroundStyle(SaltColor.textSecondary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(SaltColor.textSecondary)
+                }
+                .frame(height: 50)
+                .contentShape(Rectangle())
+            }
+            .accessibilityLabel("New members can: \((collection?.newMemberRole ?? .editor).shortTitle)")
+
+            Button("Turn off link") { showingTurnOffAlert = true }
+                .font(SaltFont.bodyLarge)
+                .foregroundStyle(SaltColor.textPrimary)
+                .frame(height: 50)
+
+            Button("Reset link") { showingResetAlert = true }
+                .font(SaltFont.bodyLarge)
+                .foregroundStyle(SaltColor.textDestructive)
+                .frame(height: 50)
+
+            Text("Anyone with the link can join until it expires, or until you reset it or turn it off.")
+                .font(SaltFont.caption)
+                .foregroundStyle(SaltColor.textSecondary)
+                .padding(.top, 4)
         }
+    }
+
+    private func memberRow(_ member: CollectionMember) -> some View {
+        let canManage = isOwner && !member.isOwner
+        return Button {
+            if canManage { selectedMember = member }
+        } label: {
+            HStack(spacing: 16) {
+                SaltAvatar(
+                    name: member.displayName,
+                    imageURL: member.profileImageUrl.flatMap(URL.init(string:)),
+                    size: 40
+                )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(member.displayName + (isCurrentUser(member) ? String(localized: " (you)") : ""))
+                        .font(SaltFont.bodyLarge)
+                        .foregroundStyle(SaltColor.textPrimary)
+                    Text(member.isOwner ? String(localized: "Owner") : (member.role ?? .editor).title)
+                        .font(SaltFont.body)
+                        .foregroundStyle(SaltColor.textSecondary)
+                }
+                Spacer()
+                if canManage {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(SaltColor.textSecondary)
+                }
+            }
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!canManage)
         .accessibilityElement(children: .combine)
     }
 
@@ -320,11 +464,67 @@ struct CollectionMembersView: View {
     private func loadMembers() async {
         isLoading = true
         do {
-            members = try await manager.members(of: collectionId)
+            members = try await manager.members(of: collectionId).sorted { $0.isOwner && !$1.isOwner }
         } catch {
             errorMessage = "Couldn't load the members."
         }
         isLoading = false
+    }
+
+    private func copyLink() async {
+        do {
+            let url = try await manager.inviteLink(for: collectionId)
+            UIPasteboard.general.url = url
+            SaltToastCenter.shared.show(String(localized: "Invite link copied"), duration: .seconds(2.5))
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func setRole(_ role: CollectionRole, of member: CollectionMember) async {
+        guard member.role != role else { return }
+        do {
+            try await manager.setRole(role, of: member.userId, in: collectionId)
+            if let index = members.firstIndex(where: { $0.userId == member.userId }) {
+                members[index].role = role
+            }
+        } catch {
+            errorMessage = String(localized: "Couldn't change \(member.displayName)'s role. If this keeps happening, the roles update may not be set up yet.")
+        }
+    }
+
+    /// "Link expires     In 7 days ›"
+    private func settingRow(_ title: LocalizedStringKey, value: String) -> some View {
+        HStack(spacing: 16) {
+            Text(title)
+                .font(SaltFont.bodyLarge)
+                .foregroundStyle(SaltColor.textPrimary)
+            Spacer()
+            Text(value)
+                .font(SaltFont.body)
+                .foregroundStyle(SaltColor.textSecondary)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(SaltColor.textSecondary)
+        }
+        .frame(height: 50)
+        .contentShape(Rectangle())
+    }
+
+    private func setInviteExpiry(_ days: Int?) async {
+        do {
+            try await manager.setInviteExpiry(days: days, in: collectionId)
+        } catch {
+            errorMessage = String(localized: "Couldn't change the setting. Please try again.")
+        }
+    }
+
+    private func setNewMemberRole(_ role: CollectionRole) async {
+        do {
+            try await manager.setNewMemberRole(role, in: collectionId)
+        } catch {
+            errorMessage = String(localized: "Couldn't change the setting. Please try again.")
+        }
     }
 
     private func remove(_ member: CollectionMember) async {
