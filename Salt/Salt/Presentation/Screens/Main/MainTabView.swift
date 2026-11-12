@@ -16,6 +16,7 @@ struct MainTabView: View {
     @ObservedObject private var sharedRecipeRouter = SharedRecipeRouter.shared
     @ObservedObject private var collectionInviteRouter = CollectionInviteRouter.shared
     @ObservedObject private var authManager = AuthManager.shared
+    @ObservedObject private var toastCenter = SaltToastCenter.shared
     /// Paywall shown at launch (see LaunchPaywall); nil when it isn't showing
     @State private var launchPaywallTrigger: LaunchPaywall.Trigger?
     /// Salt was opened to do something (a shared link, recipe or invite); no paywall in the way
@@ -79,6 +80,11 @@ struct MainTabView: View {
                     openCreateRecipe: {
                         addRecipeTabRequest = .create
                         selectedTab = 1
+                    },
+                    openLinkImport: {
+                        // "Import a recipe" when nothing is found: Add Recipe → Link
+                        addRecipeTabRequest = .link
+                        selectedTab = 1
                     }
                 )
                     .navigationBarHidden(true)
@@ -105,11 +111,18 @@ struct MainTabView: View {
             .tag(1)
 
             // My Recipes Tab
-            MyRecipesView(switchToAddRecipe: {
-                // Add Your First Recipe: the Import page, even if Create was open last
-                addRecipeTabRequest = .import
-                selectedTab = 1
-            })
+            MyRecipesView(
+                switchToAddRecipe: {
+                    // Add your first recipe: the Add Recipe page, even if Create was open last
+                    addRecipeTabRequest = .import
+                    selectedTab = 1
+                },
+                switchToExplore: { selectedTab = 0 },
+                openLinkImport: {
+                    addRecipeTabRequest = .link
+                    selectedTab = 1
+                }
+            )
                 .tabItem {
                     Image("menuIcon")
                         .renderingMode(.template)
@@ -128,8 +141,19 @@ struct MainTabView: View {
                 }
                 .tag(3)
         }
-        .accentColor(Color("OrangeRed"))
+        .tint(SaltColor.actionPrimary)
+        // The saved toast floats just above the tab bar on every tab
+        .saltToastHost(bottomPadding: 96)
+        .sheet(item: $toastCenter.collectionSheetRef) { ref in
+            AddToCollectionSheet(ref: ref, source: "saved_toast")
+        }
         .onAppear {
+            // Just signed up: onboarding's "Save my first recipe" or "Browse Explore"
+            switch OnboardingDestination.consume() {
+            case .addRecipe: selectedTab = 1
+            case .explore: selectedTab = 0
+            case nil: break
+            }
             // Photos or text shared while Salt couldn't be opened
             shareImportRouter.checkInbox()
             // Link shared before the tabs existed (cold launch or while logged out)

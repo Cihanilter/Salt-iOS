@@ -64,6 +64,7 @@ enum Analytics {
         case collectionJoined = "collection_joined"
         case collectionLeft = "collection_left"
         case collectionMemberRemoved = "collection_member_removed"
+        case collectionMemberRoleChanged = "collection_member_role_changed"
         case recipeCopiedFromCollection = "recipe_copied_from_collection"
         /// "Add to a collection?" after saving a recipe; `step` is pick, name or invite
         case collectionPromptShown = "collection_prompt_shown"
@@ -76,6 +77,7 @@ enum Analytics {
 
         // Cooking
         case ingredientSubstituted = "ingredient_substituted"
+        case cookingModeTurnedOn = "cooking_mode_turned_on"
 
         // Subscription
         case importLimitReached = "import_limit_reached"

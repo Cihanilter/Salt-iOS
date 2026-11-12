@@ -24,6 +24,8 @@ class MyRecipesViewModel: ObservableObject {
 
     private let recipeService = RecipeService.shared
     private var cancellables = Set<AnyCancellable>()
+    /// Recipes deleted with "Recipe deleted · Undo"; removed from the server once the toast is gone
+    private var pendingDeletes: [UUID: Task<Void, Never>] = [:]
 
     // MARK: - Computed Properties
 
@@ -31,8 +33,10 @@ class MyRecipesViewModel: ObservableObject {
         if searchText.isEmpty {
             return userRecipes
         }
+        // Names and ingredients
         return userRecipes.filter { recipe in
             recipe.title.localizedCaseInsensitiveContains(searchText)
+                || recipe.ingredients.contains { $0.localizedCaseInsensitiveContains(searchText) }
         }
     }
 
@@ -42,6 +46,7 @@ class MyRecipesViewModel: ObservableObject {
         }
         return bookmarkedRecipes.filter { recipe in
             recipe.title.localizedCaseInsensitiveContains(searchText)
+                || recipe.ingredients.contains { $0.localizedCaseInsensitiveContains(searchText) }
         }
     }
 
@@ -101,7 +106,8 @@ class MyRecipesViewModel: ObservableObject {
             async let userRecipesTask = recipeService.getUserRecipes()
             async let bookmarkedTask = loadBookmarkedRecipes()
 
-            userRecipes = try await userRecipesTask
+            // Recipes waiting for their Undo toast to end stay hidden
+            userRecipes = try await userRecipesTask.filter { pendingDeletes[$0.id] == nil }
             bookmarkedRecipes = await bookmarkedTask
 
         } catch {
@@ -171,17 +177,54 @@ class MyRecipesViewModel: ObservableObject {
         Analytics.log(.recipeDeleted, ["screen": "recipe_detail"])
     }
 
+    /// Deletes from the recipe page: the recipe leaves the list right away and a
+    /// "Recipe deleted · Undo" toast shows; it's deleted on the server once the toast is gone.
+    func deleteRecipeWithUndo(id: UUID) {
+        guard let index = userRecipes.firstIndex(where: { $0.id == id }) else {
+            Task { try? await deleteRecipe(id: id) }
+            return
+        }
+        let recipe = userRecipes.remove(at: index)
+
+        pendingDeletes[id] = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(5.5))
+            guard let self, !Task.isCancelled else { return }
+            self.pendingDeletes[id] = nil
+            do {
+                try await self.recipeService.deleteRecipe(id)
+                CollectionsManager.shared.recipeWasDeleted(.own(id))
+                Analytics.log(.recipeDeleted, ["screen": "recipe_detail"])
+            } catch {
+                // Not deleted after all; put it back
+                self.userRecipes.insert(recipe, at: min(index, self.userRecipes.count))
+                self.errorMessage = error.localizedDescription
+            }
+        }
+
+        SaltToastCenter.shared.show(
+            String(localized: "Recipe deleted"),
+            showsCheck: false,
+            actionTitle: String(localized: "Undo")
+        ) { [weak self] in
+            guard let self, let task = self.pendingDeletes.removeValue(forKey: id) else { return }
+            task.cancel()
+            self.userRecipes.insert(recipe, at: min(index, self.userRecipes.count))
+        }
+    }
+
     // MARK: - Edit Recipe
 
     /// Saves edits to one of the user's own recipes and updates it in the list.
     /// New photos are added after the existing ones. Nutrition is cleared when ingredients or
     /// servings changed; the caller runs the new estimate.
     func updateRecipe(id: UUID, with detail: RecipeDetail, newPhotos: [UIImage]) async throws -> UserRecipe {
-        guard let index = userRecipes.firstIndex(where: { $0.id == id }) else {
-            throw RecipeServiceError.recipeNotFound
+        // Recipes saved from import/create aren't in the list until it reloads
+        let original: UserRecipe
+        if let listed = userRecipes.first(where: { $0.id == id }) {
+            original = listed
+        } else {
+            original = try await recipeService.getUserRecipe(id: id)
         }
-
-        let original = userRecipes[index]
         var updated = original
         updated.applyEdits(from: detail)
         try await setPhotos(of: &updated, existing: detail.images, newPhotos: newPhotos)
@@ -201,6 +244,8 @@ class MyRecipesViewModel: ObservableObject {
         // The list may have changed while saving
         if let index = userRecipes.firstIndex(where: { $0.id == id }) {
             userRecipes[index] = updated
+        } else {
+            userRecipes.insert(updated, at: 0)
         }
         return updated
     }

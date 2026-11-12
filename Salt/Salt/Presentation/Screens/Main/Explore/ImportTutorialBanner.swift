@@ -44,6 +44,7 @@ struct ImportTutorialBanner: View {
                 )
                 // Inside the condition, so the hidden banner takes no space
                 .padding(.top, 8)
+                .padding(.bottom, 8)
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
@@ -134,105 +135,92 @@ enum ImportBannerOption: String, CaseIterable, Identifiable {
 
 // MARK: - Card
 
-/// The banner's card: app logos around the Salt icon, and a call to action
+/// The banner's card: illustration band (Instagram, TikTok, website → Salt icon) and a white
+/// bottom with the title and a small "Start". Dismissible.
 struct ImportTutorialBannerCard: View {
     let onTap: () -> Void
     let onDismiss: () -> Void
 
     var body: some View {
-        Button(action: onTap) {
-            VStack(spacing: 0) {
-                ImportLogosArt()
-                    .frame(height: 120)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        LinearGradient(
-                            colors: [Color("PeachCream"), Color("Orange").opacity(0.35)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+        VStack(spacing: 0) {
+            ImportLogosArt()
+                .frame(height: 118)
+                .frame(maxWidth: .infinity)
+                .background(
+                    LinearGradient(
+                        colors: [SaltColor.surfaceWarm, SaltColor.surfaceWarmStrong],
+                        startPoint: .leading,
+                        endPoint: .trailing
                     )
+                )
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onTap)
 
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Import your first recipe")
-                            .font(.custom("Playfair9pt-SemiBold", size: 18))
-                            .foregroundColor(.black)
-                        Text("From social media, websites, or your own")
-                            .font(.custom("OpenSans-Regular", size: 13))
-                            .foregroundColor(Color("GraniteGray"))
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    HStack(spacing: 4) {
-                        Text("Start")
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .bold))
-                    }
-                    .font(.custom("OpenSans-SemiBold", size: 14))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(Capsule().fill(Color("Orange")))
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Import your first recipe")
+                        .font(SaltFont.h3)
+                        .foregroundStyle(SaltColor.textPrimary)
+                    Text("From social media or any website")
+                        .font(SaltFont.body)
+                        .foregroundStyle(SaltColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(14)
-                .background(Color.white)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button("Start", action: onTap)
+                    .buttonStyle(.salt(.primary, size: .small))
             }
-            .clipShape(RoundedRectangle(cornerRadius: 18))
-            .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color("GrayButtonBorderColor"), lineWidth: 1))
-            .shadow(color: .black.opacity(0.05), radius: 8, y: 3)
+            .padding(16)
+            .background(SaltColor.surfaceScreen)
         }
-        .buttonStyle(.plain)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(SaltColor.borderSubtle, lineWidth: 1)
+        )
         .overlay(alignment: .topTrailing) {
             Button(action: onDismiss) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(Color("GraniteGray"))
-                    .frame(width: 26, height: 26)
-                    .background(Circle().fill(Color.white.opacity(0.85)))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(SaltColor.iconDefault)
+                    .frame(width: 30, height: 30)
+                    .background(Color.white.opacity(0.85), in: Circle())
+                    .frame(width: 44, height: 44)
             }
-            .padding(8)
+            .padding(2)
             .accessibilityLabel("Dismiss")
         }
         .accessibilityElement(children: .contain)
     }
 }
 
-/// Fanned-out app logos with an arrow into the Salt icon
+/// Three sources (Instagram, TikTok, a website) with an arrow into the Salt icon
 private struct ImportLogosArt: View {
-    private let logos = ["instagramLogo", "tiktokLogo", "facebookLogo", "youtubeShortsLogo"]
-
     var body: some View {
-        HStack(spacing: 18) {
-            HStack(spacing: -10) {
-                ForEach(Array(logos.enumerated()), id: \.offset) { index, logo in
-                    LogoTile {
-                        Image(logo)
-                            .resizable()
-                            .scaledToFit()
-                    }
-                    .rotationEffect(.degrees(Double(index - 1) * 8 - 4))
-                    .offset(y: index.isMultiple(of: 2) ? 4 : -4)
-                }
+        HStack(spacing: 22) {
+            HStack(spacing: -12) {
+                LogoTile { Image("instagramLogo").resizable().scaledToFit() }
+                    .rotationEffect(.degrees(-6))
+                LogoTile { Image("tiktokLogo").resizable().scaledToFit() }
+                    .offset(y: -3)
                 LogoTile {
                     Image(systemName: "globe")
                         .resizable()
                         .scaledToFit()
-                        .foregroundColor(Color("GraniteGray"))
+                        .foregroundStyle(SaltColor.textSecondary)
                 }
-                .rotationEffect(.degrees(14))
+                .rotationEffect(.degrees(6))
             }
 
             Image(systemName: "arrow.right")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(Color("Orange"))
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(SaltColor.iconAccent)
 
             Image("saltAppIcon")
                 .resizable()
-                .frame(width: 56, height: 56)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
+                .frame(width: 60, height: 60)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .accessibilityHidden(true)
     }
@@ -243,9 +231,9 @@ private struct ImportLogosArt: View {
         var body: some View {
             content
                 .frame(width: 24, height: 24)
-                .padding(10)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.white))
-                .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
+                .padding(13)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.white))
+                .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
         }
     }
 }

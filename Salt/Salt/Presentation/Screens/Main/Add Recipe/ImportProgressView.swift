@@ -17,7 +17,8 @@ enum ImportProgressKind {
 /// Full-screen loading screen shown while a recipe is imported from a link, photos or a note
 struct ImportProgressView: View {
     let kind: ImportProgressKind
-    let onCancel: () -> Void
+    /// Nil hides Cancel (the import walkthroughs, which move on by themselves)
+    let onCancel: (() -> Void)?
 
     @State private var messageIndex = 0
     @State private var showsSlowHint = false
@@ -37,10 +38,13 @@ struct ImportProgressView: View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
-                Button("Cancel", action: onCancel)
-                    .font(.custom("OpenSans-SemiBold", size: 16))
-                    .foregroundColor(Color("GraniteGray"))
+                if let onCancel {
+                    Button("Cancel", action: onCancel)
+                        .font(.custom("OpenSans-SemiBold", size: 16))
+                        .foregroundColor(Color("GraniteGray"))
+                }
             }
+            .frame(minHeight: 22)
             .padding(.horizontal, 20)
             .padding(.top, 12)
 

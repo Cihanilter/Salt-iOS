@@ -18,7 +18,7 @@ struct ShareTutorialView: View {
         /// After a web funnel buyer's first login (WebBuyerWelcomeView)
         case webWelcome = "web_welcome"
 
-        /// Ends with "Try it on Instagram" and Paste a link instead of Continue
+        /// Ends with "Try it on Instagram" and Maybe later instead of Continue
         var endsWithRealImport: Bool { self != .onboarding }
     }
 
@@ -111,9 +111,14 @@ struct ShareTutorialView: View {
     }
 
     let context: Context
-    /// Played in order; the next one starts after the first is imported
-    let sources: [Source]
+    /// Played in order; the next one starts after the first is imported.
+    /// State so "See how" on the last screen can add the website walkthrough.
+    @State private var sources: [Source]
     let onFinish: (Outcome) -> Void
+    /// In the onboarding demo queue: "Instagram & TikTok · 1 of 3" under the top bar
+    var progress: OnboardingDemoProgress?
+    /// The saved screen's button when another demo follows, e.g. "Next: websites"
+    var nextTitle: String?
 
     @State private var step: Step
     @State private var sourceIndex = 0
@@ -125,18 +130,33 @@ struct ShareTutorialView: View {
     private let recipe = TutorialSampleRecipe.current
 
     /// `step` is only for previews; the tutorial always starts on the post
-    init(context: Context, sources: [Source] = [.instagram], startingAt step: Step = .post, onFinish: @escaping (Outcome) -> Void) {
+    init(
+        context: Context,
+        sources: [Source] = [.instagram],
+        startingAt step: Step = .post,
+        progress: OnboardingDemoProgress? = nil,
+        nextTitle: String? = nil,
+        onFinish: @escaping (Outcome) -> Void
+    ) {
         self.context = context
-        self.sources = sources.isEmpty ? [.instagram] : sources
+        _sources = State(initialValue: sources.isEmpty ? [.instagram] : sources)
         self.onFinish = onFinish
+        self.progress = progress
+        self.nextTitle = nextTitle
         _step = State(initialValue: step)
     }
 
     private var source: Source { sources[sourceIndex] }
     private var hasNextSource: Bool { sourceIndex < sources.count - 1 }
+    /// The last screen offers trying it for real (in-app only), or Maybe later
+    private var showsRealImportChoices: Bool { context.endsWithRealImport && !hasNextSource }
+    /// Onboarding sells the one tap: Salt sits right on the share sheet. The in-app how-to
+    /// also shows finding it under More and adding it to Favorites, as on a real phone.
+    private var sharesToSaltDirectly: Bool { context == .onboarding }
 
     private var primaryTitle: String {
         if hasNextSource { return "Next: recipe websites" }
+        if let nextTitle { return nextTitle }
         guard context.endsWithRealImport else { return "Continue" }
         return "Try it on \(source.name)"
     }
@@ -171,17 +191,56 @@ struct ShareTutorialView: View {
                 appScreen
                     .transition(.opacity)
             case .importing:
-                TutorialImportingView()
+                // The same loading screen as a real import
+                ImportProgressView(kind: .link, onCancel: nil)
+                    .padding(.top, progress != nil ? 48 : 0)
+                    .background(Color(.systemBackground).ignoresSafeArea())
                     .transition(.opacity)
             case .imported:
-                TutorialImportedView(recipe: recipe, context: context, primaryTitle: primaryTitle, showsPasteLink: context.endsWithRealImport && !hasNextSource, onPrimary: finishPrimary, onPasteLink: {
-                    finish(.pasteLink)
-                })
+                TutorialImportedView(
+                    recipe: recipe,
+                    context: context,
+                    primaryTitle: primaryTitle,
+                    hasProgress: progress != nil,
+                    showsMaybeLater: showsRealImportChoices,
+                    // Social walkthroughs only; the website one is what "See how" plays
+                    showsWebsiteHint: showsRealImportChoices && source.isSocial,
+                    onPrimary: finishPrimary,
+                    onMaybeLater: { finish(.completed) },
+                    onSeeWebsites: playWebsiteWalkthrough
+                )
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .overlay(alignment: .top) {
+            if let progress {
+                OnboardingDemoProgressBar(progress: progress, onDark: step != .importing && step != .imported)
+                    .padding(.horizontal, SaltSpacing.screenMargin)
+                    .padding(.top, step == .imported || step == .importing ? 8 : 52)
+                    .allowsHitTesting(false)
+            }
+        }
         .overlay(alignment: .topTrailing) {
-            if step != .imported {
+            // "Show me how": a way out on the last screen without trying it for real
+            if step == .imported && context.endsWithRealImport && progress == nil {
+                Button {
+                    finish(.completed)
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(SaltColor.iconDefault)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("Close")
+                // The glyph lines up with the screen margin; level with the "Saved to My Recipes" pill
+                .padding(.trailing, SaltSpacing.screenMargin - 14)
+                .padding(.top, 17)
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            // Not over the short transformation, where it would cover the progress line
+            if step != .imported && step != .importing {
                 Button("Skip") { finish(.skipped) }
                     .font(.custom("OpenSans-SemiBold", size: 14))
                     .foregroundColor(.white)
@@ -192,6 +251,7 @@ struct ShareTutorialView: View {
                     .padding(.top, 8)
             }
         }
+        .environment(\.tutorialStepCount, sharesToSaltDirectly ? 3 : 5)
         .sensoryFeedback(.impact(weight: .light), trigger: step)
         .sensoryFeedback(.warning, trigger: missedTaps)
         .onAppear {
@@ -201,7 +261,7 @@ struct ShareTutorialView: View {
             // Shows the import running for a moment, like the real share extension.
             // Cancelled if the tutorial is skipped or closed meanwhile.
             guard step == .importing else { return }
-            try? await Task.sleep(for: .seconds(1.6))
+            try? await Task.sleep(for: .seconds(reduceMotion ? 1.2 : 2.8))
             guard !Task.isCancelled else { return }
             advance(to: .imported)
             Analytics.log(.importTutorialCompleted, ["context": context.rawValue, "source": source.rawValue])
@@ -235,7 +295,14 @@ struct ShareTutorialView: View {
             }
 
             if step == .systemShareSheet {
-                TutorialSystemShareSheet(recipe: recipe, source: source, missedTaps: missedTaps, onMore: { advance(to: .appsList) })
+                TutorialSystemShareSheet(
+                    recipe: recipe,
+                    source: source,
+                    missedTaps: missedTaps,
+                    showsSalt: sharesToSaltDirectly,
+                    onMore: { advance(to: .appsList) },
+                    onSalt: { advance(to: .importing) }
+                )
                     .transition(.move(edge: .bottom))
             }
 
@@ -284,6 +351,14 @@ struct ShareTutorialView: View {
         } else {
             finish(.completed)
         }
+    }
+
+    /// "Works the same on websites. See how": the same walkthrough in Safari
+    private func playWebsiteWalkthrough() {
+        sources.append(.website)
+        sourceIndex = sources.count - 1
+        logStarted()
+        advance(to: .post)
     }
 
     private func finish(_ outcome: Outcome) {
@@ -375,28 +450,36 @@ struct TutorialRecipePhoto: View {
 
 // MARK: - Hint
 
-/// "TAP SHARE"-style label pointing at the element to tap
+/// Soft coach mark: "1 of 4" in pink over one short instruction, on a white card
 private struct TutorialHint: View {
+    let step: Int
     let text: String
     let missedTaps: Int
+    @Environment(\.tutorialStepCount) private var totalSteps
 
     var body: some View {
-        Text(text)
-            .font(.custom("OpenSans-SemiBold", size: 18))
-            .tracking(0.5)
-            .foregroundColor(.white)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(RoundedRectangle(cornerRadius: 10).fill(Color("Orange")))
-            .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
-            // Bounces when the user taps somewhere else
-            .keyframeAnimator(initialValue: 1.0, trigger: missedTaps) { content, scale in
-                content.scaleEffect(scale)
-            } keyframes: { _ in
-                SpringKeyframe(1.15, duration: 0.15)
-                SpringKeyframe(1.0, duration: 0.3)
-            }
-            .accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 2) {
+            Text("\(step) of \(totalSteps)")
+                .font(SaltFont.bodyStrong)
+                .foregroundStyle(SaltColor.iconMeta)
+            Text(text)
+                .font(SaltFont.bodyLarge)
+                .foregroundStyle(SaltColor.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(maxWidth: 260, alignment: .leading)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: SaltRadius.card, style: .continuous))
+        .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
+        // Bounces when the user taps somewhere else
+        .keyframeAnimator(initialValue: 1.0, trigger: missedTaps) { content, scale in
+            content.scaleEffect(scale)
+        } keyframes: { _ in
+            SpringKeyframe(1.08, duration: 0.15)
+            SpringKeyframe(1.0, duration: 0.3)
+        }
+        .accessibilityHidden(true)
     }
 }
 
@@ -523,7 +606,7 @@ private struct TutorialPostView: View {
                 if !isDimmed {
                     // Ends left of the button: the overlay is wider than the button and
                     // grows leftwards from its trailing edge
-                    TutorialHint(text: "TAP SHARE", missedTaps: missedTaps)
+                    TutorialHint(step: 1, text: "Tap Share to send this post", missedTaps: missedTaps)
                         .fixedSize()
                         .padding(.trailing, 68)
                         .allowsHitTesting(false)
@@ -622,7 +705,7 @@ private struct TutorialAppShareSheet: View {
                 .ignoresSafeArea(edges: .bottom)
         )
         .overlay(alignment: .bottom) {
-            TutorialHint(text: "TAP \(source.shareToLabel.uppercased())", missedTaps: missedTaps)
+            TutorialHint(step: 2, text: "Tap \u{201C}\(source.shareToLabel)\u{201D} to open your phone\u{2019}s share menu", missedTaps: missedTaps)
                 .padding(.bottom, 100)
                 .allowsHitTesting(false)
         }
@@ -652,7 +735,10 @@ private struct TutorialSystemShareSheet: View {
     let recipe: TutorialSampleRecipe
     let source: ShareTutorialView.Source
     let missedTaps: Int
+    /// Salt is on the sheet already (onboarding); otherwise it's found under More
+    var showsSalt = false
     let onMore: () -> Void
+    var onSalt: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 18) {
@@ -682,17 +768,31 @@ private struct TutorialSystemShareSheet: View {
 
             // Apps
             HStack(alignment: .top, spacing: 0) {
+                if showsSalt {
+                    Button(action: onSalt) {
+                        TutorialSaltAppIcon()
+                    }
+                    .buttonStyle(.plain)
+                    .tutorialPulse(cornerRadius: 16)
+                    .accessibilityLabel("Salt")
+                    .accessibilityHint("Step 3 of 3")
+                }
                 TutorialAppIcon(label: "AirDrop", systemImage: "dot.radiowaves.left.and.right", color: .blue)
                 TutorialAppIcon(label: "Messages", systemImage: "message.fill", color: .green)
                 TutorialAppIcon(label: "Mail", systemImage: "envelope.fill", color: .blue)
-                TutorialAppIcon(label: "Notes", systemImage: "note.text", color: .yellow)
-                Button(action: onMore) {
+                if showsSalt {
                     TutorialAppIcon(label: "More", systemImage: "ellipsis", color: Color(.systemGray4), iconColor: .black)
+                        .accessibilityHidden(true)
+                } else {
+                    TutorialAppIcon(label: "Notes", systemImage: "note.text", color: .yellow)
+                    Button(action: onMore) {
+                        TutorialAppIcon(label: "More", systemImage: "ellipsis", color: Color(.systemGray4), iconColor: .black)
+                    }
+                    .buttonStyle(.plain)
+                    .tutorialPulse(cornerRadius: 16)
+                    .accessibilityLabel("More")
+                    .accessibilityHint("Step 3 of 4")
                 }
-                .buttonStyle(.plain)
-                .tutorialPulse(cornerRadius: 16)
-                .accessibilityLabel("More")
-                .accessibilityHint("Step 3 of 4")
             }
             .padding(.horizontal, 8)
 
@@ -707,7 +807,11 @@ private struct TutorialSystemShareSheet: View {
                 .ignoresSafeArea(edges: .bottom)
         )
         .overlay(alignment: .top) {
-            TutorialHint(text: "TAP MORE", missedTaps: missedTaps)
+            TutorialHint(
+                step: 3,
+                text: showsSalt ? "Tap Salt. That\u{2019}s it, the recipe is saved" : "Tap More: new apps hide here until you find them",
+                missedTaps: missedTaps
+            )
                 .offset(y: -56)
                 .allowsHitTesting(false)
         }
@@ -716,10 +820,18 @@ private struct TutorialSystemShareSheet: View {
 
 // MARK: - Step 4: iOS Apps List
 
-/// The list iOS shows after More, with Salt under Suggestions
+/// The list iOS shows after More. New apps hide under Suggestions, so the user pins Salt
+/// first (Edit → + → Done), then taps it in Favorites, the way it works for real.
 private struct TutorialAppsListSheet: View {
     let missedTaps: Int
     let onSalt: () -> Void
+
+    private enum Phase { case tapEdit, tapAdd, tapDone, tapSalt }
+    @State private var phase: Phase = .tapEdit
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var isEditing: Bool { phase == .tapAdd || phase == .tapDone }
+    private var saltIsFavorite: Bool { phase == .tapDone || phase == .tapSalt }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -730,12 +842,9 @@ private struct TutorialAppsListSheet: View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 30))
                         .foregroundColor(.blue)
+                        .opacity(isEditing ? 0 : 1)
                     Spacer()
-                    Text("Edit")
-                        .font(.custom("OpenSans-Regular", size: 15))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 7)
-                        .background(Capsule().fill(Color.white))
+                    topButton
                 }
             }
             .foregroundColor(.black)
@@ -744,40 +853,34 @@ private struct TutorialAppsListSheet: View {
 
             sectionTitle("Favorites")
             VStack(spacing: 0) {
+                if saltIsFavorite {
+                    saltRow(inFavorites: true)
+                    Divider().padding(.leading, 56)
+                }
                 appRow("AirDrop", systemImage: "dot.radiowaves.left.and.right", color: .blue)
                 Divider().padding(.leading, 56)
                 appRow("Messages", systemImage: "message.fill", color: .green)
-                Divider().padding(.leading, 56)
-                appRow("Mail", systemImage: "envelope.fill", color: .blue)
+                if !saltIsFavorite {
+                    Divider().padding(.leading, 56)
+                    appRow("Mail", systemImage: "envelope.fill", color: .blue)
+                }
             }
             .background(RoundedRectangle(cornerRadius: 12).fill(Color.white))
 
             sectionTitle("Suggestions")
                 .padding(.top, 8)
             VStack(spacing: 0) {
-                Button(action: onSalt) {
-                    HStack(spacing: 14) {
-                        Image("saltAppIcon")
-                            .resizable()
-                            .frame(width: 30, height: 30)
-                            .clipShape(RoundedRectangle(cornerRadius: 7))
-                        Text("Salt")
-                            .font(.custom("OpenSans-SemiBold", size: 16))
-                            .foregroundColor(.black)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .contentShape(Rectangle())
+                if !saltIsFavorite {
+                    saltRow(inFavorites: false)
+                    Divider().padding(.leading, 56)
                 }
-                .buttonStyle(.plain)
-                .tutorialPulse(cornerRadius: 12)
-                .accessibilityLabel("Salt")
-                .accessibilityHint("Step 4 of 4")
-                Divider().padding(.leading, 56)
                 appRow("Reminders", systemImage: "checklist", color: .orange)
                 Divider().padding(.leading, 56)
                 appRow("Instagram", systemImage: "camera", color: Color(red: 0.84, green: 0.16, blue: 0.46))
+                if saltIsFavorite {
+                    Divider().padding(.leading, 56)
+                    appRow("Mail", systemImage: "envelope.fill", color: .blue)
+                }
             }
             .background(RoundedRectangle(cornerRadius: 12).fill(Color.white))
         }
@@ -788,11 +891,102 @@ private struct TutorialAppsListSheet: View {
                 .fill(Color(.systemGray6))
                 .ignoresSafeArea(edges: .bottom)
         )
-        .overlay(alignment: .bottom) {
-            TutorialHint(text: "TAP SALT", missedTaps: missedTaps)
-                .padding(.bottom, 168)
+        // Above the sheet, so it never covers names or buttons
+        .overlay(alignment: .top) {
+            TutorialHint(step: hintStep, text: hintText, missedTaps: missedTaps)
+                .id(phase)
+                .transition(.opacity)
+                .offset(y: -96)
                 .allowsHitTesting(false)
         }
+    }
+
+    private var hintStep: Int { phase == .tapSalt ? 5 : 4 }
+
+    private var hintText: String {
+        switch phase {
+        case .tapEdit: "Pin Salt so it\u{2019}s always there: tap Edit"
+        case .tapAdd: "Tap + next to Salt"
+        case .tapDone: "Salt is in Favorites now. Tap Done"
+        case .tapSalt: "Tap Salt to save the recipe"
+        }
+    }
+
+    @ViewBuilder private var topButton: some View {
+        let title = isEditing ? "Done" : "Edit"
+        let button = Button {
+            switch phase {
+            case .tapEdit: advance(to: .tapAdd)
+            case .tapDone: advance(to: .tapSalt)
+            default: break
+            }
+        } label: {
+            Text(title)
+                .font(.custom(isEditing ? "OpenSans-SemiBold" : "OpenSans-Regular", size: 15))
+                .foregroundColor(isEditing ? .blue : .black)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(Capsule().fill(Color.white))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+
+        if phase == .tapEdit || phase == .tapDone {
+            button.tutorialPulse()
+        } else {
+            button.allowsHitTesting(false)
+        }
+    }
+
+    /// Salt in Suggestions (with a green + while editing) or pinned in Favorites
+    private func saltRow(inFavorites: Bool) -> some View {
+        let row = HStack(spacing: 14) {
+            if isEditing && !inFavorites {
+                Button { advance(to: .tapDone) } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(.white, .green)
+                }
+                .buttonStyle(.plain)
+                .tutorialPulse()
+                .accessibilityLabel("Add Salt to Favorites")
+            } else if isEditing {
+                Image(systemName: "minus.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(.white, .red)
+            }
+            Image("saltAppIcon")
+                .resizable()
+                .frame(width: 30, height: 30)
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+            Text("Salt")
+                .font(.custom("OpenSans-SemiBold", size: 16))
+                .foregroundColor(.black)
+            Spacer()
+            if isEditing {
+                Image(systemName: "line.3.horizontal")
+                    .foregroundColor(Color(.systemGray3))
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
+
+        return Group {
+            if phase == .tapSalt && inFavorites {
+                Button(action: onSalt) { row }
+                    .buttonStyle(.plain)
+                    .tutorialPulse(cornerRadius: 12)
+                    .accessibilityLabel("Salt")
+                    .accessibilityHint("Step 5 of 5")
+            } else {
+                row
+            }
+        }
+    }
+
+    private func advance(to next: Phase) {
+        withAnimation(reduceMotion ? nil : .spring(duration: 0.4)) { phase = next }
     }
 
     private func sectionTitle(_ title: String) -> some View {
@@ -804,6 +998,11 @@ private struct TutorialAppsListSheet: View {
 
     private func appRow(_ name: String, systemImage: String, color: Color) -> some View {
         HStack(spacing: 14) {
+            if isEditing {
+                Image(systemName: "minus.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(.white, .red)
+            }
             Image(systemName: systemImage)
                 .font(.system(size: 14))
                 .foregroundColor(.white)
@@ -813,6 +1012,10 @@ private struct TutorialAppsListSheet: View {
                 .font(.custom("OpenSans-Regular", size: 16))
                 .foregroundColor(.black)
             Spacer()
+            if isEditing {
+                Image(systemName: "line.3.horizontal")
+                    .foregroundColor(Color(.systemGray3))
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -933,7 +1136,7 @@ private struct TutorialWebsiteView: View {
             // Hint above the button, ending at the screen edge
             .overlay(alignment: .bottomTrailing) {
                 if !isDimmed {
-                    TutorialHint(text: "TAP •••", missedTaps: missedTaps)
+                    TutorialHint(step: 1, text: "Tap \u{2022}\u{2022}\u{2022} to open the menu", missedTaps: missedTaps)
                         .fixedSize()
                         .padding(.bottom, 64)
                         .allowsHitTesting(false)
@@ -974,7 +1177,7 @@ private struct TutorialSafariMenu: View {
         .background(RoundedRectangle(cornerRadius: 18).fill(Color.white))
         .shadow(color: .black.opacity(0.2), radius: 20, y: 6)
         .overlay(alignment: .top) {
-            TutorialHint(text: "TAP SHARE", missedTaps: missedTaps)
+            TutorialHint(step: 2, text: "Tap Share to open your phone\u{2019}s share menu", missedTaps: missedTaps)
                 .fixedSize()
                 .offset(y: -56)
                 .allowsHitTesting(false)
@@ -999,6 +1202,27 @@ private struct TutorialSafariMenu: View {
 }
 
 // MARK: - Sheet Building Blocks
+
+/// Salt on the share sheet's app row
+private struct TutorialSaltAppIcon: View {
+    var body: some View {
+        VStack(spacing: 6) {
+            Image("saltAppIcon")
+                .resizable()
+                .frame(width: 58, height: 58)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+            Text("Salt")
+                .font(.custom("OpenSans-Regular", size: 11))
+                .foregroundColor(.black)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+extension EnvironmentValues {
+    /// Steps in the walkthrough, for the hints' "2 of 5"
+    @Entry var tutorialStepCount = 5
+}
 
 private struct TutorialAppIcon: View {
     let label: String
@@ -1045,73 +1269,73 @@ private struct TutorialListGroup: View {
     }
 }
 
-// MARK: - Step 5: Importing
-
-private struct TutorialImportingView: View {
-    var body: some View {
-        VStack(spacing: 20) {
-            Image("saltAppIcon")
-                .resizable()
-                .frame(width: 84, height: 84)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-            ProgressView()
-                .tint(Color("Orange"))
-            Text("Importing your recipe...")
-                .font(.custom("Playfair9pt-Regular", size: 22))
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.white.ignoresSafeArea())
-    }
-}
-
 // MARK: - Step 6: Imported
 
 private struct TutorialImportedView: View {
     let recipe: TutorialSampleRecipe
     let context: ShareTutorialView.Context
     let primaryTitle: String
-    let showsPasteLink: Bool
+    var hasProgress = false
+    let showsMaybeLater: Bool
+    let showsWebsiteHint: Bool
     let onPrimary: () -> Void
-    let onPasteLink: () -> Void
+    let onMaybeLater: () -> Void
+    let onSeeWebsites: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            VStack(spacing: 6) {
-                Text("Recipe imported\nsuccessfully! \u{1F389}")
-                    .font(.custom("Playfair9pt-SemiBold", size: 28))
-                    .multilineTextAlignment(.center)
-                Text("Ingredients and steps, saved in one tap.\nNo more screenshots.")
-                    .font(.custom("OpenSans-Regular", size: 14))
-                    .foregroundColor(Color("GraniteGray"))
-                    .multilineTextAlignment(.center)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(SaltColor.iconAccent)
+                Text("Saved to My Recipes")
+                    .font(SaltFont.bodyStrong)
+                    .foregroundStyle(SaltColor.textPrimary)
             }
-            .padding(.top, 24)
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 12)
+            .frame(height: 30)
+            .background(SaltColor.surfaceWarmStrong, in: Capsule())
+            .padding(.top, hasProgress ? 64 : 24)
+
+            Text("Your first recipe is ready")
+                .font(SaltFont.h1)
+                .foregroundStyle(SaltColor.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 12)
+            Text("Ingredients and steps, saved in one tap. No more screenshots.")
+                .font(SaltFont.bodyLarge)
+                .foregroundStyle(SaltColor.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 8)
 
             recipeSnippet
-                .padding(.horizontal, 20)
                 .padding(.top, 20)
 
             Spacer(minLength: 16)
 
-            VStack(spacing: 12) {
-                Button(action: onPrimary) {
-                    Text(primaryTitle)
-                        .font(.custom("OpenSans-SemiBold", size: 16))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(RoundedRectangle(cornerRadius: 16).fill(Color("Orange")))
+            VStack(spacing: 8) {
+                if showsWebsiteHint {
+                    HStack(spacing: 6) {
+                        Text("Works the same on websites.")
+                            .font(SaltFont.body)
+                            .foregroundStyle(SaltColor.textSecondary)
+                        Button("See how", action: onSeeWebsites)
+                            .font(SaltFont.bodyStrong)
+                            .foregroundStyle(SaltColor.textAccent)
+                            .frame(minHeight: 44)
+                    }
+                    .padding(.bottom, -4)
                 }
-                if showsPasteLink {
-                    Button("Paste a link instead", action: onPasteLink)
-                        .font(.custom("OpenSans-Regular", size: 15))
-                        .foregroundColor(Color("OrangeRed"))
+                Button(primaryTitle, action: onPrimary)
+                    .buttonStyle(.salt())
+                if showsMaybeLater {
+                    Button("Maybe later", action: onMaybeLater)
+                        .buttonStyle(.salt(.text))
                 }
             }
-            .padding(.horizontal, 20)
             .padding(.bottom, 16)
         }
+        .padding(.horizontal, SaltSpacing.screenMargin)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.white.ignoresSafeArea())
     }
@@ -1132,7 +1356,7 @@ private struct TutorialImportedView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Ingredients")
-                    .font(.custom("Playfair9pt-SemiBold", size: 20))
+                    .font(SaltFont.h3)
                     .padding(.bottom, 2)
 
                 ForEach(recipe.ingredients.prefix(3), id: \.self) { ingredient in

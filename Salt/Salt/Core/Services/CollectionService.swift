@@ -17,8 +17,9 @@ final class CollectionService {
 
     /// Collection columns with each entry's recipe embedded, so a collection can be shown
     /// without loading the recipes separately
+    /// `*` so the app works before and after the roles migration (collection_roles.sql)
     private static let collectionSelect =
-        "id, owner_id, name, created_at, collection_members(user_id), collection_recipes(\(entrySelect))"
+        "*, collection_members(*), collection_recipes(\(entrySelect))"
     private static let entrySelect = "id, user_recipe_id, recipe_id, added_at, user_recipes(*), recipes(*)"
 
     private init() {}
@@ -151,6 +152,56 @@ final class CollectionService {
 
     func leave(_ collectionId: UUID) async throws {
         try await removeMember(try await userId(), from: collectionId)
+    }
+
+    // MARK: - Roles
+
+    /// Can add & edit, or can only view (owner only)
+    func setRole(_ role: CollectionRole, of userId: UUID, in collectionId: UUID) async throws {
+        try await supabase
+            .rpc("set_collection_member_role", params: [
+                "p_collection_id": collectionId.uuidString,
+                "p_user_id": userId.uuidString,
+                "p_role": role.rawValue
+            ])
+            .execute()
+    }
+
+    /// What people who join with the invite link can do (owner only)
+    func setNewMemberRole(_ role: CollectionRole, in collectionId: UUID) async throws {
+        try await supabase
+            .from("collections")
+            .update(["new_member_role": role.rawValue])
+            .eq("id", value: collectionId.uuidString)
+            .execute()
+    }
+
+    /// How many days new invite links work; nil = never (owner only)
+    func setInviteExpiry(days: Int?, in collectionId: UUID) async throws {
+        try await supabase
+            .rpc("set_collection_invite_expiry", params: InviteExpiryParams(collectionId: collectionId, days: days))
+            .execute()
+    }
+
+    /// Sends `p_days: null` for "Never" (synthesized Encodable would leave it out)
+    private nonisolated struct InviteExpiryParams: Encodable, Sendable {
+        let collectionId: UUID
+        let days: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case collectionId = "p_collection_id"
+            case days = "p_days"
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(collectionId.uuidString, forKey: .collectionId)
+            if let days {
+                try container.encode(days, forKey: .days)
+            } else {
+                try container.encodeNil(forKey: .days)
+            }
+        }
     }
 
     // MARK: - Recipes
