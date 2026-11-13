@@ -345,7 +345,9 @@ struct SettingsView: View {
                 if RevenueCatConfig.isEnabled {
                     group("Subscription") {
                         Button {
-                            if subscriptionManager.isPremium {
+                            if subscriptionManager.hasWebSubscription {
+                                manageWebSubscription()
+                            } else if subscriptionManager.isPremium {
                                 showingManageSubscription = true
                             } else {
                                 showingPaywall = true
@@ -442,6 +444,16 @@ struct SettingsView: View {
         case .imperial: String(localized: "Imperial")
         case .metric: String(localized: "Metric")
         case nil: String(localized: "As written")
+        }
+    }
+
+    /// Web subscriptions are managed on RevenueCat's page, not in Apple's sheet; without
+    /// that page (e.g. Premium given as a promo), support can help
+    private func manageWebSubscription() {
+        if let url = subscriptionManager.webManagementURL {
+            openURL(url)
+        } else if let url = URL(string: "mailto:\(SupportConfig.feedbackEmail)?subject=Salt%20Premium%20subscription") {
+            openURL(url)
         }
     }
 

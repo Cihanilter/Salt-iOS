@@ -17,6 +17,13 @@ final class SubscriptionManager: ObservableObject {
     /// True while the user has an active "premium" entitlement (monthly or yearly)
     @Published private(set) var isPremium = false
 
+    /// Premium bought outside the App Store (the web funnel's RevenueCat checkout), which Apple's
+    /// Manage Subscriptions sheet doesn't list
+    @Published private(set) var hasWebSubscription = false
+
+    /// RevenueCat's page for cancelling or changing a web subscription; nil for App Store ones
+    @Published private(set) var webManagementURL: URL?
+
     /// Premium features are open when the user has Premium, or when subscriptions are switched off
     var hasPremiumAccess: Bool {
         !RevenueCatConfig.isEnabled || isPremium
@@ -134,7 +141,29 @@ final class SubscriptionManager: ObservableObject {
     /// Updates Premium status right away, e.g. from a paywall purchase result,
     /// without waiting for `customerInfoStream` to deliver it.
     func update(with customerInfo: CustomerInfo) {
-        isPremium = customerInfo.entitlements[RevenueCatConfig.premiumEntitlementID]?.isActive == true
+        let entitlement = customerInfo.entitlements[RevenueCatConfig.premiumEntitlementID]
+        isPremium = entitlement?.isActive == true
         Analytics.setPremium(isPremium)
+
+        if let entitlement, entitlement.isActive, ![.appStore, .macAppStore].contains(entitlement.store) {
+            hasWebSubscription = true
+            // The subscription's own URL: customerInfo.managementURL prefers the App Store one
+            webManagementURL = customerInfo.subscriptionsByProductIdentifier[entitlement.productIdentifier]?.managementURL
+                ?? customerInfo.managementURL
+        } else {
+            hasWebSubscription = false
+            webManagementURL = nil
+        }
+        #if DEBUG
+        print("RevenueCat: Premium \(isPremium), store \(entitlement.map { String(describing: $0.store) } ?? "none"), product \(entitlement?.productIdentifier ?? "none"), web management URL \(webManagementURL?.absoluteString ?? "none")")
+        #endif
+    }
+
+    /// Asks RevenueCat again, skipping its cached answer: Premium bought on the web can take a
+    /// moment to reach the app. True once it's active
+    func recheckPremium() async -> Bool {
+        guard RevenueCatConfig.isEnabled, Purchases.isConfigured else { return hasPremiumAccess }
+        Purchases.shared.invalidateCustomerInfoCache()
+        return await refreshPremium()
     }
 }
