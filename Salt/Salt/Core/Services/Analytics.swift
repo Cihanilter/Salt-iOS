@@ -34,6 +34,8 @@ enum Analytics {
         // Web funnel buyers: welcome after their first login in the app
         case webWelcomeShown = "web_welcome_shown"
         case webWelcomeSkipped = "web_welcome_skipped"
+        /// The welcome couldn't confirm Premium with RevenueCat yet
+        case webWelcomePremiumPending = "web_welcome_premium_pending"
         /// Download Salt link on the funnel's success page opened the app
         case webBuyerLinkOpened = "web_buyer_link_opened"
 
