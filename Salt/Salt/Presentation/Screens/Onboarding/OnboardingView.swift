@@ -319,6 +319,7 @@ struct OnboardingFlowView: View {
                 hasLoggedStart = true
                 Analytics.log(.onboardingStarted)
             }
+            returnToLastDemoIfFinished()
         }
         .fullScreenCover(isPresented: $showingSocialDemo) {
             // The existing share walkthrough, with the progress line; its Skip goes to the next demo
@@ -523,6 +524,18 @@ struct OnboardingFlowView: View {
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { page = .demos }
         if demo == .social {
             showingSocialDemo = true
+        }
+    }
+
+    /// Back from Create account after the last demo: the flow is still one past the last demo,
+    /// which has nothing to show, so go back to that demo instead of a blank page
+    private func returnToLastDemoIfFinished() {
+        guard page == .demos, currentDemo == nil, !demos.isEmpty else { return }
+        demoIndex = demos.count - 1
+        // After the navigation back finishes, so the social walkthrough can be presented
+        Task {
+            try? await Task.sleep(for: .seconds(0.35))
+            showCurrentDemo()
         }
     }
 
