@@ -526,6 +526,8 @@ struct CollectionDetailView: View {
                     .foregroundStyle(SaltColor.iconDefault)
                     .frame(width: 44, height: 44)
             }
+            // Dark menu icons like Recipe detail's; only Delete / Leave are colored (red, as destructive)
+            .tint(SaltColor.textPrimary)
             .padding(.trailing, -12)
             .accessibilityLabel("Collection options")
         }

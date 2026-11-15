@@ -468,15 +468,26 @@ struct SaltPremiumBadge: View {
 
 // MARK: - Avatar
 
-/// Avatar without photo = pink circle with initials.
+/// Avatar without photo = initials on a soft circle, its color picked from the name so
+/// members in a stack look different and each person has the same color everywhere.
 struct SaltAvatar: View {
     let name: String
     var imageURL: URL?
     var size: CGFloat = 28
 
+    private static let backgrounds = [
+        SaltColor.surfacePink, SaltColor.surfaceWarmStrong, SaltColor.surfaceRecipeCard, SaltColor.surfaceWarm
+    ]
+
+    /// A sum of the characters, not `hashValue`, which changes on every launch
+    private var background: Color {
+        let sum = name.lowercased().unicodeScalars.reduce(0) { $0 + Int($1.value) }
+        return Self.backgrounds[sum % Self.backgrounds.count]
+    }
+
     var body: some View {
         ZStack {
-            Circle().fill(SaltColor.surfacePink)
+            Circle().fill(background)
             if let imageURL {
                 AsyncImage(url: imageURL) { image in
                     image.resizable().scaledToFill()
