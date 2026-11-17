@@ -119,6 +119,9 @@ struct ShareTutorialView: View {
     var progress: OnboardingDemoProgress?
     /// The saved screen's button when another demo follows, e.g. "Next: websites"
     var nextTitle: String?
+    /// Onboarding: a back button that steps back through the walkthrough, then calls this
+    /// from its first screen (to the previous demo or question)
+    var onBack: (() -> Void)?
 
     @State private var step: Step
     @State private var sourceIndex = 0
@@ -136,6 +139,7 @@ struct ShareTutorialView: View {
         startingAt step: Step = .post,
         progress: OnboardingDemoProgress? = nil,
         nextTitle: String? = nil,
+        onBack: (() -> Void)? = nil,
         onFinish: @escaping (Outcome) -> Void
     ) {
         self.context = context
@@ -143,6 +147,7 @@ struct ShareTutorialView: View {
         self.onFinish = onFinish
         self.progress = progress
         self.nextTitle = nextTitle
+        self.onBack = onBack
         _step = State(initialValue: step)
     }
 
@@ -153,6 +158,8 @@ struct ShareTutorialView: View {
     /// Onboarding sells the one tap: Salt sits right on the share sheet. The in-app how-to
     /// also shows finding it under More and adding it to Favorites, as on a real phone.
     private var sharesToSaltDirectly: Bool { context == .onboarding }
+    /// Room on the mock screens' top-left for the back button
+    private var backInset: CGFloat { onBack == nil ? 0 : 42 }
 
     private var primaryTitle: String {
         if hasNextSource { return "Next: recipe websites" }
@@ -216,6 +223,8 @@ struct ShareTutorialView: View {
             if let progress {
                 OnboardingDemoProgressBar(progress: progress, onDark: step != .importing && step != .imported)
                     .padding(.horizontal, SaltSpacing.screenMargin)
+                    // Beside the back button on the saved screen, where it's on the top row
+                    .padding(.leading, step == .imported ? backInset : 0)
                     .padding(.top, step == .imported || step == .importing ? 8 : 52)
                     .allowsHitTesting(false)
             }
@@ -236,6 +245,11 @@ struct ShareTutorialView: View {
                 // The glyph lines up with the screen margin; level with the "Saved to My Recipes" pill
                 .padding(.trailing, SaltSpacing.screenMargin - 14)
                 .padding(.top, 17)
+            }
+        }
+        .overlay(alignment: .topLeading) {
+            if onBack != nil && step != .importing {
+                backButton
             }
         }
         .overlay(alignment: .topTrailing) {
@@ -261,7 +275,8 @@ struct ShareTutorialView: View {
             // Shows the import running for a moment, like the real share extension.
             // Cancelled if the tutorial is skipped or closed meanwhile.
             guard step == .importing else { return }
-            try? await Task.sleep(for: .seconds(reduceMotion ? 1.2 : 2.8))
+            // A little shorter in onboarding, where it's one of several demos
+            try? await Task.sleep(for: .seconds(reduceMotion ? 1.2 : (context == .onboarding ? 1.8 : 2.8)))
             guard !Task.isCancelled else { return }
             advance(to: .imported)
             Analytics.log(.importTutorialCompleted, ["context": context.rawValue, "source": source.rawValue])
@@ -276,9 +291,9 @@ struct ShareTutorialView: View {
         ZStack(alignment: .bottom) {
             Group {
                 if source.isSocial {
-                    TutorialPostView(recipe: recipe, source: source, isDimmed: step != .post, missedTaps: missedTaps, onShare: { advance(to: .appShareSheet) })
+                    TutorialPostView(recipe: recipe, source: source, isDimmed: step != .post, missedTaps: missedTaps, leadingInset: backInset, onShare: { advance(to: .appShareSheet) })
                 } else {
-                    TutorialWebsiteView(recipe: recipe, isDimmed: step != .post, missedTaps: missedTaps, onMenu: { advance(to: .appShareSheet) })
+                    TutorialWebsiteView(recipe: recipe, isDimmed: step != .post, missedTaps: missedTaps, leadingInset: backInset, onMenu: { advance(to: .appShareSheet) })
                 }
             }
             .contentShape(Rectangle())
@@ -313,7 +328,50 @@ struct ShareTutorialView: View {
         }
     }
 
+    /// Dark circle like Skip on the mock app screens; a plain chevron on the white saved screen
+    private var backButton: some View {
+        Button(action: goBack) {
+            Group {
+                if step == .imported {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(SaltColor.iconDefault)
+                } else {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 32, height: 32)
+                        .background(Circle().fill(Color.black.opacity(0.55)))
+                }
+            }
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Back")
+        .padding(.leading, step == .imported ? 6 : 10)
+        .padding(.top, step == .imported ? 0 : 2)
+    }
+
     // MARK: - Steps
+
+    /// One step back; from the post, the previous walkthrough or the screen before the tutorial
+    private func goBack() {
+        switch step {
+        case .post:
+            if sourceIndex > 0 {
+                sourceIndex -= 1
+                advance(to: .post)
+            } else {
+                onBack?()
+            }
+        case .appShareSheet: advance(to: .post)
+        case .systemShareSheet: advance(to: .appShareSheet)
+        case .appsList: advance(to: .systemShareSheet)
+        case .importing: break
+        // Watch it again from the start
+        case .imported: advance(to: .post)
+        }
+    }
 
     private func advance(to next: Step) {
         withAnimation(reduceMotion ? nil : .spring(duration: 0.4)) {
@@ -496,9 +554,10 @@ private struct TutorialPulse: ViewModifier {
                     .stroke(Color("Orange"), lineWidth: 3)
                     .padding(-6)
             )
+            // Peach-orange glow; the orange itself at low opacity reads pink
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(Color("Orange").opacity(0.3))
+                    .fill(SaltColor.surfaceWarmStrong)
                     .padding(-12)
                     .scaleEffect(isPulsing ? 1.15 : 0.9)
                     .opacity(isPulsing ? 0.2 : 0.8)
@@ -526,6 +585,7 @@ private struct TutorialPostView: View {
     let source: ShareTutorialView.Source
     let isDimmed: Bool
     let missedTaps: Int
+    var leadingInset: CGFloat = 0
     let onShare: () -> Void
 
     var body: some View {
@@ -565,7 +625,7 @@ private struct TutorialPostView: View {
         .padding(.trailing, 12)
         .padding(.vertical, 5)
         .background(Capsule().fill(Color.black.opacity(0.55)))
-        .padding(.leading, 16)
+        .padding(.leading, 16 + leadingInset)
         .padding(.top, 8)
         .accessibilityHidden(true)
     }
@@ -1031,6 +1091,7 @@ private struct TutorialWebsiteView: View {
     let recipe: TutorialSampleRecipe
     let isDimmed: Bool
     let missedTaps: Int
+    var leadingInset: CGFloat = 0
     let onMenu: () -> Void
 
     var body: some View {
@@ -1040,6 +1101,7 @@ private struct TutorialWebsiteView: View {
                 .font(.custom("Playfair9pt-SemiBold", size: 20))
                 .foregroundColor(.black)
                 .padding(.horizontal, 20)
+                .padding(.leading, leadingInset)
             .padding(.vertical, 12)
 
             Divider()
@@ -1385,7 +1447,7 @@ private struct TutorialImportedView: View {
 // MARK: - Preview
 
 #Preview("Onboarding") {
-    ShareTutorialView(context: .onboarding) { _ in }
+    ShareTutorialView(context: .onboarding, progress: .init(label: "Instagram", index: 0, total: 2), onBack: {}) { _ in }
 }
 
 #Preview("App Share Sheet") {
@@ -1401,7 +1463,7 @@ private struct TutorialImportedView: View {
 }
 
 #Preview("Website") {
-    ShareTutorialView(context: .onboarding, sources: [.website]) { _ in }
+    ShareTutorialView(context: .onboarding, sources: [.website], progress: .init(label: "Websites & food blogs", index: 1, total: 2), onBack: {}) { _ in }
 }
 
 #Preview("Safari Menu") {

@@ -646,8 +646,8 @@ struct SaltGlassCircle<Content: View>: View {
     }
 }
 
-/// Bookmark over a photo (Figma): 34pt circle, black at 32% over an 8pt backdrop blur.
-/// Saved = orange filled bookmark; otherwise a white outline.
+/// Bookmark over a photo (Figma): 34pt circle, black at 32% over an 8pt backdrop blur with a
+/// white outline. Saved = orange filled bookmark on a solid white circle.
 struct SaltBookmarkCircle: View {
     let isBookmarked: Bool
 
@@ -667,13 +667,17 @@ struct SaltBookmarkCircle: View {
         .frame(width: 18, height: 18)
         .frame(width: Self.size, height: Self.size)
         .background {
-            ZStack {
-                // ~ backdrop-filter: blur(8px)
-                Circle().fill(.ultraThinMaterial)
-                // #00000052
-                Circle().fill(Color.black.opacity(0x52 / 255.0))
+            if isBookmarked {
+                Circle().fill(Color.white)
+            } else {
+                ZStack {
+                    // ~ backdrop-filter: blur(8px)
+                    Circle().fill(.ultraThinMaterial)
+                    // #00000052
+                    Circle().fill(Color.black.opacity(0x52 / 255.0))
+                }
+                .environment(\.colorScheme, .dark)
             }
-            .environment(\.colorScheme, .dark)
         }
         .clipShape(Circle())
     }

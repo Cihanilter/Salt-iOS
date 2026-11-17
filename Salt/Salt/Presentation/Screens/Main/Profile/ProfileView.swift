@@ -99,19 +99,26 @@ struct ProfileView: View {
                         HStack(spacing: 12) {
                             Button("Edit profile") { viewModel.startEditing() }
                                 .buttonStyle(.salt(.outline, size: .small))
+                            // Same outline square as Edit profile (its 44pt visible height), with the Figma gear
                             Button { showingSettings = true } label: {
-                                Image(systemName: "gearshape")
-                                    .font(.system(size: 18))
+                                Image("settingsIcon")
+                                    .resizable()
+                                    .frame(width: 22, height: 22)
                                     .foregroundStyle(SaltColor.iconDefault)
-                                    .frame(width: 38, height: 38)
-                                    .background(SaltColor.surfaceScreen, in: Circle())
-                                    .overlay(Circle().stroke(SaltColor.borderSubtle, lineWidth: 1))
                                     .frame(width: 44, height: 44)
+                                    .background(SaltColor.surfaceScreen, in: RoundedRectangle(cornerRadius: SaltRadius.buttonSmall, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: SaltRadius.buttonSmall, style: .continuous)
+                                            .stroke(SaltColor.borderDefault, lineWidth: 1)
+                                    )
+                                    .contentShape(Rectangle())
                             }
+                            .buttonStyle(.plain)
                             .accessibilityLabel("Settings")
                         }
                         .padding(.horizontal, SaltSpacing.screenMargin)
-                        .padding(.bottom, 52)
+                        // Clear of the Dynamic Island
+                        .padding(.bottom, 36)
                     }
 
                 avatar
@@ -251,17 +258,86 @@ struct ProfileView: View {
             }
 
             if let cuisines = viewModel.userProfile?.favoriteCuisines, !cuisines.isEmpty {
-                ChipFlow(spacing: 8) {
-                    ForEach(cuisines, id: \.self) { cuisine in
-                        SaltChip(title: cuisine, isSelected: true, showsCheck: false)
-                    }
-                }
+                FavoriteCuisineChips(cuisines: cuisines)
             } else {
                 Text("Pick the cuisines you love to personalize Explore.")
                     .font(SaltFont.body)
                     .foregroundStyle(SaltColor.textSecondary)
             }
         }
+    }
+}
+
+// MARK: - Favorite Cuisine Chips
+
+/// At most two rows; what doesn't fit rolls into an outline "+N more" chip at the end of
+/// row 2. Tapping it shows them all, ending in "Show less".
+private struct FavoriteCuisineChips: View {
+    let cuisines: [String]
+
+    private static let spacing: CGFloat = 8
+    private static let maxRows = 2
+
+    @State private var isExpanded = false
+    @State private var width: CGFloat = 0
+    @ScaledMetric(relativeTo: .body) private var fontSize: CGFloat = 14
+
+    var body: some View {
+        let visible = isExpanded ? cuisines.count : visibleCount(in: width)
+        ChipFlow(spacing: Self.spacing) {
+            ForEach(cuisines.prefix(visible), id: \.self) { cuisine in
+                SaltChip(title: cuisine, isSelected: true, showsCheck: false)
+            }
+            if isExpanded {
+                SaltChip(title: String(localized: "Show less")) {
+                    withAnimation(.easeInOut(duration: 0.2)) { isExpanded = false }
+                }
+            } else if visible < cuisines.count {
+                SaltChip(title: moreTitle(cuisines.count - visible)) {
+                    withAnimation(.easeInOut(duration: 0.2)) { isExpanded = true }
+                }
+                .accessibilityHint("Shows all favorite cuisines")
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+    }
+
+    private func moreTitle(_ count: Int) -> String {
+        String(localized: "+\(count) more")
+    }
+
+    /// How many chips fit in two rows with the "+N more" chip after them (all, if they fit)
+    private func visibleCount(in width: CGFloat) -> Int {
+        guard width > 0 else { return cuisines.count }
+        let widths = cuisines.map(chipWidth)
+        if rowCount(widths, in: width) <= Self.maxRows { return cuisines.count }
+        for count in stride(from: cuisines.count - 1, through: 0, by: -1) {
+            let candidate = Array(widths.prefix(count)) + [chipWidth(moreTitle(cuisines.count - count))]
+            if rowCount(candidate, in: width) <= Self.maxRows { return count }
+        }
+        return 0
+    }
+
+    /// SaltChip's width: 14pt padding on each side of Open Sans 14 (scaled for Dynamic Type)
+    private func chipWidth(_ title: String) -> CGFloat {
+        let font = UIFont(name: "OpenSans-Regular", size: fontSize) ?? .systemFont(ofSize: fontSize)
+        return ceil((title as NSString).size(withAttributes: [.font: font]).width) + 28
+    }
+
+    /// Rows ChipFlow would use for these widths (same wrapping rule)
+    private func rowCount(_ widths: [CGFloat], in width: CGFloat) -> Int {
+        var rows = 0
+        var rowWidth: CGFloat = 0
+        for chip in widths {
+            if rows == 0 || rowWidth + Self.spacing + chip > width {
+                rows += 1
+                rowWidth = chip
+            } else {
+                rowWidth += Self.spacing + chip
+            }
+        }
+        return rows
     }
 }
 

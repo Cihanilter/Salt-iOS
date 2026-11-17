@@ -19,8 +19,9 @@ final class SaltToastCenter: ObservableObject {
         let message: String
         /// Second, gray line (e.g. the Cooking mode toast)
         var detail: String?
-        /// Orange icon instead of the success badge
+        /// Orange icon instead of the success badge (an SF Symbol or an asset)
         var systemImage: String?
+        var image: Image?
         var showsCheck = true
         var actionTitle: String?
         var action: (() -> Void)?
@@ -37,11 +38,11 @@ final class SaltToastCenter: ObservableObject {
     private init() {}
 
     func show(_ message: String, detail: String? = nil, systemImage: String? = nil,
-              showsCheck: Bool = true, actionTitle: String? = nil,
+              image: Image? = nil, showsCheck: Bool = true, actionTitle: String? = nil,
               duration: Duration = .seconds(5), action: (() -> Void)? = nil) {
         hideTask?.cancel()
         withAnimation(.spring(duration: 0.35)) {
-            current = Toast(message: message, detail: detail, systemImage: systemImage,
+            current = Toast(message: message, detail: detail, systemImage: systemImage, image: image,
                             showsCheck: showsCheck, actionTitle: actionTitle, action: action)
         }
         hideTask = Task {
@@ -74,7 +75,14 @@ struct SaltToastView: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            if let systemImage = toast.systemImage {
+            if let image = toast.image {
+                image
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 22, height: 22)
+                    .foregroundStyle(SaltColor.iconAccent)
+                    .frame(width: 28)
+            } else if let systemImage = toast.systemImage {
                 Image(systemName: systemImage)
                     .font(.system(size: 18))
                     .foregroundStyle(SaltColor.iconAccent)
