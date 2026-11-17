@@ -1308,15 +1308,17 @@ struct IngredientsSection: View {
     /// Recipe text (title and steps) used to tell its language, for English plurals
     var languageSample: [String] = []
 
-    /// The Swap an ingredient link opens the list (or the paywall for free users);
-    /// tapping a swapped line opens just that one
+    /// The Swap an ingredient link opens the list (or, for free users, the Premium sheet
+    /// and then the paywall); tapping a swapped line opens just that one
     private enum ReplaceSheet: Identifiable {
+        case premium
         case paywall
         case pickIngredient
         case ingredient(IngredientPosition)
 
         var id: String {
             switch self {
+            case .premium: return "premium"
             case .paywall: return "paywall"
             case .pickIngredient: return "pick"
             case .ingredient(let position): return "\(position.section)-\(position.line)"
@@ -1328,6 +1330,8 @@ struct IngredientsSection: View {
     /// Ingredients swapped while viewing the recipe; the recipe itself isn't changed
     @State private var swaps: [IngredientPosition: Substitute] = [:]
     @State private var replaceSheet: ReplaceSheet?
+    /// "Try Premium free" on the Premium sheet: the paywall opens once that sheet is gone
+    @State private var pendingSwapPaywall = false
     /// Changed amounts flash orange for ~1s after the servings change
     @State private var flashesAmounts = false
     @State private var flashTask: Task<Void, Never>?
@@ -1393,11 +1397,12 @@ struct IngredientsSection: View {
             if !ingredients.isEmpty {
                 // A quiet link, so it doesn't compete with the ingredients
                 Button {
-                    replaceSheet = subscriptionManager.hasPremiumAccess ? .pickIngredient : .paywall
+                    replaceSheet = subscriptionManager.hasPremiumAccess ? .pickIngredient : .premium
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 13))
+                        Image("swapIcon")
+                            .resizable()
+                            .frame(width: 18, height: 18)
                         Text("Swap an ingredient")
                             .font(SaltFont.bodyStrong)
                         if !subscriptionManager.hasPremiumAccess {
@@ -1425,8 +1430,23 @@ struct IngredientsSection: View {
         .onChange(of: ingredients) { _, _ in
             swaps = [:]
         }
-        .sheet(item: $replaceSheet) { sheet in
+        .sheet(item: $replaceSheet, onDismiss: {
+            if pendingSwapPaywall {
+                pendingSwapPaywall = false
+                replaceSheet = .paywall
+            }
+        }) { sheet in
             switch sheet {
+            case .premium:
+                PremiumFeatureSheet(
+                    title: String(localized: "Swap any ingredient"),
+                    message: String(localized: "Out of buttermilk? Get a good swap\nand the amount to use."),
+                    onTryPremium: {
+                        pendingSwapPaywall = true
+                        replaceSheet = nil
+                    },
+                    onNotNow: { replaceSheet = nil }
+                )
             case .paywall:
                 // Remote paywall: shows whatever is attached to the current offering in the RevenueCat dashboard
                 PaywallView(displayCloseButton: true)
@@ -1449,8 +1469,7 @@ struct IngredientsSection: View {
                     ingredients: ingredients,
                     display: scaled,
                     onSelect: { position, substitute in
-                        swaps[position] = substitute
-                        replaceSheet = nil
+                        applySwap(substitute, at: position)
                     }
                 )
             case .ingredient(let position):
@@ -1461,19 +1480,31 @@ struct IngredientsSection: View {
                         ingredients: ingredients,
                         current: swaps[position],
                         display: scaled,
+                        showsBack: false,
                         onSelect: { substitute in
-                            swaps[position] = substitute
-                            replaceSheet = nil
+                            applySwap(substitute, at: position)
                         }
                     )
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Close") { replaceSheet = nil }
-                        }
-                    }
                 }
-                .presentationDetents([.medium, .large])
+                .swapSheetStyle()
             }
+        }
+    }
+
+    /// Uses the substitute (nil = back to the original) and closes the sheet. A new swap
+    /// says "Swapped for now" (it resets when you leave the recipe), with Undo.
+    private func applySwap(_ substitute: Substitute?, at position: IngredientPosition) {
+        let previous = swaps[position]
+        swaps[position] = substitute
+        replaceSheet = nil
+        guard substitute != nil else { return }
+        SaltToastCenter.shared.show(
+            String(localized: "Swapped for now"),
+            image: Image("swapIcon"),
+            showsCheck: false,
+            actionTitle: String(localized: "Undo")
+        ) {
+            swaps[position] = previous
         }
     }
 
@@ -1505,9 +1536,11 @@ struct IngredientsSection: View {
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 12, weight: .semibold))
+                        Image("swapIcon")
+                            .resizable()
+                            .frame(width: 18, height: 18)
                             .foregroundStyle(SaltColor.iconAccent)
+                            .alignmentGuide(.firstTextBaseline) { $0.height * 0.75 }
                             .accessibilityHidden(true)
                         Text(scaled(swap.line))
                             .font(SaltFont.bodyLarge)

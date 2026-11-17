@@ -232,13 +232,12 @@ private enum RecipeSource: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Notes have no demo: a note is shared or pasted as text, which needs no showing
+    /// Only the social apps and websites have a tutorial (the tap-to-share walkthrough)
     var demo: OnboardingDemo? {
         switch self {
         case .instagram, .tiktok, .youtube, .facebook: .social
         case .websites: .website
-        case .cookbooks, .handwritten, .screenshots: .photo
-        case .notes: nil
+        case .cookbooks, .handwritten, .screenshots, .notes: nil
         }
     }
 }
@@ -268,7 +267,8 @@ struct OnboardingFlowView: View {
     @State private var demos: [OnboardingDemo] = []
     @State private var demoIndex = 0
     @State private var learned: Set<OnboardingDemo> = []
-    @State private var showingSocialDemo = false
+    /// The share walkthrough playing full screen (social apps or Safari)
+    @State private var presentedDemo: OnboardingDemo?
     @FocusState private var isTextFieldFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -321,18 +321,23 @@ struct OnboardingFlowView: View {
             }
             returnToLastDemoIfFinished()
         }
-        .fullScreenCover(isPresented: $showingSocialDemo) {
-            // The existing share walkthrough, with the progress line; its Skip goes to the next demo
+        // The next (or previous) walkthrough opens once this one is fully closed;
+        // presenting during the close animation can be dropped
+        .fullScreenCover(item: $presentedDemo, onDismiss: {
+            if page == .demos { showCurrentDemo() }
+        }) { demo in
+            // The share walkthrough, with the progress line; its Skip goes to the next demo
             ShareTutorialView(
                 context: .onboarding,
-                sources: [socialSource],
-                progress: progress(for: .social),
-                nextTitle: demos.indices.contains(demoIndex + 1) ? demos[demoIndex + 1].nextTitle : String(localized: "Continue")
+                sources: [demo == .website ? .website : socialSource],
+                progress: progress(for: demo),
+                nextTitle: demos.indices.contains(demoIndex + 1) ? demos[demoIndex + 1].nextTitle : String(localized: "Continue"),
+                onBack: previousDemo
             ) { outcome in
                 UserDefaults.standard.set(true, forKey: OnboardingStorage.tutorialSeenKey)
-                if outcome != .skipped { learned.insert(.social) }
-                showingSocialDemo = false
-                nextDemo()
+                if outcome != .skipped { learned.insert(demo) }
+                demoIndex += 1
+                presentedDemo = nil
             }
         }
     }
@@ -386,14 +391,16 @@ struct OnboardingFlowView: View {
 
     // MARK: Pages
 
-    /// Social proof: a user review
+    /// Social proof: real reviews only, no numbers we can't back up
     private var introPage: some View {
         ScrollView(showsIndicators: false) {
-            Text("Thousands of cooks \(Text("love").foregroundStyle(SaltColor.textAccent)) using Salt")
-                .font(.custom("Playfair9pt-Regular", size: 28))
-                .multilineTextAlignment(.center)
-            .padding(.horizontal, 24)
-            .padding(.top, 28)
+            Text("What cooks say about Salt")
+                .font(SaltFont.h1)
+                .foregroundStyle(SaltColor.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.horizontal, SaltSpacing.screenMargin)
+                .padding(.top, 28)
 
             ReviewSlider(reviews: OnboardingReview.featured)
                 .padding(.top, 24)
@@ -465,22 +472,9 @@ struct OnboardingFlowView: View {
         .padding(.horizontal, SaltSpacing.screenMargin)
     }
 
-    @ViewBuilder private var demoPage: some View {
-        switch currentDemo {
-        case .website, .photo:
-            OnboardingSampleDemoView(
-                demo: currentDemo!,
-                progress: progress(for: currentDemo!),
-                onDone: {
-                    learned.insert(currentDemo!)
-                    nextDemo()
-                },
-                onSkip: nextDemo
-            )
-        case .social, nil:
-            // The social demo plays full screen on top
-            Color.white
-        }
+    /// The walkthroughs play full screen on top
+    private var demoPage: some View {
+        Color.white
     }
 
     // MARK: Demos
@@ -500,14 +494,12 @@ struct OnboardingFlowView: View {
             label = apps.prefix(2).joined(separator: " & ")
         case .website:
             label = String(localized: "Websites & food blogs")
-        case .photo:
-            label = String(localized: "Cookbooks & handwritten notes")
         }
         return OnboardingDemoProgress(label: label, index: index, total: demos.count)
     }
 
     private func startDemos() {
-        let order: [OnboardingDemo] = [.social, .website, .photo]
+        let order: [OnboardingDemo] = [.social, .website]
         let picked = Set(sources.compactMap(\.demo))
         demos = order.filter(picked.contains)
         demoIndex = 0
@@ -522,9 +514,7 @@ struct OnboardingFlowView: View {
             return
         }
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { page = .demos }
-        if demo == .social {
-            showingSocialDemo = true
-        }
+        presentedDemo = demo
     }
 
     /// Back from Create account after the last demo: the flow is still one past the last demo,
@@ -539,13 +529,14 @@ struct OnboardingFlowView: View {
         }
     }
 
-    private func nextDemo() {
-        demoIndex += 1
-        // After the full-screen walkthrough closes, so the next screen isn't covered
-        Task {
-            try? await Task.sleep(for: .seconds(0.35))
-            showCurrentDemo()
+    /// Back from a walkthrough's first screen: the previous walkthrough, or the sources question
+    private func previousDemo() {
+        if demoIndex > 0 {
+            demoIndex -= 1
+        } else {
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { page = .sources }
         }
+        presentedDemo = nil
     }
 
     // MARK: Navigation
@@ -811,24 +802,16 @@ private struct ReviewCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                HStack(spacing: 3) {
-                    ForEach(0..<5, id: \.self) { _ in
-                        Image(systemName: "star.fill")
-                            .foregroundColor(Color(red: 1.0, green: 0.76, blue: 0.03))
-                    }
+            // One accent color: orange stars, no big quote mark
+            HStack(spacing: 3) {
+                ForEach(0..<5, id: \.self) { _ in
+                    Image(systemName: "star.fill")
+                        .foregroundStyle(SaltColor.iconAccent)
                 }
-                .font(.system(size: 16))
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("5 stars")
-
-                Spacer()
-
-                Image(systemName: "quote.opening")
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundColor(Color("Orange"))
-                    .accessibilityHidden(true)
             }
+            .font(.system(size: 16))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("5 stars")
 
             Text("\u{201C}\(review.quote)\u{201D}")
                 .font(.custom("OpenSans-Regular", size: 15))

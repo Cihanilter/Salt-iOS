@@ -297,7 +297,7 @@ private struct DemoHighlight<Content: View>: View {
             )
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius + 6)
-                    .fill(Color("Orange").opacity(0.2))
+                    .fill(SaltColor.surfaceWarmStrong)
                     .padding(-6)
                     .scaleEffect(isPulsing ? 1.12 : 0.92)
             )
