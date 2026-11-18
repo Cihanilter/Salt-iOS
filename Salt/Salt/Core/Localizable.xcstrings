@@ -314,7 +314,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%2$lld ücretsiz içe aktarma hakkından %1$lld tane kaldı"
+            "value" : "%1$lld/%2$lld ücretsiz hak kaldı"
           }
         }
       }
@@ -330,7 +330,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
-            "value" : "%2$lld ücretsiz içe aktarmadan %1$lld tanesi kullanıldı"
+            "value" : "%1$lld/%2$lld ücretsiz hak kullanıldı"
           }
         }
       }
