@@ -1442,7 +1442,7 @@ struct CreateRecipeAddButton: View {
 // MARK: - Create Recipe Delete Button
 
 struct CreateRecipeDeleteButton: View {
-    let label: String
+    let label: LocalizedStringResource
     let action: () -> Void
 
     var body: some View {
@@ -1452,7 +1452,7 @@ struct CreateRecipeDeleteButton: View {
                 .foregroundStyle(SaltColor.textSecondary)
                 .frame(width: 28, height: 50)
         }
-        .accessibilityLabel(label)
+        .accessibilityLabel(Text(label))
     }
 }
 

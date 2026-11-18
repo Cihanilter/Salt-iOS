@@ -13,8 +13,8 @@ struct GenericInputProperties {
 		let tapAction: () -> Void
 	}
 
-	let title: String
-    let placeholder: String?
+	let title: LocalizedStringResource
+    let placeholder: LocalizedStringResource?
     var isSecure: Bool
 	let actionInfo: ActionInfo?
 	let keyboardType: UIKeyboardType?

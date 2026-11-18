@@ -17,6 +17,15 @@ enum MyRecipesTab: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// The tab's name as shown
+    var title: String {
+        switch self {
+        case .all: String(localized: "All", comment: "My Recipes tab")
+        case .imports: String(localized: "Imports", comment: "My Recipes tab: imported and created recipes")
+        case .saved: String(localized: "Saved", comment: "My Recipes tab: bookmarked recipes")
+        }
+    }
+
     /// Search bar placeholder for this tab
     var searchPlaceholder: String {
         switch self {
@@ -116,7 +125,7 @@ struct MyRecipesView: View {
                 .padding(.top, 12)
                 .accessibilityAddTraits(.isHeader)
 
-            SaltPageTabs(tabs: MyRecipesTab.allCases, selection: $selectedTab) { $0.rawValue }
+            SaltPageTabs(tabs: MyRecipesTab.allCases, selection: $selectedTab) { $0.title }
 
             if !hasNoRecipes || isSearching {
                 searchBar

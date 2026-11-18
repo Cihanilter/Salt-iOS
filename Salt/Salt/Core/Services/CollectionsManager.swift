@@ -187,8 +187,8 @@ final class CollectionsManager: ObservableObject {
         var parameters = [
             "deep_link_value": CollectionInviteRouter.deepLinkValue,
             OneLinkCodeRouter.codeParameter: code,
-            "af_og_title": "Join \u{201C}\(collection?.name ?? "my collection")\u{201D} on Salt",
-            "af_og_description": "A shared recipe collection on Salt"
+            "af_og_title": String(localized: "Join \u{201C}\(collection?.name ?? String(localized: "my collection"))\u{201D} on Salt"),
+            "af_og_description": String(localized: "A shared recipe collection on Salt")
         ]
         if let image = collection?.coverImageUrls.first {
             parameters["af_og_image"] = image

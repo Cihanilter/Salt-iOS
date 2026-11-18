@@ -35,7 +35,7 @@ final class SupabaseAuthService: AuthService {
         }
 
         guard ValidationHelper.isValidFullName(fullName) else {
-            throw AuthError.unknown("Please enter a valid full name.")
+            throw AuthError.unknown(String(localized: "Please enter a valid full name."))
         }
 
         do {

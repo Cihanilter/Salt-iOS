@@ -65,7 +65,7 @@ struct ImportedRecipe {
     // Convert to RecipeDetail for preview
     func toRecipeDetail() -> RecipeDetail {
         let totalTime = totalTimeMinutes ?? ((prepTimeMinutes ?? 0) + (cookTimeMinutes ?? 0))
-        let durationText = totalTime > 0 ? "\(totalTime) mins" : "N/A"
+        let durationText = DisplayText.duration(minutes: totalTime)
 
         // Extract number from servings string (e.g., "4 servings" -> "4")
         let servingsNumber: String
@@ -83,7 +83,7 @@ struct ImportedRecipe {
         return RecipeDetail(
             title: title,
             duration: durationText,
-            ingredientsCount: "\(ingredients.count) ingredients",
+            ingredientsCount: DisplayText.ingredientCount(ingredients.count),
             description: description ?? "No description",
             servings: servingsNumber,
             prepTime: prepTimeMinutes.map { "\($0)" } ?? "0",
@@ -332,7 +332,7 @@ class RecipeImportService {
     /// Parse recipe from API response
     private func parseApiRecipe(from data: [String: Any], sourceUrl: String) -> ImportedRecipe {
         ImportedRecipe(
-            title: data["title"] as? String ?? "Untitled Recipe",
+            title: data["title"] as? String ?? String(localized: "Untitled Recipe"),
             description: data["description"] as? String,
             imageUrl: data["imageUrl"] as? String,
             prepTimeMinutes: data["prepTimeMinutes"] as? Int,

@@ -178,11 +178,11 @@ enum ProfileServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notAuthenticated:
-            return "Please sign in to continue"
+            return String(localized: "Please sign in to continue")
         case .imageProcessingFailed:
-            return "Failed to process image"
+            return String(localized: "Failed to process image")
         case .uploadFailed(let message):
-            return "Failed to upload image: \(message)"
+            return String(localized: "Failed to upload image: \(message)")
         }
     }
 }

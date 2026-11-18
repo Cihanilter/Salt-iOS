@@ -41,7 +41,7 @@ extension Recipe {
         if let text = servingsText, !text.isEmpty {
             servingsDisplayText = text
         } else if let count = servings {
-            servingsDisplayText = "\(count) servings"
+            servingsDisplayText = String(localized: "\(count) servings")
         } else {
             servingsDisplayText = "N/A"
         }
@@ -332,10 +332,10 @@ struct RecipeDetailView: View {
         }
         if mode == .preview {
             // Just saved from this screen; the estimate runs in the background
-            return ("Getting nutrition… You'll find it in My Recipes.", true)
+            return (String(localized: "Getting nutrition… You'll find it in My Recipes."), true)
         }
         if isEstimatingNutrition {
-            return ("Getting nutrition…", true)
+            return (String(localized: "Getting nutrition…"), true)
         }
         return nil
     }
@@ -1770,10 +1770,10 @@ struct NutritionSection: View {
     // Fiber and sodium are left out: too detailed for a recipe app, and hard to estimate reliably
     private var rows: [Row] {
         let candidates: [(String, String?)] = [
-            ("Carbs", nutrition.carbohydrateContent),
-            ("Protein", nutrition.proteinContent),
-            ("Fat", nutrition.fatContent),
-            ("Sugar", nutrition.sugarContent)
+            (String(localized: "Carbs", comment: "Nutrition label"), nutrition.carbohydrateContent),
+            (String(localized: "Protein", comment: "Nutrition label"), nutrition.proteinContent),
+            (String(localized: "Fat", comment: "Nutrition label"), nutrition.fatContent),
+            (String(localized: "Sugar", comment: "Nutrition label"), nutrition.sugarContent)
         ]
         return candidates.compactMap { name, raw in
             Self.formatAmount(raw).map { Row(name: name, value: $0) }
@@ -1928,7 +1928,8 @@ struct NutritionSection: View {
     /// Value with its unit, e.g. "23 g", "4.5 g", "1,493 mg". Small gram values keep one decimal.
     static func formatAmount(_ raw: String?) -> String? {
         guard let raw, let value = number(in: raw) else { return nil }
-        let unit = raw.lowercased().contains("mg") ? "mg" : (raw.lowercased().contains("calorie") ? "cal" : "g")
+        let unit = raw.lowercased().contains("mg") ? "mg"
+            : (raw.lowercased().contains("calorie") ? String(localized: "cal", comment: "Short for calories") : "g")
         let shown = (unit == "g" && value < 10) ? value.formatted(.number.precision(.fractionLength(0...1)))
                                                 : Int(value.rounded()).formatted()
         return "\(shown) \(unit)"

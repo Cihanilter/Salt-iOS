@@ -423,7 +423,7 @@ struct CollectionDetailView: View {
                         try await manager.leave(collectionId)
                         dismiss()
                     } catch {
-                        errorMessage = "Couldn't leave the collection."
+                        errorMessage = String(localized: "Couldn't leave the collection.")
                     }
                 }
             }
@@ -578,8 +578,8 @@ struct CollectionDetailView: View {
 /// New collection / Rename: one field, focused with the keyboard open; the button is
 /// disabled until a name is typed. Names are limited to 20 characters.
 struct CollectionNameSheet: View {
-    let title: String
-    let actionTitle: String
+    let title: LocalizedStringResource
+    let actionTitle: LocalizedStringResource
     var initialName = ""
     var hint: String? = nil
     /// Returns the collection when one was created, so it can offer "Cook together"
@@ -641,7 +641,7 @@ struct CollectionNameSheet: View {
             .padding(.top, 12)
 
             Button(action: save) {
-                SaltButtonLabel(title: actionTitle, isLoading: isSaving)
+                SaltButtonLabel(title: String(localized: actionTitle), isLoading: isSaving)
             }
             .buttonStyle(.salt())
             .disabled(trimmedName.isEmpty)
@@ -677,7 +677,7 @@ struct CollectionNameSheet: View {
                     dismiss()
                 }
             } catch {
-                errorMessage = "Couldn't save. Please try again."
+                errorMessage = String(localized: "Couldn't save. Please try again.")
                 print("❌ Collection save failed: \(error)")
             }
             isSaving = false

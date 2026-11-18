@@ -69,7 +69,7 @@ final class SetNewPasswordViewModel: ObservableObject {
         guard ValidationHelper.isValidPassword(password.inputText) else {
             print("SetNewPasswordViewModel: Password validation failed")
             var updated = password
-            updated.errorText = "Password must be at least 10 characters with numbers and special characters."
+            updated.errorText = String(localized: "Password must be at least 10 characters with numbers and special characters.")
             password = updated
             print("SetNewPasswordViewModel: errorText set to: \(password.errorText ?? "nil")")
             return
@@ -79,7 +79,7 @@ final class SetNewPasswordViewModel: ObservableObject {
         guard password.inputText == confirmPassword.inputText else {
             print("SetNewPasswordViewModel: Passwords don't match")
             var updated = confirmPassword
-            updated.errorText = "Passwords do not match."
+            updated.errorText = String(localized: "Passwords do not match.")
             confirmPassword = updated
             return
         }
@@ -93,14 +93,14 @@ final class SetNewPasswordViewModel: ObservableObject {
 
             // Show success message
             showSuccessMessage = true
-            alertMessage = "Your password has been updated successfully. Please sign in with your new password."
+            alertMessage = String(localized: "Your password has been updated successfully. Please sign in with your new password.")
             showAlert = true
         } catch let error as AuthError {
             print("SetNewPasswordViewModel: AuthError - \(error)")
             handleAuthError(error)
         } catch {
             print("SetNewPasswordViewModel: Unknown error - \(error)")
-            showAlertMessage("An unexpected error occurred. Please try again.")
+            showAlertMessage(String(localized: "An unexpected error occurred. Please try again."))
         }
 
         isLoading = false
@@ -114,7 +114,7 @@ final class SetNewPasswordViewModel: ObservableObject {
             updated.errorText = error.errorDescription
             password = updated
         default:
-            showAlertMessage(error.errorDescription ?? "An error occurred")
+            showAlertMessage(error.errorDescription ?? String(localized: "An error occurred"))
         }
     }
 

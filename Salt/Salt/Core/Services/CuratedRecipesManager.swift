@@ -187,7 +187,10 @@ class CuratedRecipesManager {
 
     /// Get curated recipes for a section (cuisine or category).
     /// Returns a random selection so Explore shows different curated recipes on each load.
+    /// None when the app isn't in English: the bundle only has English recipes, so Explore
+    /// loads the sections from the server in the app's language instead.
     func recipes(forSection name: String, isCuisine: Bool, limit: Int = 6) -> [Recipe] {
+        guard AppLanguage.code == "en" else { return [] }
         let recipes = isCuisine ? recipesByCuisine[name] : recipesByCategory[name]
         guard let recipes = recipes else { return [] }
 
@@ -211,7 +214,8 @@ class CuratedRecipesManager {
 
     /// Search curated recipes by title
     func search(_ query: String, limit: Int = 20) -> [Recipe] {
-        guard !query.isEmpty else { return [] }
+        // English recipes only; in other languages the search runs on the server
+        guard !query.isEmpty, AppLanguage.code == "en" else { return [] }
 
         let lowercasedQuery = query.lowercased()
         let results = allRecipes.filter { $0.title.lowercased().contains(lowercasedQuery) }

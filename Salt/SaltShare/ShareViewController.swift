@@ -270,13 +270,13 @@ class ShareViewController: UIViewController {
         spinner.color = UIColor(red: 1.0, green: 0.27, blue: 0.0, alpha: 1.0)
         spinner.startAnimating()
 
-        statusLabel.text = "Opening in Salt…"
+        statusLabel.text = String(localized: "Opening in Salt…")
         statusLabel.font = .preferredFont(forTextStyle: .headline)
         statusLabel.adjustsFontForContentSizeCategory = true
         statusLabel.textAlignment = .center
         statusLabel.numberOfLines = 0
 
-        doneButton.setTitle("Done", for: .normal)
+        doneButton.setTitle(String(localized: "Done"), for: .normal)
         doneButton.titleLabel?.font = .preferredFont(forTextStyle: .headline)
         doneButton.isHidden = true
         doneButton.addAction(UIAction { [weak self] _ in

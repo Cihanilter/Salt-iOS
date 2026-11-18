@@ -19,21 +19,21 @@ enum AuthError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidEmail:
-            return "Please enter a valid email address."
+            return String(localized: "Please enter a valid email address.")
         case .weakPassword:
-            return "Password must be at least 10 characters with numbers and special characters."
+            return String(localized: "Password must be at least 10 characters with numbers and special characters.")
         case .passwordsDoNotMatch:
-            return "Passwords do not match."
+            return String(localized: "Passwords do not match.")
         case .emailAlreadyInUse:
-            return "This email is already registered."
+            return String(localized: "This email is already registered.")
         case .invalidCredentials:
-            return "Invalid email or password."
+            return String(localized: "Invalid email or password.")
         case .userNotFound:
-            return "No account found with this email."
+            return String(localized: "No account found with this email.")
         case .emailNotVerified:
-            return "Please verify your email address first."
+            return String(localized: "Please verify your email address first.")
         case .networkError:
-            return "Network error. Please check your connection."
+            return String(localized: "Network error. Please check your connection.")
         case .unknown(let message):
             return message
         }

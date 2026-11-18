@@ -1,0 +1,59 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Done" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bitti"
+          }
+        }
+      }
+    },
+    "Link copied. Open Salt and paste it in Add Recipe → Import." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bağlantı kopyalandı. Salt’ı açıp Tarif Ekle → İçe Aktar bölümüne yapıştırın."
+          }
+        }
+      }
+    },
+    "No link found. Share a recipe link to import it into Salt." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bağlantı bulunamadı. Salt’a içe aktarmak için bir tarif bağlantısı paylaşın."
+          }
+        }
+      }
+    },
+    "Opening in Salt…" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Salt’ta açılıyor…"
+          }
+        }
+      }
+    },
+    "This link can't be imported." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "machine_translated",
+            "value" : "Bu bağlantı içe aktarılamıyor."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.3"
+}

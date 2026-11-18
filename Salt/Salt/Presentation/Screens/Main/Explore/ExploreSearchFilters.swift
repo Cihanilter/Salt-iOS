@@ -211,7 +211,7 @@ struct SearchFilterSheet: View {
     }
 
     private var ingredientOptions: [String] {
-        let suggested = RecipeSearchFilters.suggestedIngredients
+        let suggested = DisplayText.suggestedIngredients
         let typed = draft.ingredients.filter { ingredient in
             !suggested.contains { $0.caseInsensitiveCompare(ingredient) == .orderedSame }
         }

@@ -251,7 +251,7 @@ enum UnitConverter {
                 var text = String(format: "%.2f", value)
                 while text.hasSuffix("0") { text.removeLast() }
                 if text.hasSuffix(".") { text.removeLast() }
-                return text
+                return AppLanguage.isTurkish ? text.replacingOccurrences(of: ".", with: ",") : text
             case .kitchen:
                 return IngredientScaler.fraction(value)
             }
