@@ -12,7 +12,6 @@
       }
     },
     "Link copied. Open Salt and paste it in Add Recipe → Import." : {
-      "extractionState" : "stale",
       "localizations" : {
         "tr" : {
           "stringUnit" : {
@@ -33,6 +32,16 @@
         }
       }
     },
+    "No recipe found. Share a recipe link, a screenshot or a note with the recipe to import it into Salt." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarif bulunamadı. Salt’a içe aktarmak için bir tarif bağlantısı, ekran görüntüsü veya tarifin olduğu bir not paylaşın."
+          }
+        }
+      }
+    },
     "Opening in Salt…" : {
       "localizations" : {
         "tr" : {
@@ -43,13 +52,32 @@
         }
       }
     },
+    "Saved. Open Salt to finish importing." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kaydedildi. İçe aktarmayı tamamlamak için Salt’ı açın."
+          }
+        }
+      }
+    },
     "This link can't be imported." : {
-      "extractionState" : "stale",
       "localizations" : {
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
             "value" : "Bu bağlantı içe aktarılamıyor."
+          }
+        }
+      }
+    },
+    "To import a note, choose \"Send Copy\" in the Notes share menu, then pick Salt." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir notu içe aktarmak için Notlar’ın paylaşım menüsünde “Kopya Gönder”i seçin, ardından Salt’ı seçin."
           }
         }
       }

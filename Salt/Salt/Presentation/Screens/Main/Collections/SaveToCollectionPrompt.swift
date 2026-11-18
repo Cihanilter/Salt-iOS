@@ -395,7 +395,7 @@ struct CookTogetherView: View {
             Button {
                 Task { await invite.create(for: collectionId, reset: false) }
             } label: {
-                SaltButtonLabel(title: "Invite someone", isLoading: invite.isCreating)
+                SaltButtonLabel(title: String(localized: "Invite someone"), isLoading: invite.isCreating)
             }
             .buttonStyle(.salt())
             .allowsHitTesting(!invite.isCreating)

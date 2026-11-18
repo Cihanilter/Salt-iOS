@@ -685,9 +685,13 @@ struct CollectionRecipeCopyView: View {
 // MARK: - Text
 
 private func peopleText(_ count: Int) -> String {
-    String(localized: "\(count) people", comment: "Number of people in a collection")
+    count == 1
+        ? String(localized: "1 person", comment: "Number of people in a collection")
+        : String(localized: "\(count) people", comment: "Number of people in a collection")
 }
 
 private func recipesText(_ count: Int) -> String {
-    String(localized: "\(count) recipes", comment: "Number of recipes in a collection")
+    count == 1
+        ? String(localized: "1 recipe", comment: "Number of recipes in a collection")
+        : String(localized: "\(count) recipes", comment: "Number of recipes in a collection")
 }

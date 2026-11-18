@@ -57,7 +57,7 @@ struct CollectionsRow: View {
             }
         }
         .sheet(isPresented: $showingNewCollection) {
-            CollectionNameSheet(title: "New collection", actionTitle: "Create", hint: "You can invite people to it later.") { name in
+            CollectionNameSheet(title: "New collection", actionTitle: "Create", hint: String(localized: "You can invite people to it later.")) { name in
                 try await manager.createCollection(named: name)
             }
         }
@@ -249,14 +249,14 @@ struct AllCollectionsView: View {
         .background(SaltColor.surfaceScreen)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { availableWidth = $0 }
         .safeAreaInset(edge: .top, spacing: 0) {
-            SaltBackHeader(title: "Collections") { dismiss() }
+            SaltBackHeader(title: String(localized: "Collections")) { dismiss() }
         }
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
             Analytics.screen("All Collections")
         }
         .sheet(isPresented: $showingNewCollection) {
-            CollectionNameSheet(title: "New collection", actionTitle: "Create", hint: "You can invite people to it later.") { name in
+            CollectionNameSheet(title: "New collection", actionTitle: "Create", hint: String(localized: "You can invite people to it later.")) { name in
                 try await manager.createCollection(named: name)
             }
         }
@@ -778,7 +778,7 @@ struct AddToCollectionSheet: View {
             Text(errorMessage ?? "")
         }
         .sheet(isPresented: $showingNewCollection) {
-            CollectionNameSheet(title: "New collection", actionTitle: "Create", hint: "You can invite people to it later.") { name in
+            CollectionNameSheet(title: "New collection", actionTitle: "Create", hint: String(localized: "You can invite people to it later.")) { name in
                 // A collection made from here gets the recipe right away
                 let collection = try await manager.createCollection(named: name)
                 try await manager.addRecipe(ref, to: collection.id, source: source)
@@ -907,7 +907,7 @@ struct AddRecipesToCollectionSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SaltSheetHeader(title: "Add to \(collection?.name ?? "collection")") {
+            SaltSheetHeader(title: collection.map { String(localized: "Add to \($0.name)") } ?? String(localized: "Add to collection")) {
                 Button("Cancel") { dismiss() }
                     .font(SaltFont.bodyLarge)
                     .foregroundStyle(SaltColor.textSecondary)

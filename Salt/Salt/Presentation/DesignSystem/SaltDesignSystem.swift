@@ -406,13 +406,13 @@ struct SaltStepper: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            key("minus", enabled: canDecrement, label: "Fewer", action: onDecrement)
+            key("minus", enabled: canDecrement, label: String(localized: "Fewer", comment: "Stepper button: one less serving"), action: onDecrement)
             Text(label)
                 .font(SaltFont.bodyLarge)
                 .foregroundStyle(SaltColor.textPrimary)
                 .monospacedDigit()
                 .contentTransition(.numericText())
-            key("plus", enabled: canIncrement, label: "More", action: onIncrement)
+            key("plus", enabled: canIncrement, label: String(localized: "More", comment: "Stepper button: one more serving"), action: onIncrement)
         }
     }
 

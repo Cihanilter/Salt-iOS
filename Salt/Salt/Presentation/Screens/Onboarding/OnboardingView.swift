@@ -190,11 +190,11 @@ private enum RecipeSource: String, CaseIterable, Identifiable {
         case .tiktok: "TikTok"
         case .youtube: "YouTube"
         case .facebook: "Facebook"
-        case .websites: "Websites & blogs"
-        case .cookbooks: "Cookbooks"
-        case .handwritten: "Handwritten & family"
-        case .screenshots: "Screenshots"
-        case .notes: "Notes"
+        case .websites: String(localized: "Websites & blogs")
+        case .cookbooks: String(localized: "Cookbooks")
+        case .handwritten: String(localized: "Handwritten & family")
+        case .screenshots: String(localized: "Screenshots")
+        case .notes: String(localized: "Notes", comment: "The Notes app, as a place recipes are kept")
         }
     }
 
@@ -410,7 +410,7 @@ struct OnboardingFlowView: View {
 
     private var namePage: some View {
         VStack(spacing: 24) {
-            OnboardingTitle(title: "What should we call you?", subtitle: "This helps us to personalize your experience.")
+            OnboardingTitle(title: String(localized: "What should we call you?"), subtitle: String(localized: "This helps us to personalize your experience."))
 
             TextField("Your name", text: $name)
                 .textContentType(.givenName)

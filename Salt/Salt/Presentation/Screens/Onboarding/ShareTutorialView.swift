@@ -162,10 +162,10 @@ struct ShareTutorialView: View {
     private var backInset: CGFloat { onBack == nil ? 0 : 42 }
 
     private var primaryTitle: String {
-        if hasNextSource { return "Next: recipe websites" }
+        if hasNextSource { return String(localized: "Next: recipe websites") }
         if let nextTitle { return nextTitle }
-        guard context.endsWithRealImport else { return "Continue" }
-        return "Try it on \(source.name)"
+        guard context.endsWithRealImport else { return String(localized: "Continue") }
+        return String(localized: "Try it on \(source.name)")
     }
 
     enum Step: Int {
@@ -666,7 +666,7 @@ private struct TutorialPostView: View {
                 if !isDimmed {
                     // Ends left of the button: the overlay is wider than the button and
                     // grows leftwards from its trailing edge
-                    TutorialHint(step: 1, text: "Tap Share to send this post", missedTaps: missedTaps)
+                    TutorialHint(step: 1, text: String(localized: "Tap Share to send this post"), missedTaps: missedTaps)
                         .fixedSize()
                         .padding(.trailing, 68)
                         .allowsHitTesting(false)
@@ -765,7 +765,7 @@ private struct TutorialAppShareSheet: View {
                 .ignoresSafeArea(edges: .bottom)
         )
         .overlay(alignment: .bottom) {
-            TutorialHint(step: 2, text: "Tap \u{201C}\(source.shareToLabel)\u{201D} to open your phone\u{2019}s share menu", missedTaps: missedTaps)
+            TutorialHint(step: 2, text: String(localized: "Tap \u{201C}\(source.shareToLabel)\u{201D} to open your phone\u{2019}s share menu"), missedTaps: missedTaps)
                 .padding(.bottom, 100)
                 .allowsHitTesting(false)
         }
@@ -871,7 +871,9 @@ private struct TutorialSystemShareSheet: View {
         .overlay(alignment: .top) {
             TutorialHint(
                 step: 3,
-                text: showsSalt ? "Tap Salt. That\u{2019}s it, the recipe is saved" : "Tap More: new apps hide here until you find them",
+                text: showsSalt
+                    ? String(localized: "Tap Salt. That\u{2019}s it, the recipe is saved")
+                    : String(localized: "Tap More: new apps hide here until you find them"),
                 missedTaps: missedTaps
             )
                 .offset(y: -56)
@@ -967,10 +969,10 @@ private struct TutorialAppsListSheet: View {
 
     private var hintText: String {
         switch phase {
-        case .tapEdit: "Pin Salt so it\u{2019}s always there: tap Edit"
-        case .tapAdd: "Tap + next to Salt"
-        case .tapDone: "Salt is in Favorites now. Tap Done"
-        case .tapSalt: "Tap Salt to save the recipe"
+        case .tapEdit: String(localized: "Pin Salt so it\u{2019}s always there: tap Edit")
+        case .tapAdd: String(localized: "Tap + next to Salt")
+        case .tapDone: String(localized: "Salt is in Favorites now. Tap Done")
+        case .tapSalt: String(localized: "Tap Salt to save the recipe")
         }
     }
 
@@ -1200,7 +1202,7 @@ private struct TutorialWebsiteView: View {
             // Hint above the button, ending at the screen edge
             .overlay(alignment: .bottomTrailing) {
                 if !isDimmed {
-                    TutorialHint(step: 1, text: "Tap \u{2022}\u{2022}\u{2022} to open the menu", missedTaps: missedTaps)
+                    TutorialHint(step: 1, text: String(localized: "Tap \u{2022}\u{2022}\u{2022} to open the menu"), missedTaps: missedTaps)
                         .fixedSize()
                         .padding(.bottom, 64)
                         .allowsHitTesting(false)
@@ -1241,7 +1243,7 @@ private struct TutorialSafariMenu: View {
         .background(RoundedRectangle(cornerRadius: 18).fill(Color.white))
         .shadow(color: .black.opacity(0.2), radius: 20, y: 6)
         .overlay(alignment: .top) {
-            TutorialHint(step: 2, text: "Tap Share to open your phone\u{2019}s share menu", missedTaps: missedTaps)
+            TutorialHint(step: 2, text: String(localized: "Tap Share to open your phone\u{2019}s share menu"), missedTaps: missedTaps)
                 .fixedSize()
                 .offset(y: -56)
                 .allowsHitTesting(false)

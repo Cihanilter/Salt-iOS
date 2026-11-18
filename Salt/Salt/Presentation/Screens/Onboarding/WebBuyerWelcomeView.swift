@@ -47,7 +47,7 @@ struct WebBuyerWelcomeView: View {
                     .padding(.top, 8)
 
                 OnboardingTitle(
-                    title: firstName.map { "Welcome to Salt, \($0) 🎉" } ?? "Welcome to Salt 🎉",
+                    title: firstName.map { String(localized: "Welcome to Salt, \($0) 🎉") } ?? String(localized: "Welcome to Salt 🎉"),
                     subtitle: subtitle
                 )
 

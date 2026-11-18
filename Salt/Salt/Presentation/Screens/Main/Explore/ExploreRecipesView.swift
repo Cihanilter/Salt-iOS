@@ -40,7 +40,11 @@ struct ExploreRecipesView: View {
     @State private var contentID = UUID()
 
     /// Terms that return results in the library
-    let popularSearches = ["Chicken", "Pasta", "Salad", "Soup"]
+    /// Searched in the app's language, so Turkish suggests Turkish dishes
+    let popularSearches = [
+        String(localized: "Chicken", comment: "Popular search"), String(localized: "Pasta", comment: "Popular search"),
+        String(localized: "Salad", comment: "Popular search"), String(localized: "Soup", comment: "Popular search")
+    ]
 
     /// Only cuisines with this many recipes become sections
     private static let minimumSectionSize = 6
@@ -753,7 +757,7 @@ struct DishTypeItem: View {
                     .frame(width: 64, height: 64)
                     .background(isSelected ? SaltColor.surfaceWarmStrong : SaltColor.surfaceWarm, in: Circle())
 
-                Text(dishType.displayName)
+                Text(DisplayText.food(dishType.displayName))
                     .font(isSelected ? SaltFont.bodyStrong : SaltFont.body)
                     .foregroundStyle(isSelected ? SaltColor.textAccent : SaltColor.textSecondary)
                     .lineLimit(1)

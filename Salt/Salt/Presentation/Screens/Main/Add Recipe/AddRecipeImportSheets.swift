@@ -206,7 +206,7 @@ struct LinkImportSheet: View {
             }
         case .unreadable, nil:
             Button(action: onImport) {
-                SaltButtonLabel(title: isImporting ? "Importing…" : "Import recipe", isLoading: isImporting)
+                SaltButtonLabel(title: isImporting ? String(localized: "Importing…") : String(localized: "Import recipe"), isLoading: isImporting)
             }
             .buttonStyle(.salt())
             // Gray until a link is in; while importing it stays orange with a spinner,
@@ -389,7 +389,7 @@ struct TextImportSheet: View {
             .padding(.bottom, 24)
 
             Button(action: onImport) {
-                SaltButtonLabel(title: isImporting ? "Importing…" : "Import recipe", isLoading: isImporting)
+                SaltButtonLabel(title: isImporting ? String(localized: "Importing…") : String(localized: "Import recipe"), isLoading: isImporting)
             }
             .buttonStyle(.salt())
             .opacity(isImporting ? 0.85 : 1)

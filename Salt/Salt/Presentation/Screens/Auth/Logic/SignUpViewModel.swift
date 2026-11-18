@@ -238,7 +238,7 @@ final class SignUpViewModel: ObservableObject {
             password = updated
         case .emailAlreadyInUse:
             existingAccountEmail = email.inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-            showAlertMessage("\(existingAccountEmail ?? "This email") already has a Salt account. Log in to use it. If you bought Premium on our website, it’s on that account.")
+            showAlertMessage(String(localized: "\(existingAccountEmail ?? String(localized: "This email")) already has a Salt account. Log in to use it. If you bought Premium on our website, it’s on that account."))
         default:
             showAlertMessage(error.errorDescription ?? String(localized: "An error occurred"))
         }

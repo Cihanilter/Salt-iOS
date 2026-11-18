@@ -21,10 +21,10 @@ final class CollectionsManager: ObservableObject {
 
     /// Empty starter collection every new user starts with: a real collection (renameable,
     /// deletable) that gives the first "Add to collection" a ready home
-    static let starterNames = ["Dinner ideas"]
+    static let starterNames = [String(localized: "Dinner ideas", comment: "Starter collection name for new users")]
 
     /// Starter names, including ones earlier versions created, so they're listed last
-    private static let listedLastNames: Set<String> = Set(starterNames + ["Planned", "Holiday Favorites"])
+    private static let listedLastNames: Set<String> = Set(starterNames + ["Dinner ideas", "Planned", "Holiday Favorites"])
 
     /// The user's own collections first (in creation order), then their starter collection,
     /// so the ones they made appear at the top

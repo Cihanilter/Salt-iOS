@@ -814,7 +814,7 @@ struct CreateRecipeView: View {
     // Editing a recipe that's already saved (own recipe, or a copy of an Explore recipe):
     // the button saves right away and the sheet stays open until it succeeds
     var onSaveChanges: ((RecipeDetail, [UIImage]) async throws -> Void)? = nil
-    var saveChangesTitle = "Save changes"
+    var saveChangesTitle = String(localized: "Save changes")
     var editNotice: String? = nil  // Shown above the form, e.g. that a copy is saved
     /// Back in a sheet (edit); nil when pushed (create), where back pops the form
     var onCancel: (() -> Void)? = nil
@@ -853,7 +853,7 @@ struct CreateRecipeView: View {
                     CreateRecipeMultilineField(
                         title: "Description",
                         isOptional: true,
-                        placeholder: "Describe your recipe in a few words (e.g., quick, family favorite, festive)",
+                        placeholder: String(localized: "Describe your recipe in a few words (e.g., quick, family favorite, festive)"),
                         text: $viewModel.description,
                         isFocused: focusedField == .description
                     )
@@ -868,7 +868,7 @@ struct CreateRecipeView: View {
                     CreateRecipeMultilineField(
                         title: "Notes & tips",
                         isOptional: true,
-                        placeholder: "Add any tips, tricks or substitutions",
+                        placeholder: String(localized: "Add any tips, tricks or substitutions"),
                         text: $viewModel.notes,
                         isFocused: focusedField == .notes
                     )
@@ -1415,7 +1415,7 @@ struct CreateRecipeUnitPicker: View {
             .saltInput()
         }
         .accessibilityLabel("Unit")
-        .accessibilityValue(unit.isEmpty ? "None" : unit)
+        .accessibilityValue(unit.isEmpty ? String(localized: "None", comment: "No unit picked") : unit)
     }
 }
 
