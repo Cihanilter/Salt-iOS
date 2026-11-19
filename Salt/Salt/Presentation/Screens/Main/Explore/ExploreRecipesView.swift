@@ -725,7 +725,9 @@ struct DishTypesRow: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: 14) {
+            // Items are all DishTypeItem.width wide, so the circles are evenly spaced
+            // whatever the label's length (e.g. Turkish "Atıştırmalıklar")
+            HStack(alignment: .top, spacing: 8) {
                 ForEach(dishTypes) { dishType in
                     DishTypeItem(dishType: dishType, viewModel: viewModel)
                 }
@@ -737,6 +739,9 @@ struct DishTypesRow: View {
 }
 
 struct DishTypeItem: View {
+    /// Room for the 64pt circle and a short label; longer labels shrink to fit
+    static let width: CGFloat = 76
+
     let dishType: DishType
     @ObservedObject var viewModel: ExploreViewModel
 
@@ -761,8 +766,9 @@ struct DishTypeItem: View {
                     .font(isSelected ? SaltFont.bodyStrong : SaltFont.body)
                     .foregroundStyle(isSelected ? SaltColor.textAccent : SaltColor.textSecondary)
                     .lineLimit(1)
-                    .fixedSize()
+                    .minimumScaleFactor(0.75)
             }
+            .frame(width: Self.width)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
