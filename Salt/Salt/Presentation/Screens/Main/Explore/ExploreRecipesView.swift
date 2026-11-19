@@ -739,8 +739,9 @@ struct DishTypesRow: View {
 }
 
 struct DishTypeItem: View {
-    /// Turkish only: room for the 64pt circle and a short label; longer labels shrink to fit
-    static let width: CGFloat = 76
+    /// Turkish only: room for the 64pt circle and a short label; longer labels end in "…"
+    /// at the same font size
+    static let width: CGFloat = 80
 
     let dishType: DishType
     @ObservedObject var viewModel: ExploreViewModel
@@ -766,7 +767,6 @@ struct DishTypeItem: View {
                     .font(isSelected ? SaltFont.bodyStrong : SaltFont.body)
                     .foregroundStyle(isSelected ? SaltColor.textAccent : SaltColor.textSecondary)
                     .lineLimit(1)
-                    .minimumScaleFactor(AppLanguage.isTurkish ? 0.75 : 1)
                     .fixedSize(horizontal: !AppLanguage.isTurkish, vertical: !AppLanguage.isTurkish)
             }
             .frame(width: AppLanguage.isTurkish ? Self.width : nil)
