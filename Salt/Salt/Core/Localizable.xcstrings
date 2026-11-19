@@ -244,7 +244,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld ücretsiz içe aktarma hakkı kaldı"
+            "value" : "%lld ücretsiz hak kaldı"
           }
         }
       }
@@ -625,7 +625,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
-            "value" : "Hesabınız başarıyla oluşturuldu! Hesabınızı doğrulamak için lütfen e-postanızı kontrol edin."
+            "value" : "Hesabınız başarıyla oluşturuldu! Hesabınızı doğrulamak için lütfen e‑postanızı kontrol edin."
           }
         }
       }
@@ -656,7 +656,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ekleme ve düzenleme"
+            "value" : "Ekleyip düzenler"
           }
         }
       }
@@ -1463,7 +1463,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ekleyebilir ve düzenleyebilir"
+            "value" : "Ekleyip düzenleyebilir"
           }
         }
       }
@@ -1473,7 +1473,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Yalnızca görüntüleyebilir"
+            "value" : "Yalnızca görebilir"
           }
         }
       }
@@ -2416,7 +2416,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Akşam yemeği fikirleri"
+            "value" : "Akşam yemeği"
           }
         }
       }
@@ -2663,7 +2663,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
-            "value" : "Bu e-posta zaten kullanılıyor"
+            "value" : "Bu e‑posta zaten kullanılıyor"
           }
         }
       }
@@ -3603,7 +3603,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
-            "value" : "İçe Aktarılanlar"
+            "value" : "İçe Aktarılan"
           }
         }
       }
@@ -4046,7 +4046,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Son ücretsiz içe aktarma"
+            "value" : "Son ücretsiz hak"
           }
         }
       }
@@ -4527,7 +4527,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Yeni üyelerin yetkisi"
+            "value" : "Yeni üyeler"
           }
         }
       }
@@ -4537,7 +4537,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Yeni üyelerin yetkisi: %@"
+            "value" : "Yeni üyeler: %@"
           }
         }
       }
@@ -4597,7 +4597,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
-            "value" : "Bu e-postaya ait bir hesap bulunamadı."
+            "value" : "Bu e‑postaya ait bir hesap bulunamadı."
           }
         }
       }
@@ -5047,7 +5047,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Yalnızca görüntüleme"
+            "value" : "Yalnızca görür"
           }
         }
       }
@@ -5167,7 +5167,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
-            "value" : "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Lütfen gelen kutunuzu kontrol edin."
+            "value" : "Şifre sıfırlama bağlantısı e‑posta adresinize gönderildi. Lütfen gelen kutunuzu kontrol edin."
           }
         }
       }
@@ -5208,7 +5208,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Instagram, TikTok, YouTube veya herhangi bir tarif sitesinden bağlantı yapıştırın"
+            "value" : "Instagram, TikTok, YouTube veya tarif sitesi bağlantısı"
           }
         }
       }
@@ -5270,7 +5270,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Notlar, mesajlar veya e-postadan yapıştırın"
+            "value" : "Notlar, mesajlar veya e‑postadan yapıştırın"
           }
         }
       }
@@ -5414,7 +5414,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
-            "value" : "Lütfen geçerli bir e-posta adresi girin."
+            "value" : "Lütfen geçerli bir e‑posta adresi girin."
           }
         }
       }
@@ -5475,7 +5475,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
-            "value" : "Lütfen e-postanızı doğrulayın"
+            "value" : "Lütfen e‑postanızı doğrulayın"
           }
         }
       }
@@ -5485,7 +5485,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
-            "value" : "Lütfen önce e-posta adresinizi doğrulayın."
+            "value" : "Lütfen önce e‑posta adresinizi doğrulayın."
           }
         }
       }
@@ -6429,7 +6429,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
-            "value" : "Kaydedilenler"
+            "value" : "Kaydedilen"
           }
         }
       }
@@ -7679,7 +7679,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bu e-posta"
+            "value" : "Bu e‑posta"
           }
         }
       }
@@ -7689,7 +7689,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
-            "value" : "Bu e-posta zaten kayıtlı."
+            "value" : "Bu e‑posta zaten kayıtlı."
           }
         }
       }

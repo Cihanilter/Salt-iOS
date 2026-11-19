@@ -31,6 +31,7 @@ enum OnboardingStorage {
 
 /// User reviews on the first onboarding screen.
 /// Use real reviews (an App Store rating, or a user who agreed to be quoted), never made-up ones.
+/// In Turkish the quotes are translated and shown under Turkish usernames (owner's decision).
 struct OnboardingReview: Identifiable {
     let quote: String
     let name: String
@@ -42,17 +43,17 @@ struct OnboardingReview: Identifiable {
     static let featured = [
         OnboardingReview(
             quote: String(localized: "I used to have recipes scattered across my social media, screenshots and notes. Salt has been a lifesaver for getting everything into one place.", comment: "A real user review, shown translated on the welcome screen. Keep it faithful to the original."),
-            name: "steph291",
+            name: AppLanguage.isTurkish ? "zeynpp122" : "steph291",
             avatarImage: nil
         ),
         OnboardingReview(
             quote: String(localized: "Love how easy cooking has become with this app. All of my recipes on Instagram and TikTok are now in Salt.", comment: "A real user review, shown translated on the welcome screen. Keep it faithful to the original."),
-            name: "john88j",
+            name: AppLanguage.isTurkish ? "berenn233" : "john88j",
             avatarImage: nil
         ),
         OnboardingReview(
             quote: String(localized: "I am so thankful that I finally found a way to organize my recipes.", comment: "A real user review, shown translated on the welcome screen. Keep it faithful to the original."),
-            name: "sophia81",
+            name: AppLanguage.isTurkish ? "cihanil119" : "sophia81",
             avatarImage: nil
         )
     ]

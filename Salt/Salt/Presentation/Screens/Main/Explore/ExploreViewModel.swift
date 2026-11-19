@@ -231,11 +231,14 @@ class ExploreViewModel: ObservableObject {
 
     /// Fetch additional recipes from server and merge with existing (avoiding duplicates)
     private func fetchAdditionalRecipesFromServer(sectionsToLoad: [SectionItem]) async {
+        // 4 on top of the bundled curated recipes. Other languages have none bundled, so a
+        // full page of 6: a section needs 6 recipes to show, and "load more" continues at page 1.
+        let limit = AppLanguage.code == "en" ? 4 : 6
         await withTaskGroup(of: (String, [Recipe])?.self) { group in
             for section in sectionsToLoad {
                 group.addTask {
                     do {
-                        let recipes = try await self.fetchRecipesForSection(section, page: 0, limit: 4)
+                        let recipes = try await self.fetchRecipesForSection(section, page: 0, limit: limit)
                         return (section.displayName, recipes)
                     } catch {
                         print("⚠️ Failed to fetch \(section.displayName) from server: \(error)")
@@ -261,7 +264,7 @@ class ExploreViewModel: ObservableObject {
                     cuisineSections.append(CuisineSection(
                         cuisine: displayName,
                         recipes: newRecipes,
-                        hasMore: newRecipes.count >= 4,
+                        hasMore: newRecipes.count >= limit,
                         currentPage: 0,
                         isLoadingMore: false,
                         isLoaded: true,
