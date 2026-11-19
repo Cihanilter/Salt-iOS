@@ -725,9 +725,7 @@ struct DishTypesRow: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            // In Turkish the items are all DishTypeItem.width wide, so the circles stay evenly
-            // spaced despite long labels ("Atıştırmalıklar"); English is laid out as designed
-            HStack(alignment: .top, spacing: AppLanguage.isTurkish ? 8 : 14) {
+            HStack(alignment: .top, spacing: 14) {
                 ForEach(dishTypes) { dishType in
                     DishTypeItem(dishType: dishType, viewModel: viewModel)
                 }
@@ -739,9 +737,11 @@ struct DishTypesRow: View {
 }
 
 struct DishTypeItem: View {
-    /// Turkish only: room for the 64pt circle and a short label; longer labels end in "…"
-    /// at the same font size
-    static let width: CGFloat = 80
+    static let circleSize: CGFloat = 64
+    /// Turkish only: labels may be this wide, overhanging the circle a little without moving
+    /// it, so the circles have the same size and spacing as in English. Longer labels
+    /// ("Atıştırmalıklar") end in "…" at the same font size.
+    static let turkishLabelWidth: CGFloat = 78
 
     let dishType: DishType
     @ObservedObject var viewModel: ExploreViewModel
@@ -760,7 +760,7 @@ struct DishTypeItem: View {
                 Image(dishType.icon)
                     .renderingMode(.template)
                     .foregroundStyle(isSelected ? SaltColor.iconAccent : SaltColor.textSecondary)
-                    .frame(width: 64, height: 64)
+                    .frame(width: Self.circleSize, height: Self.circleSize)
                     .background(isSelected ? SaltColor.surfaceWarmStrong : SaltColor.surfaceWarm, in: Circle())
 
                 Text(DisplayText.food(dishType.displayName))
@@ -768,8 +768,10 @@ struct DishTypeItem: View {
                     .foregroundStyle(isSelected ? SaltColor.textAccent : SaltColor.textSecondary)
                     .lineLimit(1)
                     .fixedSize(horizontal: !AppLanguage.isTurkish, vertical: !AppLanguage.isTurkish)
+                    .frame(width: AppLanguage.isTurkish ? Self.turkishLabelWidth : nil)
             }
-            .frame(width: AppLanguage.isTurkish ? Self.width : nil)
+            // In Turkish the item takes the circle's width; the label overhangs it
+            .frame(width: AppLanguage.isTurkish ? Self.circleSize : nil)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
