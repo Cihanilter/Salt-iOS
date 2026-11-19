@@ -725,9 +725,9 @@ struct DishTypesRow: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            // Items are all DishTypeItem.width wide, so the circles are evenly spaced
-            // whatever the label's length (e.g. Turkish "Atıştırmalıklar")
-            HStack(alignment: .top, spacing: 8) {
+            // In Turkish the items are all DishTypeItem.width wide, so the circles stay evenly
+            // spaced despite long labels ("Atıştırmalıklar"); English is laid out as designed
+            HStack(alignment: .top, spacing: AppLanguage.isTurkish ? 8 : 14) {
                 ForEach(dishTypes) { dishType in
                     DishTypeItem(dishType: dishType, viewModel: viewModel)
                 }
@@ -739,7 +739,7 @@ struct DishTypesRow: View {
 }
 
 struct DishTypeItem: View {
-    /// Room for the 64pt circle and a short label; longer labels shrink to fit
+    /// Turkish only: room for the 64pt circle and a short label; longer labels shrink to fit
     static let width: CGFloat = 76
 
     let dishType: DishType
@@ -766,9 +766,10 @@ struct DishTypeItem: View {
                     .font(isSelected ? SaltFont.bodyStrong : SaltFont.body)
                     .foregroundStyle(isSelected ? SaltColor.textAccent : SaltColor.textSecondary)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                    .minimumScaleFactor(AppLanguage.isTurkish ? 0.75 : 1)
+                    .fixedSize(horizontal: !AppLanguage.isTurkish, vertical: !AppLanguage.isTurkish)
             }
-            .frame(width: Self.width)
+            .frame(width: AppLanguage.isTurkish ? Self.width : nil)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
