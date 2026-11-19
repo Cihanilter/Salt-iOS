@@ -740,8 +740,9 @@ struct DishTypeItem: View {
     static let circleSize: CGFloat = 64
     /// Turkish only: labels may be this wide, overhanging the circle a little without moving
     /// it, so the circles have the same size and spacing as in English. Longer labels
-    /// ("Atıştırmalıklar") end in "…" at the same font size.
-    static let turkishLabelWidth: CGFloat = 78
+    /// ("Atıştırmalıklar") end in "…" at the same font size. 70 leaves at least 8pt between
+    /// two neighbouring labels (14pt spacing minus 3pt overhang on each).
+    static let turkishLabelWidth: CGFloat = 70
 
     let dishType: DishType
     @ObservedObject var viewModel: ExploreViewModel
