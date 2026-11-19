@@ -230,8 +230,24 @@ struct ProfileView: View {
                 .accessibilityHidden(true)
             }
 
-            Button("Upgrade") { showingPaywall = true }
-                .buttonStyle(.salt(.primary, size: .small))
+            if AppLanguage.isTurkish {
+                // "Premium’a yükselt" is too long for the one-line button: same look, two lines
+                Button { showingPaywall = true } label: {
+                    Text(verbatim: "Premium’a\nyükselt")
+                        .font(SaltFont.buttonSmall)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(SaltColor.textOnAccent)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .frame(minHeight: 44)
+                        .background(SaltColor.actionPrimary, in: RoundedRectangle(cornerRadius: SaltRadius.buttonSmall, style: .continuous))
+                        .fixedSize()
+                }
+                .buttonStyle(.plain)
+            } else {
+                Button("Upgrade") { showingPaywall = true }
+                    .buttonStyle(.salt(.primary, size: .small))
+            }
         }
         .padding(16)
         .background(SaltColor.surfaceScreen, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
