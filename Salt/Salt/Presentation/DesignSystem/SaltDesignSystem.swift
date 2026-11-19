@@ -338,13 +338,14 @@ struct SaltPageTabs<Tab: Hashable>: View {
                     withAnimation(.easeInOut(duration: 0.2)) { selection = tab }
                 } label: {
                     Text(title(tab))
-                        // Turkish names are longer ("İçe Aktarılan"): a size smaller and a
-                        // little tighter so they fit without shrinking
-                        .font(SaltFont.playfair(AppLanguage.isTurkish ? 20 : 22))
+                        // Turkish names are longer ("İçe Aktarılan"): smaller and a little
+                        // tighter, with room on both sides so they don't touch the pill's edges
+                        .font(SaltFont.playfair(AppLanguage.isTurkish ? 18 : 22))
                         .tracking(AppLanguage.isTurkish ? -0.3 : 0)
                         .foregroundStyle(SaltColor.textPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
+                        .padding(.horizontal, AppLanguage.isTurkish ? 6 : 0)
                         .frame(maxWidth: .infinity)
                         .frame(height: 38)
                         .background {

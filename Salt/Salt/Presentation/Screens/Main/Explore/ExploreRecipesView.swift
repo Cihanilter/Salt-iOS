@@ -168,7 +168,9 @@ struct ExploreRecipesView: View {
                 DishTypesRow(dishTypes: dishTypes, viewModel: viewModel)
             }
         }
-        .padding(.bottom, 12)
+        // A little more room in Turkish, whose smaller dish type labels bring the first
+        // section closer to the circles
+        .padding(.bottom, AppLanguage.isTurkish ? 20 : 12)
     }
 
     // MARK: - Reset to Initial State
