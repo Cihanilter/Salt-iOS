@@ -47,7 +47,7 @@ class ProfileViewModel: ObservableObject {
     // MARK: - Computed Properties
 
     var displayName: String {
-        userProfile?.fullName ?? authManager.currentUser?.fullName ?? "User"
+        userProfile?.fullName ?? authManager.currentUser?.fullName ?? String(localized: "User", comment: "Fallback name on the profile")
     }
 
     var email: String? {
@@ -59,7 +59,8 @@ class ProfileViewModel: ObservableObject {
             return nil
         }
         let displayFormatter = DateFormatter()
-        displayFormatter.dateFormat = "MMMM yyyy"
+        // Month name in the app's language ("October 2026", "Ekim 2026")
+        displayFormatter.setLocalizedDateFormatFromTemplate("MMMM yyyy")
         return displayFormatter.string(from: date)
     }
 

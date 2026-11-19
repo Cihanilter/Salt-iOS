@@ -318,7 +318,7 @@ struct IngredientSubstitutesView: View {
         }
     }
 
-    private func ideasButton(title: String) -> some View {
+    private func ideasButton(title: LocalizedStringResource) -> some View {
         Button {
             Task { await loadIdeas() }
         } label: {
@@ -329,14 +329,14 @@ struct IngredientSubstitutesView: View {
         .frame(minHeight: 44)
     }
 
-    private func sectionTitle(_ text: String) -> some View {
+    private func sectionTitle(_ text: LocalizedStringResource) -> some View {
         Text(text)
             .font(SaltFont.bodyLargeStrong)
             .foregroundStyle(SaltColor.textPrimary)
             .accessibilityAddTraits(.isHeader)
     }
 
-    private func message(_ text: String) -> some View {
+    private func message(_ text: LocalizedStringResource) -> some View {
         Text(text)
             .font(SaltFont.body)
             .foregroundStyle(SaltColor.textSecondary)

@@ -65,7 +65,7 @@ struct ImportedRecipe {
     // Convert to RecipeDetail for preview
     func toRecipeDetail() -> RecipeDetail {
         let totalTime = totalTimeMinutes ?? ((prepTimeMinutes ?? 0) + (cookTimeMinutes ?? 0))
-        let durationText = totalTime > 0 ? "\(totalTime) mins" : "N/A"
+        let durationText = DisplayText.duration(minutes: totalTime)
 
         // Extract number from servings string (e.g., "4 servings" -> "4")
         let servingsNumber: String
@@ -83,7 +83,7 @@ struct ImportedRecipe {
         return RecipeDetail(
             title: title,
             duration: durationText,
-            ingredientsCount: "\(ingredients.count) ingredients",
+            ingredientsCount: DisplayText.ingredientCount(ingredients.count),
             description: description ?? "No description",
             servings: servingsNumber,
             prepTime: prepTimeMinutes.map { "\($0)" } ?? "0",
@@ -127,16 +127,16 @@ struct SocialPlatform {
     let postNoun: String  // "post" or "video"
 
     /// e.g. "Instagram post", "TikTok video"
-    var postName: String { "\(name) \(postNoun)" }
+    var postName: String { String(localized: "\(name) \(postNoun)", comment: "Platform and kind of post, e.g. Instagram post") }
 
     init?(url: String) {
         let url = url.lowercased()
         switch true {
-        case url.contains("instagram.com"), url.contains("instagr.am"): (name, postNoun) = ("Instagram", "post")
-        case url.contains("tiktok.com"): (name, postNoun) = ("TikTok", "video")
-        case url.contains("youtube.com"), url.contains("youtu.be"): (name, postNoun) = ("YouTube", "video")
-        case url.contains("facebook.com"), url.contains("fb.watch"): (name, postNoun) = ("Facebook", "post")
-        case url.contains("twitter.com"), url.contains("x.com"): (name, postNoun) = ("X", "post")
+        case url.contains("instagram.com"), url.contains("instagr.am"): (name, postNoun) = ("Instagram", String(localized: "post", comment: "Kind of social post in an import error, e.g. Instagram post"))
+        case url.contains("tiktok.com"): (name, postNoun) = ("TikTok", String(localized: "video", comment: "Kind of social post in an import error, e.g. TikTok video"))
+        case url.contains("youtube.com"), url.contains("youtu.be"): (name, postNoun) = ("YouTube", String(localized: "video", comment: "Kind of social post in an import error, e.g. TikTok video"))
+        case url.contains("facebook.com"), url.contains("fb.watch"): (name, postNoun) = ("Facebook", String(localized: "post", comment: "Kind of social post in an import error, e.g. Instagram post"))
+        case url.contains("twitter.com"), url.contains("x.com"): (name, postNoun) = ("X", String(localized: "post", comment: "Kind of social post in an import error, e.g. Instagram post"))
         default: return nil
         }
     }
@@ -166,29 +166,29 @@ enum RecipeImportError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidUrl:
-            return "That doesn't look like a link. Copy the full link (it starts with https://) and paste it here."
+            return String(localized: "That doesn't look like a link. Copy the full link (it starts with https://) and paste it here.")
         case .offline:
-            return "You're offline. Check your internet connection and try again."
+            return String(localized: "You're offline. Check your internet connection and try again.")
         case .timedOut:
-            return "This is taking longer than expected. Please try again in a moment."
+            return String(localized: "This is taking longer than expected. Please try again in a moment.")
         case .serviceBusy:
-            return "Salt is busy right now. Please try again in a minute."
+            return String(localized: "Salt is busy right now. Please try again in a minute.")
         case .postUnavailable(let platform):
-            return "We couldn't open this \(platform.postName). It may be private or deleted. Check that it opens in \(platform.name), then try again."
+            return String(localized: "We couldn't open this \(platform.postName). It may be private or deleted. Check that it opens in \(platform.name), then try again.")
         case .pageUnavailable:
-            return "We couldn't open this page. Check that the link opens in Safari, then try again."
+            return String(localized: "We couldn't open this page. Check that the link opens in Safari, then try again.")
         case .noRecipeFound(let platform?):
-            return "We couldn't find a recipe in this \(platform.postName). If the recipe is only shown in pictures or on screen, take screenshots of it and import them with Photo or Screenshot."
+            return String(localized: "We couldn't find a recipe in this \(platform.postName). If the recipe is only shown in pictures or on screen, take screenshots of it and import them with Photo or Screenshot.")
         case .noRecipeFound(nil):
-            return "We couldn't find a recipe on this page. Make sure the link opens a single recipe, not a list of recipes or the site's home page."
+            return String(localized: "We couldn't find a recipe on this page. Make sure the link opens a single recipe, not a list of recipes or the site's home page.")
         case .noTextInPhoto:
-            return "We couldn't read a recipe in this photo. Try a sharper, well-lit photo of the whole recipe, or a screenshot of the full caption (tap \"more\" first)."
+            return String(localized: "We couldn't read a recipe in this photo. Try a sharper, well-lit photo of the whole recipe, or a screenshot of the full caption (tap \"more\" first).")
         case .noRecipeInPhoto:
-            return "We couldn't find a recipe in this photo. Make sure the ingredients and steps are in the picture. A long recipe may need a few screenshots."
+            return String(localized: "We couldn't find a recipe in this photo. Make sure the ingredients and steps are in the picture. A long recipe may need a few screenshots.")
         case .noRecipeInText:
-            return "We couldn't find a recipe in this text. Make sure it includes the ingredients and steps."
+            return String(localized: "We couldn't find a recipe in this text. Make sure it includes the ingredients and steps.")
         case .failed:
-            return "Something went wrong while importing this recipe. Please try again."
+            return String(localized: "Something went wrong while importing this recipe. Please try again.")
         }
     }
 
@@ -332,7 +332,7 @@ class RecipeImportService {
     /// Parse recipe from API response
     private func parseApiRecipe(from data: [String: Any], sourceUrl: String) -> ImportedRecipe {
         ImportedRecipe(
-            title: data["title"] as? String ?? "Untitled Recipe",
+            title: data["title"] as? String ?? String(localized: "Untitled Recipe"),
             description: data["description"] as? String,
             imageUrl: data["imageUrl"] as? String,
             prepTimeMinutes: data["prepTimeMinutes"] as? Int,

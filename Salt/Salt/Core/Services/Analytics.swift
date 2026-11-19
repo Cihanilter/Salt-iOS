@@ -81,6 +81,9 @@ enum Analytics {
         case ingredientSubstituted = "ingredient_substituted"
         case cookingModeTurnedOn = "cooking_mode_turned_on"
 
+        // Settings
+        case languageSettingsOpened = "language_settings_opened"
+
         // Subscription
         case importLimitReached = "import_limit_reached"
         case paywallShown = "paywall_shown"

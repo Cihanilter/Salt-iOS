@@ -21,10 +21,10 @@ final class CollectionsManager: ObservableObject {
 
     /// Empty starter collection every new user starts with: a real collection (renameable,
     /// deletable) that gives the first "Add to collection" a ready home
-    static let starterNames = ["Dinner ideas"]
+    static let starterNames = [String(localized: "Dinner ideas", comment: "Starter collection name for new users")]
 
     /// Starter names, including ones earlier versions created, so they're listed last
-    private static let listedLastNames: Set<String> = Set(starterNames + ["Planned", "Holiday Favorites"])
+    private static let listedLastNames: Set<String> = Set(starterNames + ["Dinner ideas", "Planned", "Holiday Favorites"])
 
     /// The user's own collections first (in creation order), then their starter collection,
     /// so the ones they made appear at the top
@@ -187,8 +187,8 @@ final class CollectionsManager: ObservableObject {
         var parameters = [
             "deep_link_value": CollectionInviteRouter.deepLinkValue,
             OneLinkCodeRouter.codeParameter: code,
-            "af_og_title": "Join \u{201C}\(collection?.name ?? "my collection")\u{201D} on Salt",
-            "af_og_description": "A shared recipe collection on Salt"
+            "af_og_title": String(localized: "Join \u{201C}\(collection?.name ?? String(localized: "my collection"))\u{201D} on Salt"),
+            "af_og_description": String(localized: "A shared recipe collection on Salt")
         ]
         if let image = collection?.coverImageUrls.first {
             parameters["af_og_image"] = image

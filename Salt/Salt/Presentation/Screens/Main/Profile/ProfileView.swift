@@ -230,8 +230,11 @@ struct ProfileView: View {
                 .accessibilityHidden(true)
             }
 
-            Button("Upgrade") { showingPaywall = true }
-                .buttonStyle(.salt(.primary, size: .small))
+            Button { showingPaywall = true } label: {
+                // Turkish says "Premium al"; the shared "Upgrade" (Yükselt) stays in Settings
+                if AppLanguage.isTurkish { Text(verbatim: "Premium al") } else { Text("Upgrade") }
+            }
+            .buttonStyle(.salt(.primary, size: .small))
         }
         .padding(16)
         .background(SaltColor.surfaceScreen, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -286,7 +289,7 @@ private struct FavoriteCuisineChips: View {
         let visible = isExpanded ? cuisines.count : visibleCount(in: width)
         ChipFlow(spacing: Self.spacing) {
             ForEach(cuisines.prefix(visible), id: \.self) { cuisine in
-                SaltChip(title: cuisine, isSelected: true, showsCheck: false)
+                SaltChip(title: DisplayText.food(cuisine), isSelected: true, showsCheck: false)
             }
             if isExpanded {
                 SaltChip(title: String(localized: "Show less")) {
@@ -411,6 +414,16 @@ struct SettingsView: View {
                         SettingsRow(systemImage: "ruler", title: "Default units", value: unitsLabel)
                     }
                     divider
+                    // iOS keeps the language per app (Settings › Salt › Language) and restarts
+                    // Salt when it changes, which recipes and units need, so this opens that setting
+                    Button {
+                        Analytics.log(.languageSettingsOpened, ["language": AppLanguage.code])
+                        if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                    } label: {
+                        SettingsRow(systemImage: "globe", title: "Language", value: AppLanguage.displayName)
+                    }
+                    .accessibilityHint("Opens Salt in Settings, where you can choose the language")
+                    divider
                     Button {
                         if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
                     } label: {
@@ -495,7 +508,7 @@ struct SettingsView: View {
         }
         .background(SaltColor.surfaceScreen)
         .safeAreaInset(edge: .top, spacing: 0) {
-            SaltBackHeader(title: "Settings") { dismiss() }
+            SaltBackHeader(title: String(localized: "Settings")) { dismiss() }
         }
         .toolbar(.hidden, for: .navigationBar)
         .manageSubscriptionsSheet(isPresented: $showingManageSubscription)
@@ -699,7 +712,7 @@ struct EditProfileView: View {
                         ChipFlow(spacing: 8) {
                             ForEach(viewModel.availableCuisines, id: \.self) { cuisine in
                                 let isSelected = viewModel.editFavoriteCuisines.contains(cuisine)
-                                SaltChip(title: cuisine, isSelected: isSelected) {
+                                SaltChip(title: DisplayText.food(cuisine), isSelected: isSelected) {
                                     viewModel.toggleCuisine(cuisine)
                                 }
                                 .accessibilityAddTraits(isSelected ? .isSelected : [])

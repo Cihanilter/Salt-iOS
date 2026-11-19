@@ -16,10 +16,10 @@ enum SearchFilterKind: String, Identifiable, CaseIterable {
 
     var title: String {
         switch self {
-        case .ingredients: "Ingredients"
-        case .time: "Total time"
-        case .cuisine: "Cuisine"
-        case .mealType: "Meal type"
+        case .ingredients: String(localized: "Ingredients")
+        case .time: String(localized: "Total time")
+        case .cuisine: String(localized: "Cuisine")
+        case .mealType: String(localized: "Meal type")
         }
     }
 }
@@ -39,7 +39,7 @@ struct SearchFiltersBar: View {
                     SaltChip(title: label ?? kind.title, isSelected: label != nil, showsChevron: true) {
                         onSelect(kind)
                     }
-                    .accessibilityLabel(label.map { "\(kind.title): \($0)" } ?? kind.title)
+                    .accessibilityLabel(label.map { String(localized: "\(kind.title): \($0)", comment: "Filter chip: filter name and value") } ?? kind.title)
                     .accessibilityAddTraits(label != nil ? .isSelected : [])
                 }
             }
@@ -211,7 +211,7 @@ struct SearchFilterSheet: View {
     }
 
     private var ingredientOptions: [String] {
-        let suggested = RecipeSearchFilters.suggestedIngredients
+        let suggested = DisplayText.suggestedIngredients
         let typed = draft.ingredients.filter { ingredient in
             !suggested.contains { $0.caseInsensitiveCompare(ingredient) == .orderedSame }
         }
@@ -281,7 +281,7 @@ struct SearchFilterSheet: View {
                 .foregroundStyle(SaltColor.textSecondary)
             ChipFlow(spacing: 8) {
                 ForEach(RecipeSearchFilters.cuisineOptions, id: \.self) { cuisine in
-                    SaltChip(title: cuisine, isSelected: draft.cuisines.contains(cuisine)) {
+                    SaltChip(title: DisplayText.food(cuisine), isSelected: draft.cuisines.contains(cuisine)) {
                         if draft.cuisines.contains(cuisine) {
                             draft.cuisines.remove(cuisine)
                         } else {
@@ -304,7 +304,7 @@ struct SearchFilterSheet: View {
             ChipFlow(spacing: 8) {
                 // The same categories as the chips on Explore
                 ForEach(DishType.all) { dishType in
-                    SaltChip(title: dishType.displayName, isSelected: draft.dishTypes.contains(dishType.name)) {
+                    SaltChip(title: DisplayText.food(dishType.displayName), isSelected: draft.dishTypes.contains(dishType.name)) {
                         if draft.dishTypes.contains(dishType.name) {
                             draft.dishTypes.remove(dishType.name)
                         } else {

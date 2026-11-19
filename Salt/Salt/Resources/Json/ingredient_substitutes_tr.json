@@ -1,0 +1,403 @@
+[
+  { "names": ["ayran", "buttermilk"], "substitutes": [
+    { "name": "limon suyu eklenmiş süt", "note": "Her su bardağı süte 1 yemek kaşığı limon suyu ya da sirke karıştırıp 5 dakika bekletin.", "diets": ["gluten_free"] },
+    { "name": "sütle inceltilmiş yoğurt", "note": "Yaklaşık ¾ yoğurt, ¼ süt kullanın.", "diets": ["gluten_free"] },
+    { "name": "limon suyu eklenmiş soya sütü", "note": "Her su bardağına 1 yemek kaşığı limon suyu ekleyip 5 dakika bekletin.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["tereyağı", "tuzsuz tereyağı", "tuzlu tereyağı"], "excludes": ["fıstık", "badem", "kaju", "kakao", "shea", "ayçiçeği"], "substitutes": [
+    { "name": "bitkisel tereyağı", "note": "Hamur işlerinde ve yemeklerde birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "hindistan cevizi yağı", "note": "Hamur işlerinde iyi sonuç verir; oda sıcaklığında tereyağı gibi katıdır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "zeytinyağı", "factor": 0.75, "note": "Hamur işinden çok yemeklerde kullanın. Miktarın ¾'ü kadar koyun.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "margarin", "note": "Birebir kullanılır; süt ürünü içermemesi gerekiyorsa etiketine bakın.", "diets": ["gluten_free"] }
+  ]},
+  { "names": ["yumurta", "büyük boy yumurta", "orta boy yumurta"], "excludes": ["beyazı", "sarısı", "erişte"], "substitutes": [
+    { "name": "keten tohumlu yumurta", "note": "Her yumurta için 1 yemek kaşığı öğütülmüş keten tohumunu 3 yemek kaşığı suyla karıştırıp 5 dakika bekletin. Bağlayıcı olarak en iyisi.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "şekersiz elma püresi", "per": "¼ su bardağı", "note": "Kek ve muffinleri nemli tutar; biraz tatlılık katar.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "ezilmiş olgun muz", "per": "¼ su bardağı", "note": "Pankek ve keklerde iyi gider; muz tadı verir.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "aquafaba (nohut suyu)", "per": "3 yemek kaşığı", "note": "Konserve nohudun suyu. Yumurta akı gibi çırpılır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["süt", "tam yağlı süt", "yarım yağlı süt", "yağsız süt"], "excludes": ["hindistan cevizi", "badem", "yulaf", "soya", "yoğunlaştırılmış", "tozu", "kreması"], "substitutes": [
+    { "name": "yulaf sütü", "note": "Kremsi ve nötr; hamur işlerinde ve soslarda iyi gider.", "diets": ["vegan", "dairy_free"] },
+    { "name": "soya sütü", "note": "Protein bakımından inek sütüne en yakını; her yerde kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "badem sütü", "note": "Daha sulu ve hafif fındıksı.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "eşit miktarda suyla açılmış krema", "note": "Daha yoğun bir sonuç verir.", "diets": ["gluten_free"] }
+  ]},
+  { "names": ["krema", "sıvı krema", "çırpma kreması", "şanti kreması", "heavy cream"], "excludes": ["ekşi", "peynir", "hindistan cevizi"], "substitutes": [
+    { "name": "hindistan cevizi kreması", "note": "İyice soğutulursa krema gibi çırpılır; hafif hindistan cevizi tadı verir.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "eritilmiş tereyağlı süt", "note": "¾ süt, ¼ eritilmiş tereyağı kullanın. Sos ve hamur işleri için uygun; çırpılmaz.", "diets": ["gluten_free"] },
+    { "name": "süzme yoğurt", "note": "Soslarda ocaktan alınca ekleyin ki kesilmesin.", "diets": ["gluten_free"] },
+    { "name": "kaju kreması", "note": "Islatılmış kajuyu suyla pürüzsüz olana kadar çekin. Çorba ve soslarda harika.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["ekşi krema", "sour cream"], "substitutes": [
+    { "name": "süzme yoğurt", "note": "Birebir kullanılır; biraz daha ekşidir.", "diets": ["gluten_free"] },
+    { "name": "krem fraiche", "note": "Daha yağlı ve yumuşak; ısıtınca kesilmez.", "diets": ["gluten_free"] },
+    { "name": "limonlu kaju kreması", "note": "Islatılmış kajuyu su ve biraz limonla çekin.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["yoğurt", "süzme yoğurt", "yunan yoğurdu", "sade yoğurt", "yoğurdu"], "excludes": ["hindistan cevizi", "dondurulmuş"], "substitutes": [
+    { "name": "ekşi krema", "note": "Birebir kullanılır; daha yağlıdır.", "diets": ["gluten_free"] },
+    { "name": "hindistan cevizi yoğurdu", "note": "Birebir kullanılır; biraz daha tatlıdır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "labne", "note": "Koyu ve hafif ekşi; süzme yoğurt yerine iyi gider.", "diets": ["gluten_free"] }
+  ]},
+  { "names": ["krem peynir", "labne", "cream cheese"], "substitutes": [
+    { "name": "mascarpone", "note": "Daha yağlı ve daha az ekşi.", "diets": ["gluten_free"] },
+    { "name": "bir gece süzülmüş yoğurt", "note": "Daha hafif ve ekşi; koyulaşması için bir gece süzün.", "diets": ["gluten_free"] },
+    { "name": "bitkisel krem peynir", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["mascarpone"], "substitutes": [
+    { "name": "krem peynir", "note": "Daha ekşi; yumuşatmak için biraz kremayla çırpın.", "diets": ["gluten_free"] },
+    { "name": "lor peyniri", "note": "Daha hafif; pürüzsüz olana kadar çekin.", "diets": ["gluten_free"] }
+  ]},
+  { "names": ["ricotta", "lor", "lor peyniri"], "substitutes": [
+    { "name": "çökelek", "note": "Daha pürüzsüz olması için blenderdan geçirin.", "diets": ["gluten_free"] },
+    { "name": "mascarpone", "note": "Daha yağlı ve kremsi.", "diets": ["gluten_free"] },
+    { "name": "limonlu ufalanmış sert tofu", "note": "Bir tutam tuzla çekince lor kıvamı verir.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["parmesan", "parmesan peyniri", "parmigiano-reggiano", "parmigiano reggiano"], "substitutes": [
+    { "name": "rendelenmiş eski kaşar", "note": "Tuzlu ve keskin; Türkiye'de en kolay bulunan seçenek.", "diets": ["gluten_free"] },
+    { "name": "grana padano", "note": "Tadı çok yakın; biraz daha yumuşak.", "diets": ["gluten_free"] },
+    { "name": "besin mayası", "factor": 0.5, "note": "Peynirimsi ve lezzetli. Yaklaşık yarısı kadar kullanın.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["mozzarella", "mozarella"], "substitutes": [
+    { "name": "taze kaşar", "note": "Aynı şekilde erir, daha lezzetlidir.", "diets": ["gluten_free"] },
+    { "name": "dil peyniri", "note": "Uzayarak erir; hafif tuzlu.", "diets": ["gluten_free"] },
+    { "name": "bitkisel mozzarella", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["kaşar", "kaşar peyniri", "cheddar", "çedar", "cheddar peyniri", "çedar peyniri"], "substitutes": [
+    { "name": "taze kaşar", "note": "Daha yumuşak ve çok güzel erir.", "diets": ["gluten_free"] },
+    { "name": "gravyer", "note": "Fındıksı tadı var; çok güzel erir.", "diets": ["gluten_free"] },
+    { "name": "bitkisel kaşar", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["beyaz peynir", "feta", "feta peyniri"], "substitutes": [
+    { "name": "keçi peyniri", "note": "Daha kremsi ve daha az tuzlu.", "diets": ["gluten_free"] },
+    { "name": "tulum peyniri", "note": "Daha keskin ve tuzlu; biraz az kullanın.", "diets": ["gluten_free"] },
+    { "name": "limon ve tuzla marine edilmiş ufalanmış tofu", "note": "15 dakika marine edin.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["mayonez"], "substitutes": [
+    { "name": "süzme yoğurt", "note": "Daha hafif ve ekşi.", "diets": ["gluten_free"] },
+    { "name": "ekşi krema", "note": "Dip sos ve salata soslarında iyi gider.", "diets": ["gluten_free"] },
+    { "name": "bitkisel mayonez", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["hindistan cevizi sütü"], "substitutes": [
+    { "name": "krema", "note": "Daha yağlı ve hindistan cevizi tadı yok.", "diets": ["gluten_free"] },
+    { "name": "kaju kreması", "note": "Islatılmış kajuyu suyla pürüzsüz olana kadar çekin.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "süzme yoğurt", "note": "Daha ekşi; sona doğru ocaktan alıp ekleyin.", "diets": ["gluten_free"] }
+  ]},
+  { "names": ["şekerli yoğunlaştırılmış süt", "yoğunlaştırılmış süt"], "substitutes": [
+    { "name": "hindistan cevizinden yoğunlaştırılmış süt", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["un", "beyaz un", "çok amaçlı un", "buğday unu"], "excludes": ["badem", "hindistan cevizi", "pirinç", "mısır", "nohut", "yulaf", "tapyoka", "karabuğday", "ekmeklik", "kek", "kabartma", "tam buğday", "irmik"], "substitutes": [
+    { "name": "glütensiz un karışımı", "note": "Ksantan sakızı içeren, birebir kullanılabilen bir karışım seçin.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "ekmeklik un", "note": "Hamur işlerini biraz daha çiğnenebilir yapar.", "diets": ["vegan", "dairy_free"] },
+    { "name": "tam buğday unu", "note": "Daha yoğun ve fındıksı; unun en fazla yarısı yerine kullanın.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["ekmeklik un"], "substitutes": [
+    { "name": "un", "note": "Biraz daha az çiğnenebilir olur; çoğu ekmekte sorun çıkarmaz.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["kek unu"], "substitutes": [
+    { "name": "nişastalı un", "note": "Her su bardağı undan 2 yemek kaşığı çıkarıp yerine 2 yemek kaşığı mısır nişastası koyun.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["kabartma tozlu un", "self-rising flour"], "substitutes": [
+    { "name": "kabartma tozu eklenmiş un", "note": "Her su bardağı una 1 ½ çay kaşığı kabartma tozu ve ¼ çay kaşığı tuz ekleyin.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["mısır nişastası", "nişasta"], "substitutes": [
+    { "name": "ararot", "note": "Birebir kullanılır; sosu daha parlak yapar.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "patates nişastası", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "un", "factor": 2, "note": "İki katı kullanın ve birkaç dakika daha pişirin.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["kabartma tozu"], "substitutes": [
+    { "name": "karbonat ve krem tartar", "note": "Her çay kaşığı için ¼ çay kaşığı karbonat ve ½ çay kaşığı krem tartar kullanın.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["karbonat", "kabartma sodası"], "substitutes": [
+    { "name": "kabartma tozu", "factor": 3, "note": "3 katı kullanın; biraz daha az kızarır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["esmer şeker", "kahverengi şeker"], "substitutes": [
+    { "name": "pekmez eklenmiş toz şeker", "note": "Her su bardağı şekere 1 yemek kaşığı pekmez karıştırın.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "hindistan cevizi şekeri", "note": "Birebir kullanılır; karamelimsi tadı benzer.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "toz şeker", "note": "Daha az karamel tadı verir, hamur işleri biraz daha gevrek olur.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["şeker", "toz şeker", "beyaz şeker", "kristal şeker"], "excludes": ["esmer", "pudra", "hindistan cevizi", "kahverengi", "vanilyalı", "şekeri"], "substitutes": [
+    { "name": "bal", "factor": 0.75, "note": "Miktarın ¾'ünü kullanın ve her su bardağı için diğer sıvıları 3 yemek kaşığı azaltın.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "akçaağaç şurubu", "factor": 0.75, "note": "Miktarın ¾'ünü kullanın ve her su bardağı için diğer sıvıları 3 yemek kaşığı azaltın.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "hindistan cevizi şekeri", "note": "Birebir kullanılır; hafif karamel tadı katar.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["pudra şekeri"], "substitutes": [
+    { "name": "nişastayla çekilmiş toz şeker", "note": "1 su bardağı şekeri 1 yemek kaşığı nişastayla pudra kıvamına gelene kadar çekin.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["bal"], "substitutes": [
+    { "name": "akçaağaç şurubu", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "üzüm pekmezi", "note": "Birebir kullanılır; daha koyu bir tat verir.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "agave şurubu", "note": "Birebir kullanılır; biraz daha tatlıdır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["akçaağaç şurubu", "maple şurubu"], "substitutes": [
+    { "name": "bal", "note": "Birebir kullanılır.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "üzüm pekmezi", "note": "Birebir kullanılır; daha koyu bir tat verir.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["pekmez", "üzüm pekmezi", "melas"], "substitutes": [
+    { "name": "bal", "note": "Daha hafif bir tat verir.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "akçaağaç şurubu", "note": "Daha hafif bir tat verir.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["glikoz şurubu", "mısır şurubu"], "substitutes": [
+    { "name": "bal", "note": "Birebir kullanılır; bal tadı katar.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "şeker şurubu", "note": "Şekeri yarısı kadar suyla kaynatıp koyulaştırın.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["vanilya özütü", "vanilya ekstraktı", "vanilya esansı", "vanilya"], "excludes": ["çubuğu", "dondurma", "yoğurt", "şekeri"], "substitutes": [
+    { "name": "vanilyalı şeker", "note": "Her çay kaşığı özüt için 1 paket kullanın; tarifteki şekeri biraz azaltın.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "vanilya çubuğu içi", "note": "Yarım çubuğun tohumları yaklaşık 1 çay kaşığı özüte eşittir.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "badem özütü", "factor": 0.5, "note": "Çok daha güçlü; yarısını kullanın.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["kakao", "kakao tozu", "şekersiz kakao"], "substitutes": [
+    { "name": "eritilmiş bitter çikolata", "note": "Her 3 yemek kaşığı kakao için yaklaşık 30 g çikolata kullanın ve yağı 1 yemek kaşığı azaltın.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "keçiboynuzu tozu", "note": "Birebir kullanılır; daha tatlı ve kafeinsiz.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["damla çikolata", "çikolata parçacıkları"], "substitutes": [
+    { "name": "doğranmış çikolata", "note": "Birebir kullanılır; eriyip küçük göller oluşturur.", "diets": ["gluten_free"] },
+    { "name": "sütsüz damla çikolata", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["jelatin", "toz jelatin", "yaprak jelatin"], "substitutes": [
+    { "name": "agar agar tozu", "factor": 0.5, "note": "Yarısını kullanın; daha sert donar ve kaynatılması gerekir.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["limon suyu"], "substitutes": [
+    { "name": "misket limonu suyu", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "üzüm sirkesi", "factor": 0.5, "note": "Daha keskin; yarısını kullanın.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "nar ekşisi", "factor": 0.5, "note": "Salatalarda iyi gider; ekşi ve hafif tatlı.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["misket limonu suyu", "lime suyu"], "substitutes": [
+    { "name": "limon suyu", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["limon kabuğu rendesi", "limon kabuğu"], "substitutes": [
+    { "name": "misket limonu kabuğu rendesi", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "portakal kabuğu rendesi", "note": "Daha tatlı ve daha az keskin.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["beyaz şarap", "sek beyaz şarap"], "excludes": ["sirkesi"], "substitutes": [
+    { "name": "biraz beyaz şarap sirkesi eklenmiş tavuk ya da sebze suyu", "note": "Her su bardağı suya yaklaşık 1 çay kaşığı sirke ekleyin.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "elma suyu", "note": "Biraz daha tatlı; bir sıkım limonla dengeleyin.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["kırmızı şarap", "sek kırmızı şarap"], "excludes": ["sirkesi"], "substitutes": [
+    { "name": "biraz kırmızı şarap sirkesi eklenmiş et suyu", "note": "Her su bardağı suya yaklaşık 1 çay kaşığı sirke ekleyin.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "biraz sirke eklenmiş şekersiz üzüm suyu", "note": "Sos ve yahnilerde iyi gider.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["beyaz şarap sirkesi", "üzüm sirkesi", "sirke"], "excludes": ["balzamik", "elma", "pirinç"], "substitutes": [
+    { "name": "elma sirkesi", "note": "Birebir kullanılır; biraz daha meyvemsi.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "limon suyu", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["kırmızı şarap sirkesi"], "substitutes": [
+    { "name": "balzamik sirke", "note": "Daha tatlı; biraz az kullanın.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "üzüm sirkesi", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["elma sirkesi"], "substitutes": [
+    { "name": "üzüm sirkesi", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "limon suyu", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["pirinç sirkesi"], "substitutes": [
+    { "name": "bir tutam şeker eklenmiş elma sirkesi", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "üzüm sirkesi", "note": "Biraz daha keskin.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["balzamik sirke", "balsamik sirke"], "substitutes": [
+    { "name": "nar ekşisi", "note": "Ekşi-tatlı ve koyu; salatalarda harika.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "bir tutam şeker eklenmiş kırmızı şarap sirkesi", "note": "Her yemek kaşığı sirkeye yaklaşık ½ çay kaşığı şeker.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["soya sosu"], "substitutes": [
+    { "name": "tamari", "note": "Birebir kullanılır ve genellikle glütensizdir.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "hindistan cevizi aminosu", "note": "Daha tatlı ve daha az tuzlu.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["balık sosu"], "substitutes": [
+    { "name": "soya sosu", "note": "Birebir kullanılır; daha az keskin kokulu.", "diets": ["vegan", "dairy_free"] },
+    { "name": "bir sıkım misket limonlu tamari", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["worcestershire sosu", "worcestershire"], "substitutes": [
+    { "name": "biraz sirke eklenmiş soya sosu", "note": "Eşit miktarlarda kullanın.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["tavuk suyu", "tavuk bulyon"], "substitutes": [
+    { "name": "sebze suyu", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "bulyon tabletiyle hazırlanmış su", "note": "2 su bardağı suya 1 tablet.", "diets": ["dairy_free"] }
+  ]},
+  { "names": ["et suyu", "dana suyu", "et bulyon"], "substitutes": [
+    { "name": "mantar suyu", "note": "Yoğun ve lezzetli.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "tavuk suyu", "note": "Daha hafif bir tat verir.", "diets": ["dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["sebze suyu", "sebze bulyon"], "substitutes": [
+    { "name": "tavuk suyu", "note": "Birebir kullanılır.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "bulyon tabletiyle hazırlanmış su", "note": "2 su bardağı suya 1 tablet.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["arpacık soğan", "şalot"], "substitutes": [
+    { "name": "kırmızı soğan", "note": "Daha keskin; biraz az kullanın.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "kuru soğan", "note": "Daha az narin; biraz sarımsak ekleyin.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["soğan", "kuru soğan", "kırmızı soğan", "beyaz soğan"], "excludes": ["taze", "arpacık", "tozu", "yeşil"], "substitutes": [
+    { "name": "arpacık soğan", "per": "3", "note": "Daha yumuşak ve tatlı; bir soğan yerine yaklaşık 3 arpacık soğan.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "pırasa", "note": "Daha yumuşak; beyaz ve açık yeşil kısımlarını kullanın.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "soğan tozu", "per": "1 çay kaşığı", "note": "Orta boy bir soğan yerine yaklaşık 1 çay kaşığı; dokusu olmaz.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["sarımsak", "sarımsak dişi"], "excludes": ["tozu", "granül"], "substitutes": [
+    { "name": "sarımsak tozu", "per": "⅛ çay kaşığı", "note": "Bir diş yerine yaklaşık ⅛ çay kaşığı.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "ince doğranmış arpacık soğan", "per": "1 çay kaşığı", "note": "Daha yumuşak; bir diş yerine yaklaşık 1 çay kaşığı.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["taze soğan", "yeşil soğan"], "substitutes": [
+    { "name": "frenk soğanı", "note": "Daha yumuşak; en sonda ekleyin.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "ince doğranmış arpacık soğan", "note": "Daha keskin; biraz az kullanın.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["fesleğen", "taze fesleğen"], "excludes": ["kuru"], "substitutes": [
+    { "name": "kuru fesleğen", "factor": 0.33, "note": "Üçte biri kadar kullanın ve daha erken ekleyin.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "biraz kekik eklenmiş taze ıspanak", "note": "Pesto ve soslarda iyi gider.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["maydanoz", "taze maydanoz", "düz yaprak maydanoz"], "excludes": ["kuru"], "substitutes": [
+    { "name": "taze kişniş", "note": "Daha canlı, narenciye gibi bir tat.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "kuru maydanoz", "factor": 0.33, "note": "Üçte biri kadar kullanın.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "dereotu", "note": "Farklı ama taze, yeşil bir tat verir.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["kişniş", "taze kişniş", "kişniş yaprağı"], "excludes": ["kuru", "toz", "tohumu"], "substitutes": [
+    { "name": "maydanoz", "note": "Sabun tadı yok; tazelik için bir sıkım misket limonu ekleyin.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "taze nane", "note": "Taze ve canlı; salsa ve salatalarda iyi gider.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "taze fesleğen", "note": "Tayland ve Vietnam yemeklerinde iyi gider.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["kekik", "taze kekik"], "excludes": ["kuru"], "substitutes": [
+    { "name": "kuru kekik", "factor": 0.33, "note": "Üçte biri kadar kullanın.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "taze mercanköşk", "note": "Daha yumuşak ve tatlı.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["biberiye", "taze biberiye"], "excludes": ["kuru"], "substitutes": [
+    { "name": "kuru biberiye", "factor": 0.33, "note": "Üçte biri kadar kullanın; önce ezin.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "taze kekik", "note": "Daha yumuşak.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["dereotu", "taze dereotu"], "excludes": ["kuru", "turşu"], "substitutes": [
+    { "name": "kuru dereotu", "factor": 0.33, "note": "Üçte biri kadar kullanın.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "taze tarhun", "note": "Hafif anason tadı var.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["zencefil", "taze zencefil"], "excludes": ["toz", "gazoz"], "substitutes": [
+    { "name": "zencefil ezmesi", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "toz zencefil", "factor": 0.25, "note": "Çok daha güçlü; her yemek kaşığı taze için yaklaşık ¼ çay kaşığı.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["jalapeno", "jalapeño", "acı biber", "sivri biber"], "excludes": ["pul", "salçası", "toz"], "substitutes": [
+    { "name": "acı sivri biber", "note": "Benzer acılık; taze dokusu aynı.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "pul biber", "per": "¼ çay kaşığı", "note": "Acılık verir ama taze çıtırlığı olmaz.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["pul biber", "kırmızı pul biber", "isot"], "substitutes": [
+    { "name": "toz acı biber", "factor": 0.5, "note": "Daha acı; yarısını kullanın.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "acı sos", "note": "Damak zevkine göre ekleyin.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["kırmızı toz biber", "acı toz biber", "kayen biber", "cayenne"], "substitutes": [
+    { "name": "pul biber", "factor": 2, "note": "Daha yumuşak; iki katı kullanın.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "acı paprika", "note": "Daha yumuşak ve daha isli.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["füme paprika", "isli paprika"], "substitutes": [
+    { "name": "bir tutam kimyon eklenmiş tatlı toz biber", "note": "Daha az isli.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "isot", "note": "İsli ve hafif acı.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["kimyon", "toz kimyon"], "substitutes": [
+    { "name": "toz kişniş", "note": "Daha hafif ve narenciye tadında.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "köri", "note": "İçinde kimyon var, ayrıca baharatlı.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["tarçın", "toz tarçın"], "excludes": ["çubuk"], "substitutes": [
+    { "name": "yenibahar", "factor": 0.25, "note": "Daha güçlü; yaklaşık dörtte birini kullanın.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "karışık kek baharatı", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["muskat", "küçük hindistan cevizi"], "substitutes": [
+    { "name": "yenibahar", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "tarçın", "factor": 0.5, "note": "Farklı ama sıcak bir tat; yarısını kullanın.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["dijon hardalı", "hardal"], "substitutes": [
+    { "name": "tane hardal", "note": "Birebir kullanılır; daha dokulu.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "sarı hardal", "note": "Daha yumuşak ve ekşi.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["domates salçası", "salça"], "excludes": ["biber"], "substitutes": [
+    { "name": "biber salçası", "note": "Birebir kullanılır; daha baharatlı ve hafif acı olabilir.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "domates sosu", "factor": 3, "note": "3 katı kullanın ve suyunu çektirin.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "ketçap", "note": "Daha tatlı; tarifteki şekeri azaltın.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["ketçap"], "substitutes": [
+    { "name": "biraz sirke ve şekerle karıştırılmış domates salçası", "note": "Kıvamını suyla ayarlayın.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["kapari"], "substitutes": [
+    { "name": "doğranmış yeşil zeytin", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["ançüez", "hamsi"], "substitutes": [
+    { "name": "miso", "note": "Her ançüez için yaklaşık 1 çay kaşığı; aynı derin lezzeti verir.", "diets": ["vegan", "dairy_free"] },
+    { "name": "doğranmış kapari", "note": "Tuzlu ve salamuralı.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["galeta unu", "ekmek kırıntısı", "panko"], "substitutes": [
+    { "name": "ezilmiş kraker", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free"] },
+    { "name": "yulaf ezmesi", "note": "Köfte ve rulolarda bağlayıcı olarak kısaca çekip kullanın.", "diets": ["vegan", "dairy_free"] },
+    { "name": "glütensiz galeta unu", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "ezilmiş mısır gevreği", "note": "Daha çıtır bir kaplama verir.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["makarna", "spagetti", "penne", "penne makarna", "linguine", "fettuccine", "rigatoni", "fusilli", "burgu makarna", "kelebek makarna", "farfalle", "erişte"], "excludes": ["sosu", "suyu", "glütensiz"], "substitutes": [
+    { "name": "başka şekilde makarna", "note": "Her şekil olur; paketteki pişirme süresine bakın.", "diets": ["vegan", "dairy_free"] },
+    { "name": "glütensiz makarna", "note": "Bir dakika az pişirin ve lapa olmaması için durulayın.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "kabak spagetti", "note": "Hafif ve düşük karbonhidratlı; sadece 1–2 dakika pişirin.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["kıyma", "dana kıyma", "yağsız kıyma", "kuzu kıyma"], "excludes": ["hindi", "tavuk", "bitkisel"], "substitutes": [
+    { "name": "hindi kıyma", "note": "Daha yağsız; kavururken biraz yağ ekleyin.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "tavuk kıyma", "note": "Daha hafif; baharatı biraz artırın.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "bitkisel kıyma", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free"] },
+    { "name": "haşlanmış yeşil mercimek", "note": "Sos, taco ve chilide harika olur.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["tavuk göğsü", "kemiksiz tavuk göğsü", "derisiz tavuk göğsü"], "substitutes": [
+    { "name": "tavuk but", "note": "Daha sulu ve affedici; birkaç dakika daha pişirin.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "hindi göğsü", "note": "Benzer yağsız doku.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "sert tofu", "note": "İyi kızarması için önce suyunu sıkın.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["tavuk but", "kemiksiz tavuk but", "tavuk baget"], "substitutes": [
+    { "name": "tavuk göğsü", "note": "Daha yağsız ve çabuk pişer; kurumamasına dikkat edin.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "sert tofu", "note": "İyi kızarması için önce suyunu sıkın.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["pastırma", "bacon", "domuz pastırması"], "excludes": ["hindi"], "substitutes": [
+    { "name": "hindi füme", "note": "Daha yağsız; biraz yağ ekleyin.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "dana füme", "note": "İsli ve tuzlu; kızartınca çıtırlaşır.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "isli tempeh", "note": "Kızartınca isli ve çıtır olur.", "diets": ["vegan", "dairy_free"] }
+  ]},
+  { "names": ["karides"], "substitutes": [
+    { "name": "deniz tarağı", "note": "Tatlı ve yumuşak; çabuk mühürleyin.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "küp doğranmış beyaz etli balık", "note": "Dağılmaması için nazikçe pişirin.", "diets": ["dairy_free", "gluten_free"] },
+    { "name": "küp doğranmış sert tofu", "note": "Önce suyunu sıkın.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["tofu", "sert tofu"], "substitutes": [
+    { "name": "tempeh", "note": "Daha fındıksı ve sert.", "diets": ["vegan", "dairy_free"] },
+    { "name": "nohut", "note": "Köri ve sote yemeklerinde iyi gider.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["fıstık ezmesi", "yer fıstığı ezmesi"], "substitutes": [
+    { "name": "badem ezmesi", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "ayçiçeği ezmesi", "note": "Kuruyemişsiz; birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "tahin", "note": "Daha az tatlı; soslarda harika.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["tahin"], "substitutes": [
+    { "name": "ayçiçeği ezmesi", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "kaju ezmesi", "note": "Daha yumuşak ve kremsi.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["çam fıstığı", "dolmalık fıstık"], "substitutes": [
+    { "name": "ayçiçeği çekirdeği", "note": "Kuruyemişsiz; önce kavurun.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "ceviz", "note": "Daha toprak tadında; önce kavurun.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["ceviz", "ceviz içi"], "substitutes": [
+    { "name": "pekan cevizi", "note": "Birebir kullanılır; daha tatlı.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "fındık", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["pekan cevizi"], "substitutes": [
+    { "name": "ceviz", "note": "Birebir kullanılır; biraz daha acımsı.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "kabak çekirdeği", "note": "Kuruyemişsiz.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["badem", "dilimlenmiş badem", "çubuk badem"], "excludes": ["sütü", "unu", "ezmesi", "özütü"], "substitutes": [
+    { "name": "fındık", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "ayçiçeği çekirdeği", "note": "Kuruyemişsiz.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["sıvı yağ", "ayçiçek yağı", "ayçiçeği yağı", "kanola yağı", "mısırözü yağı", "bitkisel yağ"], "substitutes": [
+    { "name": "riviera zeytinyağı", "note": "Birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "avokado yağı", "note": "Birebir kullanılır; yüksek ısıya dayanıklı.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "eritilmiş tereyağı", "note": "Hamur işlerinde daha zengin bir tat verir.", "diets": ["gluten_free"] }
+  ]},
+  { "names": ["zeytinyağı", "sızma zeytinyağı", "natürel sızma zeytinyağı"], "substitutes": [
+    { "name": "ayçiçek yağı", "note": "Pişirmede birebir kullanılır.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "avokado yağı", "note": "Birebir kullanılır; nötr tatlı.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "eritilmiş tereyağı", "note": "Pişirmede zenginlik katar.", "diets": ["gluten_free"] }
+  ]},
+  { "names": ["ıspanak", "bebek ıspanak", "taze ıspanak"], "substitutes": [
+    { "name": "pazı", "note": "Benzer doku; biraz daha toprak tadında.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "kara lahana", "note": "Daha sert; saplarını ayıklayıp biraz daha uzun pişirin.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["kabak", "sakız kabağı"], "excludes": ["bal", "çekirdeği"], "substitutes": [
+    { "name": "patlıcan", "note": "Daha yumuşak olur ve daha çok yağ çeker.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "biber", "note": "Daha tatlı; benzer sürede pişer.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]},
+  { "names": ["mantar", "kültür mantarı", "istiridye mantarı"], "substitutes": [
+    { "name": "küp doğranmış patlıcan", "note": "Benzer etli doku.", "diets": ["vegan", "dairy_free", "gluten_free"] },
+    { "name": "küp doğranmış kabak", "note": "Daha hafif; çabuk pişer.", "diets": ["vegan", "dairy_free", "gluten_free"] }
+  ]}
+]

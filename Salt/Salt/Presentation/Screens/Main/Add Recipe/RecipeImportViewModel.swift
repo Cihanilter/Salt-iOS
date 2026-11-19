@@ -37,7 +37,7 @@ class RecipeImportViewModel: ObservableObject {
         let trimmedUrl = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedUrl.isEmpty else {
-            errorMessage = "Please enter a recipe URL"
+            errorMessage = String(localized: "Please enter a recipe URL")
             return
         }
 

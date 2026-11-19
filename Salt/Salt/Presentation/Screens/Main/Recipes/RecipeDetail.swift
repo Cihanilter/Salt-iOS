@@ -41,7 +41,7 @@ extension Recipe {
         if let text = servingsText, !text.isEmpty {
             servingsDisplayText = text
         } else if let count = servings {
-            servingsDisplayText = "\(count) servings"
+            servingsDisplayText = String(localized: "\(count) servings")
         } else {
             servingsDisplayText = "N/A"
         }
@@ -56,7 +56,7 @@ extension Recipe {
         return RecipeDetail(
             title: title,
             duration: durationText,
-            ingredientsCount: "\(ingredientCount) ingredients",
+            ingredientsCount: DisplayText.ingredientCount(ingredientCount),
             description: description ?? "",
             servings: servingsDisplayText,
             prepTime: prepDisplay,
@@ -276,9 +276,12 @@ struct RecipeDetailView: View {
         return nil
     }
 
-    /// Units as the recipe is written, when it has anything to convert
+    /// Units as the recipe is written, when it has anything to convert. In Turkish only for
+    /// recipes in ounces and pounds (e.g. an imported US recipe): metric is what Turkish cooks
+    /// use, so a metric recipe has nothing to switch to.
     private var recipeUnits: UnitSystem? {
-        UnitConverter.system(of: recipe.ingredients)
+        let units = UnitConverter.system(of: recipe.ingredients)
+        return AppLanguage.isTurkish && units != .imperial ? nil : units
     }
 
     /// Explore recipes are Salt's own catalog: no "Original Recipe" link and no credit line
@@ -328,14 +331,14 @@ struct RecipeDetailView: View {
     private var nutritionPlaceholder: (message: String, inProgress: Bool)? {
         guard recipe.nutrition == nil, RecipeService.canEstimateNutrition(from: recipe.ingredients) else { return nil }
         if isUnsavedPreview {
-            return ("Save this recipe to see its nutrition.", false)
+            return (String(localized: "Save this recipe to see its nutrition."), false)
         }
         if mode == .preview {
             // Just saved from this screen; the estimate runs in the background
-            return ("Getting nutrition… You'll find it in My Recipes.", true)
+            return (String(localized: "Getting nutrition… You'll find it in My Recipes."), true)
         }
         if isEstimatingNutrition {
-            return ("Getting nutrition…", true)
+            return (String(localized: "Getting nutrition…"), true)
         }
         return nil
     }
@@ -447,9 +450,9 @@ struct RecipeDetailView: View {
                     onSaveChanges: sheet == .preview ? nil : { updatedRecipe, newPhotos in
                         try await saveEdits(updatedRecipe, newPhotos: newPhotos, for: sheet)
                     },
-                    saveChangesTitle: "Save changes",
+                    saveChangesTitle: String(localized: "Save changes"),
                     editNotice: sheet == .customize
-                        ? "Your changes are saved as your own copy in My Recipes. The original recipe isn't affected."
+                        ? String(localized: "Your changes are saved as your own copy in My Recipes. The original recipe isn't affected.")
                         : nil,
                     onCancel: { editSheet = nil }
                 )
@@ -881,7 +884,7 @@ struct RecipeDetailView: View {
                 PendingSaveDataStorage.shared.store(recipe: recipe, photos: pendingPhotoImages)
                 Task { await save() }
             } label: {
-                SaltButtonLabel(title: "Save recipe", isLoading: isSaving)
+                SaltButtonLabel(title: String(localized: "Save recipe"), isLoading: isSaving)
             }
             .buttonStyle(.salt())
             .allowsHitTesting(!isSaving)
@@ -1258,7 +1261,7 @@ struct DescriptionSection: View {
                         .font(SaltFont.h2)
                         .foregroundStyle(SaltColor.textPrimary)
                         .accessibilityAddTraits(.isHeader)
-                    Text(text)
+                    Text(DisplayText.description(text))
                         .font(SaltFont.bodyLarge)
                         .foregroundStyle(SaltColor.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1770,10 +1773,10 @@ struct NutritionSection: View {
     // Fiber and sodium are left out: too detailed for a recipe app, and hard to estimate reliably
     private var rows: [Row] {
         let candidates: [(String, String?)] = [
-            ("Carbs", nutrition.carbohydrateContent),
-            ("Protein", nutrition.proteinContent),
-            ("Fat", nutrition.fatContent),
-            ("Sugar", nutrition.sugarContent)
+            (String(localized: "Carbs", comment: "Nutrition label"), nutrition.carbohydrateContent),
+            (String(localized: "Protein", comment: "Nutrition label"), nutrition.proteinContent),
+            (String(localized: "Fat", comment: "Nutrition label"), nutrition.fatContent),
+            (String(localized: "Sugar", comment: "Nutrition label"), nutrition.sugarContent)
         ]
         return candidates.compactMap { name, raw in
             Self.formatAmount(raw).map { Row(name: name, value: $0) }
@@ -1928,7 +1931,8 @@ struct NutritionSection: View {
     /// Value with its unit, e.g. "23 g", "4.5 g", "1,493 mg". Small gram values keep one decimal.
     static func formatAmount(_ raw: String?) -> String? {
         guard let raw, let value = number(in: raw) else { return nil }
-        let unit = raw.lowercased().contains("mg") ? "mg" : (raw.lowercased().contains("calorie") ? "cal" : "g")
+        let unit = raw.lowercased().contains("mg") ? "mg"
+            : (raw.lowercased().contains("calorie") ? String(localized: "cal", comment: "Short for calories") : "g")
         let shown = (unit == "g" && value < 10) ? value.formatted(.number.precision(.fractionLength(0...1)))
                                                 : Int(value.rounded()).formatted()
         return "\(shown) \(unit)"

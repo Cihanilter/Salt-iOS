@@ -18,7 +18,10 @@ final class SupabaseClientManager {
 
         self.client = SupabaseClient(
             supabaseURL: url,
-            supabaseKey: SupabaseConfig.anonKey
+            supabaseKey: SupabaseConfig.anonKey,
+            options: SupabaseClientOptions(
+                global: SupabaseClientOptions.GlobalOptions(headers: [AppLanguage.requestHeader: AppLanguage.code])
+            )
         )
     }
 }

@@ -45,12 +45,6 @@ struct RecipeSearchFilters: Equatable {
     /// Choices in the Total time filter
     static let timeOptions = [15, 30, 45, 60]
 
-    /// Quick picks in the Ingredients filter
-    static let suggestedIngredients = [
-        "Chicken", "Beef", "Salmon", "Shrimp", "Eggs", "Pasta", "Rice",
-        "Potato", "Tomato", "Cheese", "Mushroom", "Tofu", "Chickpeas", "Spinach"
-    ]
-
     /// Cuisines as stored in the recipes table
     static let cuisineOptions = [
         "African", "American", "Asian", "British", "Cajun", "Caribbean", "Chinese",
@@ -69,7 +63,7 @@ struct RecipeSearchFilters: Equatable {
         if values.count == 1 { return first }
         let joined = values.joined(separator: ", ")
         if values.count == 2 && joined.count <= 18 { return joined }
-        return "\(first) +\(values.count - 1)"
+        return String(localized: "\(first) +\(values.count - 1)", comment: "First filter value and how many more, e.g. Chicken +2")
     }
 
     var ingredientsLabel: String? {
@@ -77,15 +71,19 @@ struct RecipeSearchFilters: Equatable {
     }
 
     var timeLabel: String? {
-        maxTotalMinutes.map { $0 == 60 ? "Under 1 hour" : "Under \($0) min" }
+        maxTotalMinutes.map {
+            $0 == 60
+                ? String(localized: "Under 1 hour", comment: "Total time filter chip")
+                : String(localized: "Under \($0) min", comment: "Total time filter chip")
+        }
     }
 
     var cuisineLabel: String? {
-        Self.label(for: cuisines.sorted())
+        Self.label(for: cuisines.map(DisplayText.food).sorted())
     }
 
     var mealTypeLabel: String? {
-        Self.label(for: DishType.all.filter { dishTypes.contains($0.name) }.map(\.displayName))
+        Self.label(for: DishType.all.filter { dishTypes.contains($0.name) }.map { DisplayText.food($0.displayName) })
     }
 }
 
@@ -127,16 +125,16 @@ enum MealType: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .breakfast: "Breakfast"
-        case .mainDish: "Main Dish"
-        case .appetizers: "Snacks"
-        case .soups: "Soups"
-        case .salads: "Salads"
-        case .sides: "Side Dish"
-        case .desserts: "Desserts"
-        case .bread: "Bread"
-        case .drinks: "Drinks"
-        case .sauces: "Sauces"
+        case .breakfast: String(localized: "Breakfast")
+        case .mainDish: String(localized: "Main Dish")
+        case .appetizers: String(localized: "Snacks")
+        case .soups: String(localized: "Soups")
+        case .salads: String(localized: "Salads")
+        case .sides: String(localized: "Side Dish")
+        case .desserts: String(localized: "Desserts")
+        case .bread: String(localized: "Bread")
+        case .drinks: String(localized: "Drinks")
+        case .sauces: String(localized: "Sauces")
         }
     }
 

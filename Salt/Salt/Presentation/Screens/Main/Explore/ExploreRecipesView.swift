@@ -40,7 +40,11 @@ struct ExploreRecipesView: View {
     @State private var contentID = UUID()
 
     /// Terms that return results in the library
-    let popularSearches = ["Chicken", "Pasta", "Salad", "Soup"]
+    /// Searched in the app's language, so Turkish suggests Turkish dishes
+    let popularSearches = [
+        String(localized: "Chicken", comment: "Popular search"), String(localized: "Pasta", comment: "Popular search"),
+        String(localized: "Salad", comment: "Popular search"), String(localized: "Soup", comment: "Popular search")
+    ]
 
     /// Only cuisines with this many recipes become sections
     private static let minimumSectionSize = 6
@@ -164,7 +168,9 @@ struct ExploreRecipesView: View {
                 DishTypesRow(dishTypes: dishTypes, viewModel: viewModel)
             }
         }
-        .padding(.bottom, 12)
+        // A little more room in Turkish, whose smaller dish type labels bring the first
+        // section closer to the circles
+        .padding(.bottom, AppLanguage.isTurkish ? 20 : 12)
     }
 
     // MARK: - Reset to Initial State
@@ -733,6 +739,21 @@ struct DishTypesRow: View {
 }
 
 struct DishTypeItem: View {
+    static let circleSize: CGFloat = 64
+    /// Turkish only: labels may be this wide, overhanging the circle a little without moving
+    /// it, so the circles have the same size and spacing as in English. Longer labels
+    /// ("Atıştırmalıklar") end in "…". 68 leaves at least 10pt between two neighbouring
+    /// labels (14pt spacing minus 2pt overhang on each).
+    static let turkishLabelWidth: CGFloat = 68
+
+    /// Turkish labels are a size smaller (13pt) than English (14pt), so fewer are cut
+    private var labelFont: Font {
+        if AppLanguage.isTurkish {
+            return isSelected ? SaltFont.captionStrong : SaltFont.caption
+        }
+        return isSelected ? SaltFont.bodyStrong : SaltFont.body
+    }
+
     let dishType: DishType
     @ObservedObject var viewModel: ExploreViewModel
 
@@ -750,15 +771,18 @@ struct DishTypeItem: View {
                 Image(dishType.icon)
                     .renderingMode(.template)
                     .foregroundStyle(isSelected ? SaltColor.iconAccent : SaltColor.textSecondary)
-                    .frame(width: 64, height: 64)
+                    .frame(width: Self.circleSize, height: Self.circleSize)
                     .background(isSelected ? SaltColor.surfaceWarmStrong : SaltColor.surfaceWarm, in: Circle())
 
-                Text(dishType.displayName)
-                    .font(isSelected ? SaltFont.bodyStrong : SaltFont.body)
+                Text(DisplayText.food(dishType.displayName))
+                    .font(labelFont)
                     .foregroundStyle(isSelected ? SaltColor.textAccent : SaltColor.textSecondary)
                     .lineLimit(1)
-                    .fixedSize()
+                    .fixedSize(horizontal: !AppLanguage.isTurkish, vertical: !AppLanguage.isTurkish)
+                    .frame(width: AppLanguage.isTurkish ? Self.turkishLabelWidth : nil)
             }
+            // In Turkish the item takes the circle's width; the label overhangs it
+            .frame(width: AppLanguage.isTurkish ? Self.circleSize : nil)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])

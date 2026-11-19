@@ -130,7 +130,7 @@ enum IngredientScaler {
 
         var sections = order.compactMap { key in groups[key].map { Section(heading: $0.heading, lines: $0.lines) } }
         // Labeled so they don't read as part of the last group
-        if !pending.isEmpty { sections.append(Section(heading: "Other ingredients", lines: pending)) }
+        if !pending.isEmpty { sections.append(Section(heading: String(localized: "Other ingredients"), lines: pending)) }
         return sections
     }
 
@@ -166,7 +166,7 @@ enum IngredientScaler {
         if isAllCaps { text = text.lowercased() }
         // "For serving:" reads better as "To serve"
         if ["serving", "serve", "to serve"].contains(text.lowercased()) {
-            return "To serve"
+            return String(localized: "To serve")
         }
         guard let first = text.first else { return nil }
         return first.uppercased() + text.dropFirst()
@@ -231,12 +231,15 @@ enum IngredientScaler {
         let amount = ns.substring(with: match.range).trimmingCharacters(in: .whitespaces)
         var rest = ns.substring(from: NSMaxRange(match.range)).trimmingCharacters(in: .whitespaces)
         var unit = ""
-        if let first = rest.split(separator: " ", maxSplits: 1).first {
-            let word = String(first)
-            let bare = word.trimmingCharacters(in: CharacterSet(charactersIn: ".,")).lowercased()
+        let words = rest.split(separator: " ", maxSplits: 2).map(String.init)
+        // Two-word units first: "su bardağı", "yemek kaşığı"
+        for count in [2, 1] where words.count >= count {
+            let phrase = words.prefix(count).joined(separator: " ")
+            let bare = AppLanguage.lowercased(phrase.trimmingCharacters(in: CharacterSet(charactersIn: ".,")))
             if unitKinds[bare] != nil || containerUnits.contains(bare) {
-                unit = word
-                rest = String(rest.dropFirst(word.count)).trimmingCharacters(in: .whitespaces)
+                unit = phrase
+                rest = String(rest.dropFirst(phrase.count)).trimmingCharacters(in: .whitespaces)
+                break
             }
         }
         return (amount, unit, rest)
@@ -246,7 +249,10 @@ enum IngredientScaler {
     private static let containerUnits: Set<String> = [
         "can", "cans", "clove", "cloves", "slice", "slices", "piece", "pieces", "sprig", "sprigs",
         "bunch", "bunches", "handful", "handfuls", "package", "packages", "packet", "packets",
-        "jar", "jars", "bottle", "bottles", "head", "heads", "stalk", "stalks", "bag", "bags", "box", "boxes"
+        "jar", "jars", "bottle", "bottles", "head", "heads", "stalk", "stalks", "bag", "bags", "box", "boxes",
+        // Turkish (no plurals after numbers)
+        "adet", "diş", "dilim", "paket", "kutu", "demet", "avuç", "yaprak", "dal", "kavanoz", "şişe",
+        "baş", "tane", "parça", "poşet", "küp"
     ]
 
     /// Splits at the first comma outside parentheses
@@ -304,7 +310,7 @@ enum IngredientScaler {
 
         // As written, unless it's being scaled or written as "1/2", "1 and 1/2" or "One"
         func formatted(_ raw: String, _ value: Double) -> String {
-            let lower = raw.lowercased()
+            let lower = AppLanguage.lowercased(raw)
             let needsKitchenStyle = raw.contains("/") || lower.contains(" and ") || wordValues[lower] != nil
             return isScaled || needsKitchenStyle ? format(value * factor, unit: kind) : raw
         }
@@ -334,7 +340,7 @@ enum IngredientScaler {
     // One number: "1 and 1/2", "1 and a half", "1 1/2", "1 ½", "1½", "1/2", "1.5", "1,5", "½"
     private static let number = #"(?:\d+\s+and\s+(?:a\s+half|\d+/\d+|[¼½¾⅓⅔⅛⅜⅝⅞])|\d+\s+\d+/\d+|\d+\s*[¼½¾⅓⅔⅛⅜⅝⅞]|\d+/\d+|\d+(?:[.,]\d+)?|[¼½¾⅓⅔⅛⅜⅝⅞])"#
     // "One onion", but not "One-pot"
-    private static let wordNumber = #"(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b(?!-)"#
+    private static let wordNumber = #"(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|yarım|bir|iki|İki|üç|dört|beş|altı|yedi|sekiz|dokuz)\b(?!-)"#
     private static let approx = #"(?:(?:about|approx\.?|approximately|roughly|around)\s+)?"#
     // Groups: 1 = amount, 2 = range separator, 3 = range end
     private static let quantity = "(\(number)|\(wordNumber))(?:(\\s*(?:-|–|—|to)\\s*)(\(number)))?"
@@ -348,7 +354,7 @@ enum IngredientScaler {
     /// "Garlic cloves (2), crushed", "Beef chuck roast (about 2 pounds), trimmed".
     /// Groups: 1 = name, 2 = amount with its unit, last = what follows (the amount has groups of its own)
     private static let parenthesizedAmount = try! NSRegularExpression(
-        pattern: "^([^()\\d:]+?)\\s*\\(\\s*(\(approx)\(quantity)(?:\\s+[A-Za-z]+)*)\\s*\\)(.*)$",
+        pattern: "^([^()\\d:]+?)\\s*\\(\\s*(\(approx)\(quantity)(?:\\s+\\p{L}+)*)\\s*\\)(.*)$",
         options: [.caseInsensitive]
     )
 
@@ -359,13 +365,14 @@ enum IngredientScaler {
 
     private static let wordValues: [String: Double] = [
         "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
-        "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12
+        "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
+        "yarım": 0.5, "bir": 1, "iki": 2, "üç": 3, "dört": 4, "beş": 5, "altı": 6, "yedi": 7, "sekiz": 8, "dokuz": 9
     ]
 
     static func parseNumber(_ raw: String) -> Double? {
         let text = raw.trimmingCharacters(in: .whitespaces)
-        let lower = text.lowercased()
-        if let word = wordValues[lower] { return word }
+        let lower = AppLanguage.lowercased(text)
+        if let word = wordValues[lower] ?? wordValues[text.lowercased()] { return word }
 
         // "1 and 1/2", "1 and ½", "1 and a half"
         if let and = lower.range(of: " and ") {
@@ -403,7 +410,7 @@ enum IngredientScaler {
     /// Scales a bracketed amount starting at `location`, e.g. " (125g)" or " (240 ml)"
     private static func scaleConversion(in text: String, after location: Int, by factor: Double) -> String {
         let ns = text as NSString
-        let regex = try! NSRegularExpression(pattern: "^\\s*\\(\\s*(\(number))(\\s*)([A-Za-z]+)")
+        let regex = try! NSRegularExpression(pattern: "^\\s*\\(\\s*(\(number))(\\s*)(\\p{L}+)")
         let searchRange = NSRange(location: location, length: ns.length - location)
         guard let match = regex.firstMatch(in: text, options: .anchored, range: searchRange),
               let value = parseNumber(ns.substring(with: match.range(at: 1))),
@@ -422,15 +429,19 @@ enum IngredientScaler {
 
     private static let unitKinds: [String: UnitKind] = {
         var kinds: [String: UnitKind] = [:]
-        for word in ["g", "gr", "gram", "grams", "ml", "milliliter", "milliliters", "millilitre", "millilitres", "mg"] {
+        for word in ["g", "gr", "gram", "grams", "ml", "milliliter", "milliliters", "millilitre", "millilitres", "mg",
+                     "mililitre"] {
             kinds[word] = .metric
         }
-        for word in ["kg", "kilogram", "kilograms", "l", "liter", "liters", "litre", "litres"] {
+        for word in ["kg", "kilogram", "kilograms", "l", "liter", "liters", "litre", "litres", "lt"] {
             kinds[word] = .metricLarge
         }
         for word in ["cup", "cups", "c", "tbsp", "tbs", "tablespoon", "tablespoons", "tsp", "teaspoon", "teaspoons",
                      "oz", "ounce", "ounces", "lb", "lbs", "pound", "pounds", "pint", "pints", "quart", "quarts",
-                     "pinch", "pinches", "dash", "dashes", "stick", "sticks"] {
+                     "pinch", "pinches", "dash", "dashes", "stick", "sticks",
+                     // Turkish
+                     "su bardağı", "çay bardağı", "bardak", "yemek kaşığı", "tatlı kaşığı", "çay kaşığı",
+                     "kahve kaşığı", "kahve fincanı", "fincan", "kaşık", "tutam"] {
             kinds[word] = .kitchen
         }
         return kinds
@@ -439,13 +450,19 @@ enum IngredientScaler {
     /// The word right after the amount (e.g. "cup", "g", "large"), its range in `text`, and how
     /// amounts of it are written. Words that aren't measuring units mean counted things.
     private static func unit(atStartOf text: String) -> (word: String, range: NSRange, kind: UnitKind)? {
-        let regex = try! NSRegularExpression(pattern: #"^\s*([A-Za-z]+)"#)
+        let regex = try! NSRegularExpression(pattern: #"^\s*(\p{L}+)(?:\s+(\p{L}+))?"#)
         guard let match = regex.firstMatch(in: text, range: NSRange(location: 0, length: (text as NSString).length)) else {
             return nil
         }
+        // Two-word units first: "su bardağı", "yemek kaşığı"
+        if match.range(at: 2).location != NSNotFound {
+            let range = NSUnionRange(match.range(at: 1), match.range(at: 2))
+            let phrase = (text as NSString).substring(with: range)
+            if let kind = unitKinds[AppLanguage.lowercased(phrase)] { return (phrase, range, kind) }
+        }
         let range = match.range(at: 1)
         let word = (text as NSString).substring(with: range)
-        return (word, range, unitKinds[word.lowercased()] ?? .count)
+        return (word, range, unitKinds[AppLanguage.lowercased(word)] ?? unitKinds[word.lowercased()] ?? .count)
     }
 
     /// Singular and plural forms of units and common counted ingredients
@@ -475,7 +492,7 @@ enum IngredientScaler {
     /// Stops at a comma so notes like ", cut into 4 pieces" are left alone.
     private static func inflectNoun(in text: String, for value: Double) -> String {
         let ns = text as NSString
-        let regex = try! NSRegularExpression(pattern: #"\([^)]*\)|[A-Za-z]+|,"#)
+        let regex = try! NSRegularExpression(pattern: #"\([^)]*\)|\p{L}+|,"#)
         var wordsChecked = 0
         for match in regex.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
             let token = ns.substring(with: match.range)
@@ -512,14 +529,14 @@ enum IngredientScaler {
         }
     }
 
-    /// "1.5", "2", "0.25" (no trailing zeros, always a dot)
-    private static func decimal(_ value: Double, digits: Int) -> String {
+    /// "1.5", "2", "0.25" (no trailing zeros); "1,5" in Turkish
+    static func decimal(_ value: Double, digits: Int) -> String {
         var text = String(format: "%.\(digits)f", value)
         if text.contains(".") {
             while text.hasSuffix("0") { text.removeLast() }
             if text.hasSuffix(".") { text.removeLast() }
         }
-        return text
+        return AppLanguage.isTurkish ? text.replacingOccurrences(of: ".", with: ",") : text
     }
 
     /// Nearest kitchen fraction: "¾", "1 ½", "2 ⅓"; large amounts round to halves

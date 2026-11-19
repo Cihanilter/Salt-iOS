@@ -61,7 +61,7 @@ final class LoginViewModel: ObservableObject {
         // Validate email
         guard ValidationHelper.isValidEmail(email.inputText) else {
             var updated = email
-            updated.errorText = "Please enter a valid email address."
+            updated.errorText = String(localized: "Please enter a valid email address.")
             email = updated
             return
         }
@@ -69,7 +69,7 @@ final class LoginViewModel: ObservableObject {
         // Check password not empty
         guard !password.inputText.isEmpty else {
             var updated = password
-            updated.errorText = "Please enter your password."
+            updated.errorText = String(localized: "Please enter your password.")
             password = updated
             return
         }
@@ -83,7 +83,7 @@ final class LoginViewModel: ObservableObject {
         } catch let error as AuthError {
             handleAuthError(error)
         } catch {
-            showAlertMessage("An unexpected error occurred. Please try again.")
+            showAlertMessage(String(localized: "An unexpected error occurred. Please try again."))
         }
 
         isLoading = false
@@ -99,7 +99,7 @@ final class LoginViewModel: ObservableObject {
         } catch let error as AuthError {
             handleAuthError(error)
         } catch {
-            showAlertMessage("Failed to sign in with Google. Please try again.")
+            showAlertMessage(String(localized: "Failed to sign in with Google. Please try again."))
         }
 
         isLoading = false
@@ -117,7 +117,7 @@ final class LoginViewModel: ObservableObject {
         } catch let error as AuthError {
             handleAuthError(error)
         } catch {
-            showAlertMessage("Failed to sign in with Apple. Please try again.")
+            showAlertMessage(String(localized: "Failed to sign in with Apple. Please try again."))
         }
 
         isLoading = false
@@ -132,11 +132,11 @@ final class LoginViewModel: ObservableObject {
             updated.errorText = error.errorDescription
             email = updated
         case .invalidCredentials, .userNotFound:
-            showAlertMessage(error.errorDescription ?? "Invalid credentials")
+            showAlertMessage(error.errorDescription ?? String(localized: "Invalid credentials"))
         case .emailNotVerified:
-            showAlertMessage(error.errorDescription ?? "Please verify your email")
+            showAlertMessage(error.errorDescription ?? String(localized: "Please verify your email"))
         default:
-            showAlertMessage(error.errorDescription ?? "An error occurred")
+            showAlertMessage(error.errorDescription ?? String(localized: "An error occurred"))
         }
     }
 

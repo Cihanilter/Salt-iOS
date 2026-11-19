@@ -85,29 +85,21 @@ struct Recipe: Identifiable, Codable {
             total = calculatedTotal > 0 ? calculatedTotal : 0
         }
 
-        if total > 0 {
-            if total >= 60 {
-                let hours = total / 60
-                let mins = total % 60
-                return mins > 0 ? "\(hours)h \(mins)m" : "\(hours)h"
-            }
-            return "\(total) min"
-        }
-        return "N/A"
+        return DisplayText.duration(minutes: total)
     }
 
     var cuisineText: String {
         guard let cuisines = cuisines, !cuisines.isEmpty else {
-            return "Various"
+            return String(localized: "Various", comment: "Recipe without a cuisine")
         }
-        return cuisines.prefix(2).joined(separator: ", ")
+        return cuisines.prefix(2).map(DisplayText.food).joined(separator: ", ")
     }
 
     var categoryText: String {
-        guard let categories = categories, !categories.isEmpty else {
-            return "General"
+        guard let first = categories?.first else {
+            return String(localized: "General", comment: "Recipe without a category")
         }
-        return categories.first ?? "General"
+        return DisplayText.food(first)
     }
 
     var ingredientCount: Int {

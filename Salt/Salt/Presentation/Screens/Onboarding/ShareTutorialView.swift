@@ -81,9 +81,9 @@ struct ShareTutorialView: View {
         /// Button on the app's own share sheet that opens the iOS share sheet
         var shareToLabel: String {
             switch self {
-            case .instagram: "Share to..."
-            case .facebook: "More options"
-            case .tiktok, .youtubeShorts, .website: "More"
+            case .instagram: String(localized: "Share to...", comment: "Mock of the social app's own share button in the import tutorial; use the label that app shows in this language")
+            case .facebook: String(localized: "More options", comment: "Mock of the social app's own share button in the import tutorial; use the label that app shows in this language")
+            case .tiktok, .youtubeShorts, .website: String(localized: "More", comment: "Mock of the social app's own share button in the import tutorial; use the label that app shows in this language")
             }
         }
 
@@ -162,10 +162,10 @@ struct ShareTutorialView: View {
     private var backInset: CGFloat { onBack == nil ? 0 : 42 }
 
     private var primaryTitle: String {
-        if hasNextSource { return "Next: recipe websites" }
+        if hasNextSource { return String(localized: "Next: recipe websites") }
         if let nextTitle { return nextTitle }
-        guard context.endsWithRealImport else { return "Continue" }
-        return "Try it on \(source.name)"
+        guard context.endsWithRealImport else { return String(localized: "Continue") }
+        return String(localized: "Try it on \(source.name)")
     }
 
     enum Step: Int {
@@ -655,7 +655,7 @@ private struct TutorialPostView: View {
             postAction("heart", label: "12.4K")
             postAction("bubble.right", label: "318")
             Button(action: onShare) {
-                postAction(source.shareIcon, label: "Share")
+                postAction(source.shareIcon, label: String(localized: "Share", comment: "Mock of the social app's own share button in the import tutorial; use the label that app shows in this language"))
             }
             .buttonStyle(.plain)
             .disabled(isDimmed)
@@ -666,7 +666,7 @@ private struct TutorialPostView: View {
                 if !isDimmed {
                     // Ends left of the button: the overlay is wider than the button and
                     // grows leftwards from its trailing edge
-                    TutorialHint(step: 1, text: "Tap Share to send this post", missedTaps: missedTaps)
+                    TutorialHint(step: 1, text: String(localized: "Tap Share to send this post"), missedTaps: missedTaps)
                         .fixedSize()
                         .padding(.trailing, 68)
                         .allowsHitTesting(false)
@@ -745,8 +745,8 @@ private struct TutorialAppShareSheet: View {
 
             // Actions
             HStack(alignment: .top, spacing: 0) {
-                sheetAction("plus", label: "Add to story")
-                sheetAction("link", label: "Copy link")
+                sheetAction("plus", label: String(localized: "Add to story", comment: "Mock of the social app's own share button in the import tutorial; use the label that app shows in this language"))
+                sheetAction("link", label: String(localized: "Copy link", comment: "Mock of the social app's own share button in the import tutorial; use the label that app shows in this language"))
                 Button(action: onShareTo) {
                     sheetAction(source == .instagram ? "square.and.arrow.up" : "ellipsis", label: source.shareToLabel)
                 }
@@ -754,7 +754,7 @@ private struct TutorialAppShareSheet: View {
                 .tutorialPulse()
                 .accessibilityLabel(source.shareToLabel)
                 .accessibilityHint("Step 2 of 4")
-                sheetAction("message.fill", label: "Messages", tint: .green)
+                sheetAction("message.fill", label: String(localized: "Messages", comment: "Mock of the social app's own share button in the import tutorial; use the label that app shows in this language"), tint: .green)
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 12)
@@ -765,7 +765,7 @@ private struct TutorialAppShareSheet: View {
                 .ignoresSafeArea(edges: .bottom)
         )
         .overlay(alignment: .bottom) {
-            TutorialHint(step: 2, text: "Tap \u{201C}\(source.shareToLabel)\u{201D} to open your phone\u{2019}s share menu", missedTaps: missedTaps)
+            TutorialHint(step: 2, text: String(localized: "Tap \u{201C}\(source.shareToLabel)\u{201D} to open your phone\u{2019}s share menu"), missedTaps: missedTaps)
                 .padding(.bottom, 100)
                 .allowsHitTesting(false)
         }
@@ -782,6 +782,8 @@ private struct TutorialAppShareSheet: View {
                 .font(.custom("OpenSans-Regular", size: 11))
                 .foregroundColor(.black)
                 .lineLimit(1)
+                // Longer translations ("Bağlantıyı kopyala") shrink a little instead of truncating
+                .minimumScaleFactor(0.75)
         }
         .frame(maxWidth: .infinity)
     }
@@ -808,7 +810,7 @@ private struct TutorialSystemShareSheet: View {
                     .frame(width: 44, height: 44)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(source == .website ? recipe.title : "Post from dinnerin10")
+                    Text(source == .website ? recipe.title : String(localized: "Post from dinnerin10", comment: "Mock of the iOS share sheet header for a social post; dinnerin10 is a fake username, keep it"))
                         .font(.custom("OpenSans-SemiBold", size: 14))
                         .foregroundColor(.black)
                         .lineLimit(1)
@@ -857,7 +859,7 @@ private struct TutorialSystemShareSheet: View {
             .padding(.horizontal, 8)
 
             // Actions list
-            TutorialListGroup(rows: ["Copy", "Add to Reading List", "Save to Files"])
+            TutorialListGroup(rows: [String(localized: "Copy", comment: "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language"), String(localized: "Add to Reading List", comment: "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language"), String(localized: "Save to Files", comment: "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language")])
                 .padding(.horizontal, 16)
                 .padding(.bottom, 12)
         }
@@ -869,7 +871,9 @@ private struct TutorialSystemShareSheet: View {
         .overlay(alignment: .top) {
             TutorialHint(
                 step: 3,
-                text: showsSalt ? "Tap Salt. That\u{2019}s it, the recipe is saved" : "Tap More: new apps hide here until you find them",
+                text: showsSalt
+                    ? String(localized: "Tap Salt. That\u{2019}s it, the recipe is saved")
+                    : String(localized: "Tap More: new apps hide here until you find them"),
                 missedTaps: missedTaps
             )
                 .offset(y: -56)
@@ -911,7 +915,7 @@ private struct TutorialAppsListSheet: View {
             .padding(.top, 16)
             .padding(.bottom, 6)
 
-            sectionTitle("Favorites")
+            sectionTitle(String(localized: "Favorites", comment: "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language"))
             VStack(spacing: 0) {
                 if saltIsFavorite {
                     saltRow(inFavorites: true)
@@ -927,7 +931,7 @@ private struct TutorialAppsListSheet: View {
             }
             .background(RoundedRectangle(cornerRadius: 12).fill(Color.white))
 
-            sectionTitle("Suggestions")
+            sectionTitle(String(localized: "Suggestions", comment: "Mock of the iOS share sheet in the import tutorial; use the label iOS shows in this language"))
                 .padding(.top, 8)
             VStack(spacing: 0) {
                 if !saltIsFavorite {
@@ -965,10 +969,10 @@ private struct TutorialAppsListSheet: View {
 
     private var hintText: String {
         switch phase {
-        case .tapEdit: "Pin Salt so it\u{2019}s always there: tap Edit"
-        case .tapAdd: "Tap + next to Salt"
-        case .tapDone: "Salt is in Favorites now. Tap Done"
-        case .tapSalt: "Tap Salt to save the recipe"
+        case .tapEdit: String(localized: "Pin Salt so it\u{2019}s always there: tap Edit")
+        case .tapAdd: String(localized: "Tap + next to Salt")
+        case .tapDone: String(localized: "Salt is in Favorites now. Tap Done")
+        case .tapSalt: String(localized: "Tap Salt to save the recipe")
         }
     }
 
@@ -1198,7 +1202,7 @@ private struct TutorialWebsiteView: View {
             // Hint above the button, ending at the screen edge
             .overlay(alignment: .bottomTrailing) {
                 if !isDimmed {
-                    TutorialHint(step: 1, text: "Tap \u{2022}\u{2022}\u{2022} to open the menu", missedTaps: missedTaps)
+                    TutorialHint(step: 1, text: String(localized: "Tap \u{2022}\u{2022}\u{2022} to open the menu"), missedTaps: missedTaps)
                         .fixedSize()
                         .padding(.bottom, 64)
                         .allowsHitTesting(false)
@@ -1219,7 +1223,7 @@ private struct TutorialSafariMenu: View {
     var body: some View {
         VStack(spacing: 0) {
             Button(action: onShare) {
-                menuRow("Share", systemImage: "square.and.arrow.up")
+                menuRow(String(localized: "Share", comment: "Mock of the Safari menu in the import tutorial; use the label Safari shows in this language"), systemImage: "square.and.arrow.up")
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -1227,19 +1231,19 @@ private struct TutorialSafariMenu: View {
             .accessibilityLabel("Share")
             .accessibilityHint("Step 2 of 4")
             Divider()
-            menuRow("Add to Bookmarks", systemImage: "book")
+            menuRow(String(localized: "Add to Bookmarks", comment: "Mock of the Safari menu in the import tutorial; use the label Safari shows in this language"), systemImage: "book")
             Divider()
-            menuRow("Add to Favorites", systemImage: "star")
+            menuRow(String(localized: "Add to Favorites", comment: "Mock of the Safari menu in the import tutorial; use the label Safari shows in this language"), systemImage: "star")
             Divider()
-            menuRow("Find on Page", systemImage: "doc.text.magnifyingglass")
+            menuRow(String(localized: "Find on Page", comment: "Mock of the Safari menu in the import tutorial; use the label Safari shows in this language"), systemImage: "doc.text.magnifyingglass")
             Divider()
-            menuRow("Add to Home Screen", systemImage: "plus.square")
+            menuRow(String(localized: "Add to Home Screen", comment: "Mock of the Safari menu in the import tutorial; use the label Safari shows in this language"), systemImage: "plus.square")
         }
         .frame(width: 260)
         .background(RoundedRectangle(cornerRadius: 18).fill(Color.white))
         .shadow(color: .black.opacity(0.2), radius: 20, y: 6)
         .overlay(alignment: .top) {
-            TutorialHint(step: 2, text: "Tap Share to open your phone\u{2019}s share menu", missedTaps: missedTaps)
+            TutorialHint(step: 2, text: String(localized: "Tap Share to open your phone\u{2019}s share menu"), missedTaps: missedTaps)
                 .fixedSize()
                 .offset(y: -56)
                 .allowsHitTesting(false)

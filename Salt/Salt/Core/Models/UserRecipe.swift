@@ -77,15 +77,7 @@ struct UserRecipe: Identifiable, Codable {
             total = calculatedTotal > 0 ? calculatedTotal : 0
         }
 
-        if total > 0 {
-            if total >= 60 {
-                let hours = total / 60
-                let mins = total % 60
-                return mins > 0 ? "\(hours)h \(mins)m" : "\(hours)h"
-            }
-            return "\(total) min"
-        }
-        return "N/A"
+        return DisplayText.duration(minutes: total)
     }
 
     var ingredientCount: Int {
@@ -164,7 +156,7 @@ extension UserRecipe {
         if let text = servingsText, !text.isEmpty {
             servingsDisplayText = text
         } else if let count = servings {
-            servingsDisplayText = "\(count) servings"
+            servingsDisplayText = String(localized: "\(count) servings")
         } else {
             servingsDisplayText = "N/A"
         }
@@ -188,7 +180,7 @@ extension UserRecipe {
         return RecipeDetail(
             title: title,
             duration: durationText,
-            ingredientsCount: "\(ingredientCount) ingredients",
+            ingredientsCount: DisplayText.ingredientCount(ingredientCount),
             description: description ?? "No description available",
             servings: servingsDisplayText,
             prepTime: prepDisplay,

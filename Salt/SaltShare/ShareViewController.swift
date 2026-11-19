@@ -48,16 +48,16 @@ class ShareViewController: UIViewController {
         } else if let sharedUrl {
             // A shared note (not a copy of it) is a link to iCloud, which Salt can't open
             if sharedUrl.host?.contains("icloud.com") == true, sharedUrl.path.contains("notes") {
-                showMessage("To import a note, choose \"Send Copy\" in the Notes share menu, then pick Salt.")
+                showMessage(String(localized: "To import a note, choose \"Send Copy\" in the Notes share menu, then pick Salt."))
                 return
             }
             guard let linkImport = makeImportDeepLink(for: sharedUrl) else {
-                showMessage("This link can't be imported.")
+                showMessage(String(localized: "This link can't be imported."))
                 return
             }
             deepLink = linkImport
         } else {
-            showMessage("No recipe found. Share a recipe link, a screenshot or a note with the recipe to import it into Salt.")
+            showMessage(String(localized: "No recipe found. Share a recipe link, a screenshot or a note with the recipe to import it into Salt."))
             return
         }
 
@@ -71,9 +71,9 @@ class ShareViewController: UIViewController {
             if let url = URLComponents(url: deepLink, resolvingAgainstBaseURL: false)?
                 .queryItems?.first(where: { $0.name == "url" })?.value {
                 UIPasteboard.general.string = url
-                showMessage("Link copied. Open Salt and paste it in Add Recipe → Import.")
+                showMessage(String(localized: "Link copied. Open Salt and paste it in Add Recipe → Import."))
             } else {
-                showMessage("Saved. Open Salt to finish importing.")
+                showMessage(String(localized: "Saved. Open Salt to finish importing."))
             }
         }
     }
@@ -270,13 +270,13 @@ class ShareViewController: UIViewController {
         spinner.color = UIColor(red: 1.0, green: 0.27, blue: 0.0, alpha: 1.0)
         spinner.startAnimating()
 
-        statusLabel.text = "Opening in Salt…"
+        statusLabel.text = String(localized: "Opening in Salt…")
         statusLabel.font = .preferredFont(forTextStyle: .headline)
         statusLabel.adjustsFontForContentSizeCategory = true
         statusLabel.textAlignment = .center
         statusLabel.numberOfLines = 0
 
-        doneButton.setTitle("Done", for: .normal)
+        doneButton.setTitle(String(localized: "Done"), for: .normal)
         doneButton.titleLabel?.font = .preferredFont(forTextStyle: .headline)
         doneButton.isHidden = true
         doneButton.addAction(UIAction { [weak self] _ in

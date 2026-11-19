@@ -54,7 +54,7 @@ struct SharedRecipeView: View {
             Analytics.log(.sharedRecipeOpened, ["recipe_type": recipe.originalRecipeId == nil ? "own" : "explore"])
         } catch {
             errorMessage = (error as? SharedRecipeError)?.errorDescription
-                ?? "Couldn't load the recipe. Check your connection and try again."
+                ?? String(localized: "Couldn't load the recipe. Check your connection and try again.")
         }
     }
 

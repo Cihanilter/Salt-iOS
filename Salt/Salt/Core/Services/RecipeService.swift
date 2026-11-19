@@ -538,13 +538,13 @@ enum RecipeServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notAuthenticated:
-            return "Please sign in to continue"
+            return String(localized: "Please sign in to continue")
         case .recipeNotFound:
-            return "Recipe not found"
+            return String(localized: "Recipe not found")
         case .saveFailed(let message):
-            return "Failed to save recipe: \(message)"
+            return String(localized: "Failed to save recipe: \(message)")
         case .imageUploadFailed:
-            return "Failed to upload recipe image"
+            return String(localized: "Failed to upload recipe image")
         }
     }
 }

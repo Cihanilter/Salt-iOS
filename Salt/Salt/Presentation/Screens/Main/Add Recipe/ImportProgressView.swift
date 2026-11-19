@@ -27,11 +27,16 @@ struct ImportProgressView: View {
     private var messages: [String] {
         let first: String
         switch kind {
-        case .link: first = "Reading the recipe..."
-        case .photos(let photos): first = photos.count > 1 ? "Reading your photos..." : "Reading your photo..."
-        case .note: first = "Reading your note..."
+        case .link: first = String(localized: "Reading the recipe...")
+        case .photos(let photos): first = photos.count > 1 ? String(localized: "Reading your photos...") : String(localized: "Reading your photo...")
+        case .note: first = String(localized: "Reading your note...")
         }
-        return [first, "Gathering the ingredients...", "Writing out the steps...", "Almost ready..."]
+        return [
+            first,
+            String(localized: "Gathering the ingredients..."),
+            String(localized: "Writing out the steps..."),
+            String(localized: "Almost ready...")
+        ]
     }
 
     var body: some View {

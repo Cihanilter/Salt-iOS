@@ -338,10 +338,14 @@ struct SaltPageTabs<Tab: Hashable>: View {
                     withAnimation(.easeInOut(duration: 0.2)) { selection = tab }
                 } label: {
                     Text(title(tab))
-                        .font(SaltFont.playfair(22))
+                        // Turkish names are longer ("İçe Aktarılan"): smaller and a little
+                        // tighter, with room on both sides so they don't touch the pill's edges
+                        .font(SaltFont.playfair(AppLanguage.isTurkish ? 18 : 22))
+                        .tracking(AppLanguage.isTurkish ? -0.3 : 0)
                         .foregroundStyle(SaltColor.textPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
+                        .padding(.horizontal, AppLanguage.isTurkish ? 6 : 0)
                         .frame(maxWidth: .infinity)
                         .frame(height: 38)
                         .background {
@@ -406,13 +410,13 @@ struct SaltStepper: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            key("minus", enabled: canDecrement, label: "Fewer", action: onDecrement)
+            key("minus", enabled: canDecrement, label: String(localized: "Fewer", comment: "Stepper button: one less serving"), action: onDecrement)
             Text(label)
                 .font(SaltFont.bodyLarge)
                 .foregroundStyle(SaltColor.textPrimary)
                 .monospacedDigit()
                 .contentTransition(.numericText())
-            key("plus", enabled: canIncrement, label: "More", action: onIncrement)
+            key("plus", enabled: canIncrement, label: String(localized: "More", comment: "Stepper button: one more serving"), action: onIncrement)
         }
     }
 
