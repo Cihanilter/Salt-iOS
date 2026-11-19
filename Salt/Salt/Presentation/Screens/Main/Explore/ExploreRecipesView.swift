@@ -740,9 +740,17 @@ struct DishTypeItem: View {
     static let circleSize: CGFloat = 64
     /// Turkish only: labels may be this wide, overhanging the circle a little without moving
     /// it, so the circles have the same size and spacing as in English. Longer labels
-    /// ("Atıştırmalıklar") end in "…" at the same font size. 70 leaves at least 8pt between
-    /// two neighbouring labels (14pt spacing minus 3pt overhang on each).
-    static let turkishLabelWidth: CGFloat = 70
+    /// ("Atıştırmalıklar") end in "…". 68 leaves at least 10pt between two neighbouring
+    /// labels (14pt spacing minus 2pt overhang on each).
+    static let turkishLabelWidth: CGFloat = 68
+
+    /// Turkish labels are a size smaller (13pt) than English (14pt), so fewer are cut
+    private var labelFont: Font {
+        if AppLanguage.isTurkish {
+            return isSelected ? SaltFont.captionStrong : SaltFont.caption
+        }
+        return isSelected ? SaltFont.bodyStrong : SaltFont.body
+    }
 
     let dishType: DishType
     @ObservedObject var viewModel: ExploreViewModel
@@ -765,7 +773,7 @@ struct DishTypeItem: View {
                     .background(isSelected ? SaltColor.surfaceWarmStrong : SaltColor.surfaceWarm, in: Circle())
 
                 Text(DisplayText.food(dishType.displayName))
-                    .font(isSelected ? SaltFont.bodyStrong : SaltFont.body)
+                    .font(labelFont)
                     .foregroundStyle(isSelected ? SaltColor.textAccent : SaltColor.textSecondary)
                     .lineLimit(1)
                     .fixedSize(horizontal: !AppLanguage.isTurkish, vertical: !AppLanguage.isTurkish)
