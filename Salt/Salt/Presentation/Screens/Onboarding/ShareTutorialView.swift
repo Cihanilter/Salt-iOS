@@ -469,16 +469,55 @@ struct TutorialSampleRecipe {
                 )
             )
         }
-        let detail = recipe.toRecipeDetail()
+        var detail = recipe.toRecipeDetail()
+        var title = recipe.title
+        var ingredients = recipe.ingredients
+        // The bundled curated recipes are English only, so the Turkish app shows its own text
+        if AppLanguage.isTurkish, recipe.id == preferredId {
+            title = turkishTitle
+            ingredients = turkishIngredients
+            detail = RecipeDetail(
+                title: turkishTitle,
+                duration: detail.duration,
+                ingredientsCount: detail.ingredientsCount,
+                description: "Soğuk havalarda içinizi ısıtacak pratik bir tavuklu ramen.",
+                servings: "1 porsiyon",
+                prepTime: detail.prepTime,
+                cookTime: detail.cookTime,
+                ingredients: turkishIngredients,
+                instructions: [
+                    "Orta boy bir tencereye suyu koyun. Tavuğu, soğanı, Cajun baharatını ve acı sosu ekleyin. Fokur fokur kaynayana kadar ısıtın. Ardından erişteyi ekleyin, ocağı orta ateşe indirin ve 3 dakika pişirin.",
+                    "Tencereyi ocaktan alın. Erişteyle birlikte gelen baharat paketini ve cheddar peynirini karıştırın. Yemeden önce biraz soğumaya bırakın."
+                ],
+                notes: detail.notes,
+                images: detail.images,
+                sourceUrl: detail.sourceUrl,
+                sourceName: detail.sourceName,
+                nutrition: detail.nutrition,
+                nutritionEstimated: detail.nutritionEstimated
+            )
+        }
         return TutorialSampleRecipe(
-            title: recipe.title,
+            title: title,
             imageUrl: recipe.imageUrl.flatMap(URL.init(string:)),
-            ingredients: recipe.ingredients,
+            ingredients: ingredients,
             totalTimeMinutes: recipe.totalTimeMinutes,
             servings: recipe.servings,
             detail: detail
         )
     }
+
+    private static let turkishTitle = "Pratik Tavuklu Ramen"
+
+    private static let turkishIngredients = [
+        "Su: 2 su bardağı",
+        "Pişmiş tavuk, küp doğranmış: 1 su bardağı",
+        "Kuru soğan granülü: 1/8 çay kaşığı (isteğe göre)",
+        "Cajun baharatı: 4 tutam",
+        "Acı sos: birkaç damla",
+        "Ramen eriştesi (85 g'lık paket) ve baharat paketi: 1",
+        "Cheddar peyniri: 1 dilim"
+    ]
 }
 
 // MARK: - Recipe Photo
@@ -1383,10 +1422,14 @@ private struct TutorialImportedView: View {
                 if showsWebsiteHint {
                     HStack(spacing: 6) {
                         Text("Works the same on websites.")
-                            .font(SaltFont.body)
+                            .font(AppLanguage.isTurkish ? SaltFont.caption : SaltFont.body)
                             .foregroundStyle(SaltColor.textSecondary)
+                            .lineLimit(AppLanguage.isTurkish ? 1 : nil)
+                            .minimumScaleFactor(AppLanguage.isTurkish ? 0.8 : 1)
                         Button("See how", action: onSeeWebsites)
-                            .font(SaltFont.bodyStrong)
+                            .font(AppLanguage.isTurkish ? SaltFont.captionStrong : SaltFont.bodyStrong)
+                            .lineLimit(AppLanguage.isTurkish ? 1 : nil)
+                            .minimumScaleFactor(AppLanguage.isTurkish ? 0.8 : 1)
                             .foregroundStyle(SaltColor.textAccent)
                             .frame(minHeight: 44)
                     }

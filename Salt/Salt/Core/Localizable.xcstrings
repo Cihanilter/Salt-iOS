@@ -1367,7 +1367,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
-            "value" : "Kısa tanıtım"
+            "value" : "Bio"
           }
         }
       }
@@ -2229,7 +2229,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Varsayılan birimler"
+            "value" : "Birim"
           }
         }
       }
@@ -3676,7 +3676,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
-            "value" : "Malzemeler ve adımlar tek dokunuşla kaydedilir.\nEkran görüntüsüne son."
+            "value" : "Malzemeleri ve adımları tek dokunuşla kaydedebilirsiniz.\nEkran görüntüsüne son."
           }
         }
       }
@@ -3686,7 +3686,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Malzemeler ve adımlar tek dokunuşla kaydedilir. Ekran görüntüsüne son."
+            "value" : "Malzemeleri ve adımları tek dokunuşla kaydedebilirsiniz. Ekran görüntüsüne son."
           }
         }
       }
@@ -4234,7 +4234,7 @@
         "tr" : {
           "stringUnit" : {
             "state" : "machine_translated",
-            "value" : "Belki sonra"
+            "value" : "Daha sonra"
           }
         }
       }

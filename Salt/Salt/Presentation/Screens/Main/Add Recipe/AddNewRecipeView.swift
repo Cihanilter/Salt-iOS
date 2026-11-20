@@ -1389,7 +1389,12 @@ struct CreateRecipeMultilineField: View {
 struct CreateRecipeUnitPicker: View {
     @Binding var unit: String
 
-    private static let units = ["cups", "cup", "tbsp", "tsp", "g", "kg", "ml", "l", "oz", "lb", "pinch", "clove", "can", "piece"]
+    /// The unit is saved into the ingredient text as picked, so Turkish gets Turkish units
+    /// (IngredientScaler reads them)
+    private static let units = AppLanguage.isTurkish
+        ? ["su bardağı", "çay bardağı", "yemek kaşığı", "tatlı kaşığı", "çay kaşığı", "g", "kg", "ml", "l",
+           "tutam", "diş", "adet", "paket", "kutu", "dilim"]
+        : ["cups", "cup", "tbsp", "tsp", "g", "kg", "ml", "l", "oz", "lb", "pinch", "clove", "can", "piece"]
 
     private var options: [String] {
         let trimmed = unit.trimmingCharacters(in: .whitespaces)
