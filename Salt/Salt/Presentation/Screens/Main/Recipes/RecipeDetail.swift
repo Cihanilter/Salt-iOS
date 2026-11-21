@@ -693,7 +693,17 @@ struct RecipeDetailView: View {
                 Button(role: .destructive) {
                     showingDeleteAlert = true
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    // Menus draw SF Symbols in the text color; a pre-tinted image keeps it orange
+                    Label {
+                        Text("Delete")
+                    } icon: {
+                        if let trash = UIImage(systemName: "trash")?
+                            .withTintColor(UIColor(SaltColor.iconAccent), renderingMode: .alwaysOriginal) {
+                            Image(uiImage: trash)
+                        } else {
+                            Image(systemName: "trash")
+                        }
+                    }
                 }
             }
         } else if isUnsavedPreview {
