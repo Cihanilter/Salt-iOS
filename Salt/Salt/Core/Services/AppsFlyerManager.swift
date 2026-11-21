@@ -32,6 +32,14 @@ final class AppsFlyerManager: NSObject {
         }
     }
 
+    /// Ties AppsFlyer data to the signed-in Supabase user (customer_user_id): the same ID the web
+    /// funnel creates accounts with and PostHog identifies by, so funnel accounts can be matched
+    /// to their installs. A nil id (signed out, or the session not loaded yet) leaves it as is
+    func setUser(id userId: String?) {
+        guard AppsFlyerConfig.isConfigured, let userId else { return }
+        AppsFlyerLib.shared().customerUserID = userId
+    }
+
     /// Share link that opens Salt (or the App Store, then the app after install): a short
     /// OneLink, or the long one with the parameters in the URL if AppsFlyer can't make it.
     func oneLink(parameters: [String: String], campaign: String) async -> URL? {
