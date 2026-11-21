@@ -4,7 +4,8 @@
 //
 //  When to welcome a web funnel buyer (quiz.saltrecipes.app) after they log in: they
 //  bought Premium on the web and log in to an account made there, so they skip the app's
-//  onboarding and its import tutorial. Shown once per account on a device.
+//  onboarding and its import tutorial. Shown once per account on a device, and only with
+//  Premium active.
 //
 
 import Foundation
@@ -27,7 +28,11 @@ enum WebBuyerWelcome {
         guard let count = try? await RecipeService.shared.getImportedRecipesCount(), count == 0 else {
             return false
         }
-        return true
+
+        // Only buyers: the funnel also lets people continue with the free plan, and those are
+        // like any other free user (the funnel sends them through Get started). Not marked as
+        // shown, so someone who buys on the web later still gets it
+        return await SubscriptionManager.shared.recheckPremium()
     }
 
     static func markShown(for user: UserProfile) {

@@ -18,8 +18,9 @@ struct ShareTutorialView: View {
         /// After a web funnel buyer's first login (WebBuyerWelcomeView)
         case webWelcome = "web_welcome"
 
-        /// Ends with "Try it on Instagram" and Maybe later instead of Continue
-        var endsWithRealImport: Bool { self != .onboarding }
+        /// Ends with "Try it on Instagram" and Maybe later instead of Continue. Not after a web
+        /// buyer's first login: they want to get into the app, so Continue takes them there
+        var endsWithRealImport: Bool { self == .explore }
     }
 
     /// How the tutorial ended
