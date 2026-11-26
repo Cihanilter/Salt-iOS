@@ -101,8 +101,11 @@ struct WelcomeView: View {
     }
 }
 
-/// Phone showing a My Recipes screenshot (`welcomeScreenshot`), or recipe photos until it's added
+/// Phone showing a My Recipes screenshot (`welcomeScreenshot`, `welcomeScreenshotTR` in Turkish),
+/// or recipe photos until it's added
 private struct WelcomePhoneMockup: View {
+    private static let screenshotName = AppLanguage.isTurkish ? "welcomeScreenshotTR" : "welcomeScreenshot"
+
     private let photos: [URL?] = Array(
         CuratedRecipesManager.shared.recipes
             .compactMap { $0.imageUrl.flatMap(URL.init(string:)) }
@@ -111,7 +114,7 @@ private struct WelcomePhoneMockup: View {
 
     var body: some View {
         Group {
-            if let screenshot = UIImage(named: "welcomeScreenshot") {
+            if let screenshot = UIImage(named: Self.screenshotName) {
                 Image(uiImage: screenshot)
                     .resizable()
                     .scaledToFill()
